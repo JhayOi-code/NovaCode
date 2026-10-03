@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NovaCode</string>
+    <string name="company_name">Ljhay Softworks LLC</string>
+    <string name="footer_credit">Developed by Ljhay • %1$s</string>
+    <string name="tagline">Ultra-Fast Mobile IDE &amp; Code Studio</string>
+    <string name="welcome_heading">Code anywhere without compromise.</string>
+</resources>

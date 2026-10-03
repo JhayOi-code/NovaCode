@@ -1,0 +1,6 @@
+{
+  "name": "NovaCode",
+  "description": "Professional mobile code editor & IDE with high performance syntax highlighting, full device file access, dev server preview, and terminal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
