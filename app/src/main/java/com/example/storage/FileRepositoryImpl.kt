@@ -35,72 +35,47 @@ class FileRepositoryImpl(
 
     private fun createStarterProjects(workspace: File) {
         val webDir = File(workspace, "WebStarter").apply { mkdirs() }
-        File(webDir, "index.html").writeText(
+
+        fun copyAssetOrDefault(assetName: String, fallback: String) {
+            val destFile = File(webDir, assetName)
+            try {
+                context.assets.open("web_explorer/$assetName").use { input ->
+                    destFile.outputStream().use { out ->
+                        input.copyTo(out)
+                    }
+                }
+            } catch (_: Exception) {
+                destFile.writeText(fallback)
+            }
+        }
+
+        copyAssetOrDefault(
+            "index.html",
             """<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaCode Web Preview</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NovaCode - Mobile Code Editor & Explorer</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="card">
-        <h1>⚡ NovaCode Studio</h1>
-        <p>Live dev server and in-app responsive preview are ready.</p>
-        <button id="counterBtn">Clicks: <span id="count">0</span></button>
-    </div>
-    <script src="app.js"></script>
+  <div id="app" class="app-container">
+    <div style="padding: 20px; color: #fff;">NovaCode Mobile Explorer</div>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>"""
         )
 
-        File(webDir, "style.css").writeText(
-            """body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #f8fafc;
-}
-.card {
-    background: #1e293b;
-    padding: 2.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    border: 1px solid #334155;
-    max-width: 400px;
-}
-button {
-    background: #00e5ff;
-    color: #0b1120;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 9999px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: transform 0.1s ease;
-}
-button:active {
-    transform: scale(0.96);
-}"""
+        copyAssetOrDefault(
+            "style.css",
+            """body { margin: 0; background: #050810; color: #f3f4f6; font-family: sans-serif; }"""
         )
 
-        File(webDir, "app.js").writeText(
-            """let count = 0;
-const btn = document.getElementById('counterBtn');
-const label = document.getElementById('count');
-
-btn.addEventListener('click', () => {
-    count++;
-    label.textContent = count;
-    console.log("Button clicked, count is now:", count);
-});"""
+        copyAssetOrDefault(
+            "app.js",
+            """console.log("NovaCode Mobile Explorer loaded");"""
         )
 
         val pyDir = File(workspace, "PythonStarter").apply { mkdirs() }

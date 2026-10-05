@@ -2,6 +2,8 @@ package com.example.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,10 +16,14 @@ import com.example.model.FileItem
 import com.example.model.PermissionStatus
 import com.example.model.SupportedLanguage
 import com.example.model.TerminalLine
-import com.example.model.TerminalLineType
+import com.example.permissions.StoragePermissionState
+import com.example.server.LocalDevServer
+import com.example.server.NanoHttpDevServer
+import com.example.server.ServerRequestLog
+import com.example.server.ServerStartResult
+import com.example.server.ServerStatus
 import com.example.storage.FileRepository
 import com.example.storage.FileRepositoryImpl
-import com.example.storage.StoragePermissionHelper
 import com.example.terminal.TerminalEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +47,9 @@ data class EditorUiState(
     val permissionStatus: PermissionStatus = PermissionStatus(),
     val showPermissionWizard: Boolean = false,
     val previewHtml: String? = null,
+    val previewUrl: String? = null,
+    val serverStatus: ServerStatus = ServerStatus.Stopped,
+    val serverLogs: List<ServerRequestLog> = emptyList(),
     val isTerminalOpen: Boolean = false,
     val terminalLines: List<TerminalLine> = emptyList(),
     val isTerminalRunning: Boolean = false,
@@ -65,48 +74,59 @@ class EditorViewModel(
     )
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
+    val localDevServer: LocalDevServer = NanoHttpDevServer()
+    val gitService: GitService = GitServiceImpl()
+
+    private val terminalEngine by lazy {
+        TerminalEngine(fileRepository.internalWorkspaceDir, gitService)
+    }
+
     init {
         refreshPermissions()
         observeStorageRoots()
         loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
         openInitialFiles()
+
+        // Sync Dev Server status and logs into UI state
+        viewModelScope.launch {
+            localDevServer.status.collect { status ->
+                _uiState.update { it.copy(serverStatus = status) }
+            }
+        }
+        viewModelScope.launch {
+            localDevServer.requestLogs.collect { logs ->
+                _uiState.update { it.copy(serverLogs = logs) }
+            }
+        }
     }
 
     private fun observeStorageRoots() {
         viewModelScope.launch {
-            fileRepository.getStorageRoots()
-                .catch { e -> e.printStackTrace() }
-                .collect { roots ->
-                    _uiState.update { it.copy(storageRoots = roots) }
-                }
-        }
-    }
-
-    private fun openInitialFiles() {
-        viewModelScope.launch {
-            val readmePath = File(fileRepository.internalWorkspaceDir, "README.md").absolutePath
-            fileRepository.readFile(readmePath)
-                .catch { /* ignore missing */ }
-                .collect { content ->
-                    val file = CodeFile(
-                        name = "README.md",
-                        path = readmePath,
-                        content = content,
-                        language = SupportedLanguage.MARKDOWN
-                    )
-                    _uiState.update { it.copy(openFiles = listOf(file), activeFileIndex = 0) }
-                }
+            fileRepository.getStorageRoots().collect { roots ->
+                _uiState.update { it.copy(storageRoots = roots) }
+            }
         }
     }
 
     fun refreshPermissions() {
-        val status = StoragePermissionHelper.checkStatus(getApplication())
-        _uiState.update { it.copy(permissionStatus = status) }
-        observeStorageRoots()
-    }
-
-    fun setNavTab(tabIndex: Int) {
-        _uiState.update { it.copy(activeNavTab = tabIndex) }
+        val isAllFiles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Environment.isExternalStorageManager()
+        } else {
+            true
+        }
+        val grantedUris = getApplication<Application>().contentResolver.persistedUriPermissions.map { it.uri }
+        _uiState.update {
+            it.copy(
+                permissionStatus = PermissionStatus(
+                    tier1Granted = true,
+                    tier2Granted = grantedUris.isNotEmpty(),
+                    tier2Uri = grantedUris.firstOrNull()?.toString(),
+                    tier3Granted = isAllFiles,
+                    tier4Active = false,
+                    activeStoragePath = it.currentPathOrUri
+                )
+            )
+        }
     }
 
     fun togglePermissionWizard(show: Boolean) {
@@ -141,6 +161,10 @@ class EditorViewModel(
         _uiState.update { it.copy(reduceTransparency = enabled) }
     }
 
+    fun loadDirectory(file: File) {
+        loadDirectory(file.absolutePath)
+    }
+
     fun loadDirectory(pathOrUri: String) {
         viewModelScope.launch {
             fileRepository.listFiles(pathOrUri)
@@ -165,47 +189,48 @@ class EditorViewModel(
         }
     }
 
-    fun loadDirectory(directory: File) {
-        loadDirectory(directory.absolutePath)
-    }
-
     fun navigateUp() {
-        val current = _uiState.value.currentPathOrUri
-        if (current.startsWith("content://")) {
-            // For SAF tree root, return to internal workspace
-            loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
+        val current = _uiState.value.currentDirectory
+        val parent = current.parentFile
+        if (parent != null && parent.canRead()) {
+            loadDirectory(parent.absolutePath)
         } else {
-            val parent = File(current).parentFile
-            if (parent != null && parent.canRead()) {
-                loadDirectory(parent.absolutePath)
-            }
+            Toast.makeText(getApplication(), "Already at storage root", Toast.LENGTH_SHORT).show()
         }
     }
 
-    fun openFile(fileItem: FileItem) {
+    fun openFile(item: FileItem) {
+        if (item.isDirectory) {
+            loadDirectory(item.path)
+            return
+        }
+
         viewModelScope.launch {
-            val existingIndex = _uiState.value.openFiles.indexOfFirst { it.path == fileItem.path }
+            val existingIndex = _uiState.value.openFiles.indexOfFirst { it.path == item.path }
             if (existingIndex != -1) {
-                _uiState.update { it.copy(activeFileIndex = existingIndex, activeNavTab = 1) }
+                _uiState.update {
+                    it.copy(activeFileIndex = existingIndex, activeNavTab = 1)
+                }
                 return@launch
             }
 
-            fileRepository.readFile(fileItem.path)
-                .catch { e ->
-                    Toast.makeText(getApplication(), "Failed to open: ${e.message}", Toast.LENGTH_SHORT).show()
+            fileRepository.readFile(item.path)
+                .catch { error ->
+                    Toast.makeText(getApplication(), "Could not read ${item.name}: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
                 .collect { content ->
+                    val lang = SupportedLanguage.fromFilename(item.name)
                     val newCodeFile = CodeFile(
-                        name = fileItem.name,
-                        path = fileItem.path,
+                        name = item.name,
+                        path = item.path,
                         content = content,
-                        language = fileItem.language
+                        language = lang
                     )
-                    val newFiles = _uiState.value.openFiles + newCodeFile
-                    _uiState.update {
-                        it.copy(
-                            openFiles = newFiles,
-                            activeFileIndex = newFiles.lastIndex,
+                    _uiState.update { state ->
+                        val updated = state.openFiles + newCodeFile
+                        state.copy(
+                            openFiles = updated,
+                            activeFileIndex = updated.size - 1,
                             activeNavTab = 1
                         )
                     }
@@ -214,179 +239,239 @@ class EditorViewModel(
     }
 
     fun openFromUri(uri: Uri) {
+        loadDirectory(uri.toString())
+    }
+
+    fun openInitialFiles() {
         viewModelScope.launch {
-            val path = uri.toString()
-            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "imported_file.txt"
-            fileRepository.readFile(path)
-                .catch { e ->
-                    Toast.makeText(getApplication(), "Error loading URI: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-                .collect { content ->
-                    val codeFile = CodeFile(
-                        name = name,
-                        path = path,
-                        content = content,
-                        language = SupportedLanguage.fromFilename(name)
-                    )
-                    val newFiles = _uiState.value.openFiles + codeFile
-                    _uiState.update {
-                        it.copy(
-                            openFiles = newFiles,
-                            activeFileIndex = newFiles.lastIndex,
-                            activeNavTab = 1
-                        )
-                    }
-                }
+            val starterFile = File(fileRepository.internalWorkspaceDir, "PythonStarter/main.py")
+            if (starterFile.exists()) {
+                openFile(FileItem(name = starterFile.name, path = starterFile.absolutePath, isDirectory = false))
+            }
         }
     }
 
-    fun selectTab(index: Int) {
+    fun switchActiveFile(index: Int) {
         if (index in _uiState.value.openFiles.indices) {
             _uiState.update { it.copy(activeFileIndex = index) }
         }
     }
 
-    fun closeTab(index: Int) {
-        val files = _uiState.value.openFiles.toMutableList()
-        if (index in files.indices) {
-            files.removeAt(index)
-            val newActiveIndex = if (files.isEmpty()) 0 else (index.coerceAtMost(files.lastIndex))
-            _uiState.update { it.copy(openFiles = files, activeFileIndex = newActiveIndex) }
+    fun selectTab(index: Int) {
+        switchActiveFile(index)
+    }
+
+    fun closeFile(index: Int) {
+        _uiState.update { state ->
+            val updated = state.openFiles.toMutableList()
+            if (index in updated.indices) {
+                updated.removeAt(index)
+                val newActive = if (updated.isEmpty()) 0 else (index.coerceAtMost(updated.size - 1))
+                state.copy(openFiles = updated, activeFileIndex = newActive)
+            } else {
+                state
+            }
         }
     }
 
+    fun closeTab(index: Int) {
+        closeFile(index)
+    }
+
     fun newTab() {
-        val count = _uiState.value.openFiles.size + 1
-        val newFile = CodeFile(
-            name = "Untitled_$count.txt",
-            path = File(fileRepository.internalWorkspaceDir, "Untitled_$count.txt").absolutePath,
-            content = "",
-            language = SupportedLanguage.PLAINTEXT,
-            isDirty = true
-        )
-        val files = _uiState.value.openFiles + newFile
+        val untitledName = "untitled_${System.currentTimeMillis() % 1000}.txt"
+        val tempFile = File(fileRepository.internalWorkspaceDir, untitledName)
+        val newCode = CodeFile(name = untitledName, path = tempFile.absolutePath, content = "")
         _uiState.update {
-            it.copy(
-                openFiles = files,
-                activeFileIndex = files.lastIndex,
-                activeNavTab = 1
-            )
+            val list = it.openFiles + newCode
+            it.copy(openFiles = list, activeFileIndex = list.size - 1, activeNavTab = 1)
         }
     }
 
     fun updateActiveFileContent(newContent: String) {
-        val currentIdx = _uiState.value.activeFileIndex
-        val files = _uiState.value.openFiles.toMutableList()
-        if (currentIdx in files.indices) {
-            val current = files[currentIdx]
-            files[currentIdx] = current.withUpdatedContent(newContent)
-            _uiState.update { it.copy(openFiles = files) }
+        val activeIndex = _uiState.value.activeFileIndex
+        val currentList = _uiState.value.openFiles
+        if (activeIndex in currentList.indices) {
+            val target = currentList[activeIndex]
+            val updated = target.copy(content = newContent, isDirty = true)
+            val newList = currentList.toMutableList()
+            newList[activeIndex] = updated
+            _uiState.update { it.copy(openFiles = newList) }
         }
     }
 
     fun saveActiveFile() {
-        val currentIdx = _uiState.value.activeFileIndex
-        val files = _uiState.value.openFiles.toMutableList()
-        if (currentIdx in files.indices) {
-            val current = files[currentIdx]
+        val activeIndex = _uiState.value.activeFileIndex
+        val currentList = _uiState.value.openFiles
+        if (activeIndex in currentList.indices) {
+            val target = currentList[activeIndex]
             viewModelScope.launch {
-                val result = fileRepository.writeFile(current.path, current.content)
-                result.onSuccess {
-                    files[currentIdx] = current.markSaved()
-                    _uiState.update { it.copy(openFiles = files) }
+                fileRepository.writeFile(target.path, target.content)
+                    .onSuccess {
+                        val updated = target.copy(isDirty = false)
+                        val newList = currentList.toMutableList()
+                        newList[activeIndex] = updated
+                        _uiState.update { it.copy(openFiles = newList) }
+                        Toast.makeText(getApplication(), "Saved ${target.name}", Toast.LENGTH_SHORT).show()
+                    }
+                    .onFailure { error ->
+                        Toast.makeText(getApplication(), "Failed to save ${target.name}: ${error.message}", Toast.LENGTH_SHORT).show()
+                    }
+            }
+        }
+    }
+
+    fun createNewFileInExplorer(fileName: String) {
+        viewModelScope.launch {
+            fileRepository.createFile(_uiState.value.currentPathOrUri, fileName, false)
+                .onSuccess { item ->
                     loadDirectory(_uiState.value.currentPathOrUri)
-                    Toast.makeText(getApplication(), "Saved: ${current.name}", Toast.LENGTH_SHORT).show()
-                }.onFailure { err ->
-                    Toast.makeText(getApplication(), "Save failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                    openFile(item)
+                    Toast.makeText(getApplication(), "Created $fileName", Toast.LENGTH_SHORT).show()
                 }
-            }
+                .onFailure {
+                    Toast.makeText(getApplication(), "Failed to create file: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    fun createNewFileInExplorer(name: String) {
+    fun createNewFolderInExplorer(folderName: String) {
         viewModelScope.launch {
-            val result = fileRepository.createFile(_uiState.value.currentPathOrUri, name, isFolder = false)
-            result.onSuccess { item ->
-                loadDirectory(_uiState.value.currentPathOrUri)
-                openFile(item)
-            }.onFailure { err ->
-                Toast.makeText(getApplication(), "Could not create file: ${err.message}", Toast.LENGTH_SHORT).show()
-            }
+            fileRepository.createFile(_uiState.value.currentPathOrUri, folderName, true)
+                .onSuccess {
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    Toast.makeText(getApplication(), "Created folder $folderName", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure {
+                    Toast.makeText(getApplication(), "Failed to create directory: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    fun createNewFolderInExplorer(name: String) {
+    fun deleteFileInExplorer(target: Any) {
+        val path = when (target) {
+            is FileItem -> target.path
+            is File -> target.absolutePath
+            else -> target.toString()
+        }
         viewModelScope.launch {
-            val result = fileRepository.createFile(_uiState.value.currentPathOrUri, name, isFolder = true)
-            result.onSuccess {
-                loadDirectory(_uiState.value.currentPathOrUri)
-            }.onFailure { err ->
-                Toast.makeText(getApplication(), "Could not create folder: ${err.message}", Toast.LENGTH_SHORT).show()
-            }
+            fileRepository.deleteFile(path)
+                .onSuccess {
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    val openIndex = _uiState.value.openFiles.indexOfFirst { it.path == path }
+                    if (openIndex != -1) {
+                        closeFile(openIndex)
+                    }
+                    Toast.makeText(getApplication(), "Deleted file", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure {
+                    Toast.makeText(getApplication(), "Delete failed: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    fun deleteFileInExplorer(path: String) {
+    fun renameFileInExplorer(oldTarget: Any, newName: String) {
+        val oldPath = when (oldTarget) {
+            is FileItem -> oldTarget.path
+            is File -> oldTarget.absolutePath
+            else -> oldTarget.toString()
+        }
         viewModelScope.launch {
-            val result = fileRepository.deleteFile(path)
-            result.onSuccess {
-                val openIdx = _uiState.value.openFiles.indexOfFirst { it.path == path }
-                if (openIdx != -1) closeTab(openIdx)
-                loadDirectory(_uiState.value.currentPathOrUri)
-            }.onFailure { err ->
-                Toast.makeText(getApplication(), "Delete failed: ${err.message}", Toast.LENGTH_SHORT).show()
-            }
+            fileRepository.renameFile(oldPath, newName)
+                .onSuccess {
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    Toast.makeText(getApplication(), "Renamed to $newName", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure {
+                    Toast.makeText(getApplication(), "Rename failed: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    fun renameFileInExplorer(oldPath: String, newName: String) {
+    fun exportZip(destination: Any) {
         viewModelScope.launch {
-            val result = fileRepository.renameFile(oldPath, newName)
-            result.onSuccess {
-                loadDirectory(_uiState.value.currentPathOrUri)
-            }.onFailure { err ->
-                Toast.makeText(getApplication(), "Rename failed: ${err.message}", Toast.LENGTH_SHORT).show()
+            val currentDir = _uiState.value.currentDirectory
+            val targetFile = when (destination) {
+                is File -> destination
+                is Uri -> File(getApplication<Application>().cacheDir, "workspace_${System.currentTimeMillis()}.zip")
+                else -> File(getApplication<Application>().cacheDir, "workspace.zip")
             }
+            fileRepository.zipDirectory(currentDir.absolutePath, targetFile)
+                .onSuccess {
+                    Toast.makeText(getApplication(), "Exported ZIP successfully to ${targetFile.name}", Toast.LENGTH_LONG).show()
+                }
+                .onFailure { err ->
+                    Toast.makeText(getApplication(), "Zip export failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
         }
     }
 
-    fun exportZip(dir: File) {
-        viewModelScope.launch {
-            val outZip = File(dir.parentFile ?: dir, "${dir.name}_export.zip")
-            val result = fileRepository.zipDirectory(dir.absolutePath, outZip)
-            result.onSuccess {
-                loadDirectory(_uiState.value.currentPathOrUri)
-                Toast.makeText(getApplication(), "Exported to: ${outZip.name}", Toast.LENGTH_LONG).show()
-            }.onFailure { err ->
-                Toast.makeText(getApplication(), "Zip export failed: ${err.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    // --- Local Development HTTP Server & Web Preview ---
 
     fun openWebDemo() {
-        viewModelScope.launch {
-            val webDir = File(fileRepository.internalWorkspaceDir, "WebStarter")
-            val indexFile = File(webDir, "index.html")
-            val cssFile = File(webDir, "style.css")
-            val jsFile = File(webDir, "app.js")
+        val webDir = File(fileRepository.internalWorkspaceDir, "WebStarter")
+        startDevServerAndPreview(webDir, "index.html")
+    }
 
-            val html = if (indexFile.exists()) indexFile.readText() else "<h1>NovaCode</h1>"
-            val css = if (cssFile.exists()) cssFile.readText() else ""
-            val js = if (jsFile.exists()) jsFile.readText() else ""
+    fun openWebPreviewForActiveFile(file: CodeFile) {
+        val targetFile = File(file.path)
+        val parentDir = if (targetFile.parentFile != null && targetFile.parentFile.exists()) {
+            targetFile.parentFile
+        } else {
+            _uiState.value.currentDirectory
+        }
+        startDevServerAndPreview(parentDir, targetFile.name)
+    }
 
-            val combinedHtml = html
-                .replace("<link rel=\"stylesheet\" href=\"style.css\">", "<style>$css</style>")
-                .replace("<script src=\"app.js\"></script>", "<script>$js</script>")
-
-            _uiState.update { it.copy(previewHtml = combinedHtml) }
+    fun startDevServerAndPreview(dir: File? = null, targetPath: String = "") {
+        val targetDir = dir ?: _uiState.value.currentDirectory
+        when (val result = localDevServer.start(targetDir)) {
+            is ServerStartResult.Success -> {
+                val fullUrl = if (targetPath.isNotEmpty()) {
+                    "${result.url}${targetPath.trimStart('/')}"
+                } else {
+                    result.url
+                }
+                _uiState.update {
+                    it.copy(
+                        previewUrl = fullUrl,
+                        previewHtml = null
+                    )
+                }
+                Toast.makeText(getApplication(), "Dev Server running at ${result.url}", Toast.LENGTH_SHORT).show()
+            }
+            is ServerStartResult.Failure -> {
+                Toast.makeText(getApplication(), result.error, Toast.LENGTH_LONG).show()
+            }
         }
     }
 
-    val gitService: GitService = GitServiceImpl()
-
-    private val terminalEngine by lazy {
-        TerminalEngine(fileRepository.internalWorkspaceDir, gitService)
+    fun startDevServer(rootDir: File? = null, port: Int = 8080): ServerStartResult {
+        val dir = rootDir ?: _uiState.value.currentDirectory
+        return localDevServer.start(dir, port)
     }
+
+    fun stopDevServer() {
+        localDevServer.stop()
+        Toast.makeText(getApplication(), "Local dev server stopped", Toast.LENGTH_SHORT).show()
+    }
+
+    fun restartDevServer() {
+        val dir = (_uiState.value.serverStatus as? ServerStatus.Running)?.rootDir
+            ?: _uiState.value.currentDirectory
+        val port = (_uiState.value.serverStatus as? ServerStatus.Running)?.port ?: 8080
+        val result = localDevServer.restart(dir, port)
+        if (result is ServerStartResult.Success) {
+            Toast.makeText(getApplication(), "Dev Server restarted on port ${result.port}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun closePreview() {
+        _uiState.update { it.copy(previewHtml = null, previewUrl = null) }
+        localDevServer.stop()
+    }
+
+    // --- Git Lifecycle Operations ---
 
     fun gitClone(repoUrl: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
@@ -460,9 +545,7 @@ class EditorViewModel(
             _uiState.update {
                 it.copy(
                     terminalLines = it.terminalLines + outputLines,
-                    isTerminalRunning = false,
-                    // If HTML, also optionally allow web preview toggle
-                    previewHtml = if (file.language == SupportedLanguage.HTML) file.content else it.previewHtml
+                    isTerminalRunning = false
                 )
             }
         }
@@ -508,7 +591,12 @@ class EditorViewModel(
         }
     }
 
-    fun closePreview() {
-        _uiState.update { it.copy(previewHtml = null) }
+    fun setNavTab(tabIndex: Int) {
+        _uiState.update { it.copy(activeNavTab = tabIndex) }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        localDevServer.stop()
     }
 }

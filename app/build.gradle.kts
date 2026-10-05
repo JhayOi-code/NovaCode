@@ -78,6 +78,7 @@ dependencies {
   implementation(project(":permissions"))
   implementation(project(":editor"))
   implementation(project(":git"))
+  implementation(libs.nanohttpd)
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)

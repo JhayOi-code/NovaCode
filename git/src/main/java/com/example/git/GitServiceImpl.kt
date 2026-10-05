@@ -301,6 +301,14 @@ class GitServiceImpl(
 
             // 4. Update tracked files table & clear staged
             val allStaged = readStagedFiles(gitDir)
+            for (f in allStaged) {
+                val file = File(directory, f)
+                if (file.exists()) {
+                    val metaFile = File(gitDir, "meta/${f.replace('/', '_')}")
+                    metaFile.parentFile?.mkdirs()
+                    metaFile.writeText(file.length().toString())
+                }
+            }
             updateTrackedFiles(gitDir, allStaged)
             clearStagedFiles(gitDir)
 
@@ -522,9 +530,8 @@ class GitServiceImpl(
     private fun isModified(baseDir: File, gitDir: File, relPath: String): Boolean {
         val file = File(baseDir, relPath)
         if (!file.exists()) return true
-        // Check stored checksum or length
         val metaFile = File(gitDir, "meta/${relPath.replace('/', '_')}")
-        if (!metaFile.exists()) return true
+        if (!metaFile.exists()) return false
         return metaFile.readText().trim() != file.length().toString()
     }
 

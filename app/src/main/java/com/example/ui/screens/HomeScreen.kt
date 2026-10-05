@@ -20,10 +20,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import com.example.R
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
 import com.example.model.PermissionStatus
+import com.example.server.ServerStatus
 
 @Composable
 fun HomeScreen(
@@ -63,6 +67,9 @@ fun HomeScreen(
     onOpenPythonDemo: () -> Unit,
     onOpenStorageWizard: () -> Unit,
     onNavigateToEditor: () -> Unit,
+    serverStatus: ServerStatus = ServerStatus.Stopped,
+    onStartDevServer: () -> Unit = {},
+    onStopDevServer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val companyName = stringResource(R.string.company_name)
@@ -236,7 +243,121 @@ fun HomeScreen(
             }
         }
 
-        // Quick Actions
+        // Local Development HTTP Server Card
+        item {
+            val isServerRunning = serverStatus.isRunning
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_dev_server"),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Dns,
+                                contentDescription = null,
+                                tint = if (isServerRunning) Color(0xFF22C55E) else theme.primaryColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = "Local Dev Server",
+                                        fontWeight = FontWeight.Bold,
+                                        color = theme.onSurfaceColor,
+                                        fontSize = 13.sp
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isServerRunning) Color(0xFF14532D) else Color(0xFF1E293B)
+                                    ) {
+                                        Text(
+                                            text = if (isServerRunning) "RUNNING :${serverStatus.portOrNull}" else "STOPPED",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isServerRunning) Color(0xFF86EFAC) else Color(0xFF94A3B8),
+                                            fontFamily = FontFamily.Monospace,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = if (isServerRunning) serverStatus.urlOrNull ?: "http://127.0.0.1:8080/"
+                                    else "NanoHTTPD embedded server for workspace web preview",
+                                    color = if (isServerRunning) Color(0xFF38BDF8) else theme.lineNumberColor,
+                                    fontSize = 11.sp,
+                                    fontFamily = if (isServerRunning) FontFamily.Monospace else FontFamily.Default
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (isServerRunning) {
+                            OutlinedButton(
+                                onClick = onStopDevServer,
+                                modifier = Modifier.weight(1f).height(32.dp).testTag("btn_stop_dev_server"),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Stop Server", fontSize = 11.sp)
+                            }
+                        } else {
+                            Button(
+                                onClick = onStartDevServer,
+                                modifier = Modifier.weight(1f).height(32.dp).testTag("btn_start_dev_server"),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = theme.primaryColor,
+                                    contentColor = theme.onPrimaryColor
+                                ),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Start Server", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Button(
+                            onClick = onOpenWebDemo,
+                            modifier = Modifier.weight(1f).height(32.dp).testTag("btn_launch_web_preview"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = theme.cardBackgroundColor,
+                                contentColor = theme.onSurfaceColor
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Web Preview", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
         item {
             Text(
                 text = "Quick Launch",

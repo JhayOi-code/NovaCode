@@ -182,7 +182,10 @@ class MainActivity : ComponentActivity() {
                                     viewModel.setNavTab(1)
                                 },
                                 onOpenStorageWizard = { viewModel.togglePermissionWizard(true) },
-                                onNavigateToEditor = { viewModel.setNavTab(1) }
+                                onNavigateToEditor = { viewModel.setNavTab(1) },
+                                serverStatus = uiState.serverStatus,
+                                onStartDevServer = { viewModel.startDevServer() },
+                                onStopDevServer = { viewModel.stopDevServer() }
                             )
 
                             1 -> EditorScreen(
@@ -208,6 +211,7 @@ class MainActivity : ComponentActivity() {
                                 onExportZip = { viewModel.exportZip(it) },
                                 onRefreshFiles = { viewModel.loadDirectory(uiState.currentDirectory) },
                                 onRunDemo = { viewModel.runActiveFile(it) },
+                                onOpenWebPreview = { viewModel.openWebPreviewForActiveFile(it) },
                                 isTerminalOpen = uiState.isTerminalOpen,
                                 terminalLines = uiState.terminalLines,
                                 isTerminalRunning = uiState.isTerminalRunning,
@@ -270,11 +274,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Web Live Preview Dialog
-                        uiState.previewHtml?.let { html ->
+                        // Web Live Preview Dialog with Local Dev Server
+                        if (uiState.previewUrl != null || uiState.previewHtml != null) {
                             WebPreviewDialog(
                                 theme = theme,
-                                htmlContent = html,
+                                serverUrl = uiState.previewUrl,
+                                htmlContent = uiState.previewHtml,
+                                serverLogs = uiState.serverLogs,
+                                serverStatus = uiState.serverStatus,
+                                onRestartServer = { viewModel.restartDevServer() },
                                 onClose = { viewModel.closePreview() }
                             )
                         }

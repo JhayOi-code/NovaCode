@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Terminal
@@ -66,6 +67,7 @@ fun EditorScreen(
     onExportZip: (File) -> Unit,
     onRefreshFiles: () -> Unit,
     onRunDemo: (CodeFile) -> Unit,
+    onOpenWebPreview: (CodeFile) -> Unit = {},
     isTerminalOpen: Boolean = false,
     terminalLines: List<TerminalLine> = emptyList(),
     isTerminalRunning: Boolean = false,
@@ -148,6 +150,24 @@ fun EditorScreen(
                         )
 
                         if (active != null) {
+                            val isWebFile = active.name.endsWith(".html", ignoreCase = true) ||
+                                    active.name.endsWith(".htm", ignoreCase = true) ||
+                                    active.name.endsWith(".js", ignoreCase = true) ||
+                                    active.name.endsWith(".css", ignoreCase = true)
+
+                            if (isWebFile) {
+                                IconButton(
+                                    onClick = { onOpenWebPreview(active) },
+                                    modifier = Modifier.testTag("btn_web_preview_active_file")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Language,
+                                        contentDescription = "Web Preview with Dev Server",
+                                        tint = theme.primaryColor
+                                    )
+                                }
+                            }
+
                             // Run code in terminal
                             IconButton(
                                 onClick = { onRunDemo(active) },
