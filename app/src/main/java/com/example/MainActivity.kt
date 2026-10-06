@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 viewModel.refreshPermissions()
             }
 
-            // Sync MaterialTheme with NovaCode Theme Engine
+            // Sync MaterialTheme with Linq Studio Theme Engine
             val m3Colors = if (theme.isDark) {
                 darkColorScheme(
                     primary = theme.primaryColor,

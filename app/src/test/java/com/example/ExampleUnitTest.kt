@@ -24,7 +24,7 @@ class ExampleUnitTest {
         val result = SyntaxHighlighter.highlight(
             code = code,
             language = SupportedLanguage.KOTLIN,
-            theme = EditorTheme.NovaDark
+            theme = EditorTheme.LinqDark
         )
         assertNotNull(result)
         assertEquals(code, result.text)

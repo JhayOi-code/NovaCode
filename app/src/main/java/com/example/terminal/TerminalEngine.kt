@@ -102,7 +102,7 @@ class TerminalEngine(
 
         when (action) {
             "help" -> {
-                lines.add(TerminalLine("NovaCode Shell v1.0.0 built-in commands:", TerminalLineType.INFO))
+                lines.add(TerminalLine("Linq Studio Shell v1.0.0 built-in commands:", TerminalLineType.INFO))
                 lines.add(TerminalLine("  help               Show this help manual", TerminalLineType.STDOUT))
                 lines.add(TerminalLine("  clear              Clear the terminal buffer", TerminalLineType.STDOUT))
                 lines.add(TerminalLine("  git <command>      Git VCS (status, commit, push, clone, add, log)", TerminalLineType.STDOUT))
@@ -129,7 +129,7 @@ class TerminalEngine(
                 lines.add(TerminalLine(format.format(Date()), TerminalLineType.STDOUT))
             }
             "uname" -> {
-                lines.add(TerminalLine("Linux novacode 5.15.0-aarch64 #1 SMP PREEMPT Android GNU/Linux", TerminalLineType.STDOUT))
+                lines.add(TerminalLine("Linux linq-studio 5.15.0-aarch64 #1 SMP PREEMPT Android GNU/Linux", TerminalLineType.STDOUT))
             }
             "echo" -> {
                 lines.add(TerminalLine(args.joinToString(" "), TerminalLineType.STDOUT))
@@ -163,7 +163,7 @@ class TerminalEngine(
             }
             "python", "python3" -> {
                 if (args.isEmpty()) {
-                    lines.add(TerminalLine("Python 3.11.4 (main, NovaCode Environment)", TerminalLineType.INFO))
+                    lines.add(TerminalLine("Python 3.11.4 (main, Linq Studio Environment)", TerminalLineType.INFO))
                     lines.add(TerminalLine("Type 'help', 'copyright', 'credits' or 'license' for more info.", TerminalLineType.STDOUT))
                 } else {
                     val f = File(currentDir, args[0])
@@ -177,7 +177,7 @@ class TerminalEngine(
             }
             "node" -> {
                 if (args.isEmpty()) {
-                    lines.add(TerminalLine("Welcome to Node.js v18.17.0 (NovaCode runtime).", TerminalLineType.INFO))
+                    lines.add(TerminalLine("Welcome to Node.js v18.17.0 (Linq Studio runtime).", TerminalLineType.INFO))
                 } else {
                     val f = File(currentDir, args[0])
                     if (f.exists() && f.isFile) {

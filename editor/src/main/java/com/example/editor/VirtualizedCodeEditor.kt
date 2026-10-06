@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FindInPage
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.WrapText
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +70,7 @@ fun VirtualizedCodeEditor(
 
     var isFindOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var isMinimapVisible by remember { mutableStateOf(true) }
 
     val verticalScroll = rememberScrollState()
     val horizontalScroll = rememberScrollState()
@@ -145,71 +147,91 @@ fun VirtualizedCodeEditor(
             }
         }
 
-        // Core Text Viewport (Gutter + Text Field)
-        Box(
+        // Core Text Viewport (Gutter + Text Field + Minimap)
+        Row(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            Row(
+            // Main Text Editing Area
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(verticalScroll)
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
-                // Line Numbers Gutter
-                Column(
+                Row(
                     modifier = Modifier
-                        .background(colorScheme.gutterBackground)
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.End
+                        .fillMaxSize()
+                        .verticalScroll(verticalScroll)
                 ) {
-                    for (i in 1..lineCount) {
-                        Text(
-                            text = "$i",
-                            color = colorScheme.lineNumber,
-                            fontSize = fontSizeSp.sp,
-                            fontFamily = FontFamily.Monospace,
-                            lineHeight = (fontSizeSp + 6).sp
+                    // Line Numbers Gutter
+                    Column(
+                        modifier = Modifier
+                            .background(colorScheme.gutterBackground)
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        for (i in 1..lineCount) {
+                            Text(
+                                text = "$i",
+                                color = colorScheme.lineNumber,
+                                fontSize = fontSizeSp.sp,
+                                fontFamily = FontFamily.Monospace,
+                                lineHeight = (fontSizeSp + 6).sp
+                            )
+                        }
+                    }
+
+                    // Gutter Border Divider
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(colorScheme.gutterBorder)
+                    )
+
+                    // Code Editing Area
+                    val horizModifier = if (isWordWrap) Modifier else Modifier.horizontalScroll(horizontalScroll)
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(horizModifier)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        BasicTextField(
+                            value = textFieldValue,
+                            onValueChange = { newValue ->
+                                textFieldValue = newValue
+                                onTextChange(newValue.text)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("virtualized_editor_input"),
+                            textStyle = TextStyle(
+                                color = colorScheme.textColor,
+                                fontSize = fontSizeSp.sp,
+                                fontFamily = FontFamily.Monospace,
+                                lineHeight = (fontSizeSp + 6).sp
+                            ),
+                            cursorBrush = SolidColor(colorScheme.cursorColor),
+                            visualTransformation = syntaxTransformation
                         )
                     }
                 }
+            }
 
-                // Gutter Border Divider
-                Box(
+            // Vertical Code Mini-Map on the right side
+            if (isMinimapVisible) {
+                CodeMinimap(
+                    lines = lines,
+                    verticalScrollState = verticalScroll,
+                    colorScheme = colorScheme,
+                    fontSizeSp = fontSizeSp,
                     modifier = Modifier
-                        .width(1.dp)
+                        .width(54.dp)
                         .fillMaxHeight()
-                        .background(colorScheme.gutterBorder)
                 )
-
-                // Code Editing Area
-                val horizModifier = if (isWordWrap) Modifier else Modifier.horizontalScroll(horizontalScroll)
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(horizModifier)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    BasicTextField(
-                        value = textFieldValue,
-                        onValueChange = { newValue ->
-                            textFieldValue = newValue
-                            onTextChange(newValue.text)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("virtualized_editor_input"),
-                        textStyle = TextStyle(
-                            color = colorScheme.textColor,
-                            fontSize = fontSizeSp.sp,
-                            fontFamily = FontFamily.Monospace,
-                            lineHeight = (fontSizeSp + 6).sp
-                        ),
-                        cursorBrush = SolidColor(colorScheme.cursorColor),
-                        visualTransformation = syntaxTransformation
-                    )
-                }
             }
         }
 
@@ -255,6 +277,21 @@ fun VirtualizedCodeEditor(
                         Icons.Default.FindInPage,
                         contentDescription = "Find",
                         tint = if (isFindOpen) colorScheme.cursorColor else colorScheme.textColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Minimap toggle
+                IconButton(
+                    onClick = { isMinimapVisible = !isMinimapVisible },
+                    modifier = Modifier
+                        .size(34.dp)
+                        .testTag("btn_toggle_minimap")
+                ) {
+                    Icon(
+                        Icons.Default.Layers,
+                        contentDescription = "Toggle Minimap",
+                        tint = if (isMinimapVisible) colorScheme.cursorColor else colorScheme.lineNumber.copy(alpha = 0.5f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -314,7 +351,7 @@ fun VirtualizedCodeEditor(
                 )
 
                 Text(
-                    text = "${textFieldValue.text.length} chars  •  UTF-8",
+                    text = "${textFieldValue.text.length} chars  •  Minimap ${if (isMinimapVisible) "ON" else "OFF"}",
                     color = colorScheme.lineNumber,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace

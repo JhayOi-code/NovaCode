@@ -106,7 +106,7 @@ class GitServiceImpl(
                     |# $repoName
                     |
                     |Cloned from `$cleanUrl`
-                    |Managed with NovaCode Git Engine.
+                    |Managed with Linq Studio Git Engine.
                     |
                     |Created on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}
                     """.trimMargin() + "\n"
@@ -129,8 +129,8 @@ class GitServiceImpl(
                 directory = targetDirectory,
                 message = "Initial clone from $cleanUrl",
                 author = GitAuthor(
-                    name = credentials?.username?.ifEmpty { "NovaCode" } ?: "NovaCode",
-                    email = if (!credentials?.username.isNullOrEmpty()) "${credentials?.username}@users.noreply.github.com" else "git@novacode.local"
+                    name = credentials?.username?.ifEmpty { "Linq Studio" } ?: "Linq Studio",
+                    email = if (!credentials?.username.isNullOrEmpty()) "${credentials?.username}@users.noreply.github.com" else "git@linqstudio.local"
                 )
             )
 

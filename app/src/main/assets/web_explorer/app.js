@@ -1,5 +1,5 @@
 /**
- * NovaCode Mobile Code-Editor Side Drawer (File Explorer Panel)
+ * Linq Studio Mobile Code-Editor Side Drawer (File Explorer Panel)
  * Vanilla HTML5, CSS3 & ES6+ JavaScript
  * Features:
  * - Dynamic SVG language icons mapped from extensions & special filenames
@@ -739,7 +739,7 @@
               id: 'file-header',
               name: 'Header.tsx',
               type: 'file',
-              content: `import React from 'react';\n\nexport const Header: React.FC = () => {\n  return (\n    <header className="navbar">\n      <h1>⚡ NovaCode IDE</h1>\n    </header>\n  );\n};`
+              content: `import React from 'react';\n\nexport const Header: React.FC = () => {\n  return (\n    <header className="navbar">\n      <h1>⚡ Linq Studio</h1>\n    </header>\n  );\n};`
             },
             {
               id: 'file-counter',
@@ -753,13 +753,13 @@
           id: 'file-main-py',
           name: 'main.py',
           type: 'file',
-          content: `# NovaCode Python Micro-Engine\nimport sys\n\ndef run():\n    print("Running Python 3.12...")\n    for i in range(5):\n        print(f"Step {i+1}")\n\nif __name__ == '__main__':\n    run()`
+          content: `# Linq Studio Python Micro-Engine\nimport sys\n\ndef run():\n    print("Running Python 3.12...")\n    for i in range(5):\n        print(f"Step {i+1}")\n\nif __name__ == '__main__':\n    run()`
         },
         {
           id: 'file-server-go',
           name: 'server.go',
           type: 'file',
-          content: `package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("NovaCode microserver started on :8080")\n}`
+          content: `package main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Linq Studio microserver started on :8080")\n}`
         }
       ]
     },
@@ -773,7 +773,7 @@
           id: 'file-logo',
           name: 'logo.svg',
           type: 'file',
-          content: `<svg viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="45" fill="#38BDF8"/>\n</svg>`
+          content: `<svg viewBox="0 0 100 100">\n  <circle cx="50" cy="50" r="45" fill="#6366F1"/>\n</svg>`
         }
       ]
     },
@@ -781,31 +781,31 @@
       id: 'file-index-html',
       name: 'index.html',
       type: 'file',
-      content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>NovaCode Demo</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div id="root">\n    <h1>Welcome to NovaCode</h1>\n    <p>Mobile-first development at lightning speed.</p>\n  </div>\n</body>\n</html>`
+      content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Linq Studio Demo</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div id="root">\n    <h1>Welcome to Linq Studio</h1>\n    <p>Mobile-first development at lightning speed.</p>\n  </div>\n</body>\n</html>`
     },
     {
       id: 'file-style-css',
       name: 'style.css',
       type: 'file',
-      content: `body {\n  margin: 0;\n  background: #050810;\n  color: #f3f4f6;\n  font-family: sans-serif;\n}`
+      content: `body {\n  margin: 0;\n  background: #0F1218;\n  color: #f3f4f6;\n  font-family: sans-serif;\n}`
     },
     {
       id: 'file-app-js',
       name: 'app.js',
       type: 'file',
-      content: `console.log("NovaCode workspace loaded successfully!");\n\nexport function init() {\n  return true;\n}`
+      content: `console.log("Linq Studio workspace loaded successfully!");\n\nexport function init() {\n  return true;\n}`
     },
     {
       id: 'file-package-json',
       name: 'package.json',
       type: 'file',
-      content: `{\n  "name": "my-project",\n  "version": "1.0.0",\n  "private": true,\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  }\n}`
+      content: `{\n  "name": "linq-studio-app",\n  "version": "1.0.0",\n  "private": true,\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  }\n}`
     },
     {
       id: 'file-readme',
       name: 'README.md',
       type: 'file',
-      content: `# My Project\n\nBuilt with NovaCode mobile code studio.`
+      content: `# My Project\n\nBuilt with Linq Studio mobile code studio.`
     },
     {
       id: 'file-gitignore',
@@ -1379,7 +1379,26 @@
   // 8. ACTIVE FILE SELECTION & MAIN EDITOR SYNC
   // =========================================================================
 
+  function findNodeById(tree, id) {
+    for (const item of tree) {
+      if (item.id === id) return item;
+      if (item.children) {
+        const found = findNodeById(item.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
   function setActiveFile(node) {
+    // If switching away from an unsaved file and auto-save is enabled, flush save
+    if (activeFileId && activeFileId !== node.id && isAutoSaveEnabled) {
+      const prevNode = findNodeById(fileTreeData, activeFileId);
+      if (prevNode && tabDot && tabDot.classList.contains('dirty')) {
+        saveCurrentFile(false);
+      }
+    }
+
     activeFileId = node.id;
 
     // Highlight row in tree
@@ -1392,6 +1411,10 @@
     const iconData = getFileIcon(node.name, false);
     editorTabIcon.innerHTML = iconData.svg;
 
+    if (tabDot) {
+      tabDot.classList.remove('dirty');
+    }
+
     // Update Status Bar
     statusFile.textContent = node.name;
     const dotIdx = node.name.lastIndexOf('.');
@@ -1399,16 +1422,11 @@
     statusLang.textContent = ext ? ext.toUpperCase() : 'TEXT';
 
     // Populate code content with syntax highlighting & line numbers
-    const sampleCode = node.content || `// ${node.name}\n// Created inside NovaCode IDE\n\nfunction main() {\n  return "Ready";\n}\n`;
+    const sampleCode = node.content || `// ${node.name}\n// Created inside Linq Studio\n\nfunction main() {\n  return "Ready";\n}\n`;
     codeContent.className = `language-${ext || 'txt'}`;
     codeContent.innerHTML = SyntaxHighlighter.highlight(sampleCode, ext);
 
-    const lines = sampleCode.split('\n').length;
-    let lineNumHtml = '';
-    for (let i = 1; i <= lines; i++) {
-      lineNumHtml += `${i}<br>`;
-    }
-    lineNumbers.innerHTML = lineNumHtml;
+    updateLineNumbers(sampleCode);
 
     // Mobile: automatically close drawer on file selection for immediate editing
     if (window.innerWidth < 640) {
@@ -1702,14 +1720,20 @@
       if (themeToggleIcon) themeToggleIcon.innerHTML = MOON_ICON;
       if (themeStatusDesc) themeStatusDesc.textContent = 'High-Contrast Light';
       if (themePillLabel) themePillLabel.textContent = 'Light';
-      try { localStorage.setItem('novacode-theme', 'light'); } catch (_) {}
+      try { 
+        localStorage.setItem('linq_theme', 'light'); 
+        localStorage.setItem('novacode-theme', 'light');
+      } catch (_) {}
       if (notify) showToast('Switched to High-Contrast Light Mode');
     } else {
       appContainer.classList.remove('light-theme');
       if (themeToggleIcon) themeToggleIcon.innerHTML = SUN_ICON;
       if (themeStatusDesc) themeStatusDesc.textContent = 'Dark Studio';
       if (themePillLabel) themePillLabel.textContent = 'Dark';
-      try { localStorage.setItem('novacode-theme', 'dark'); } catch (_) {}
+      try { 
+        localStorage.setItem('linq_theme', 'dark'); 
+        localStorage.setItem('novacode-theme', 'dark');
+      } catch (_) {}
       if (notify) showToast('Switched to Dark Studio Mode');
     }
 
@@ -1731,15 +1755,649 @@
 
   // Restore saved theme preference if present
   try {
-    const savedTheme = localStorage.getItem('novacode-theme');
+    const savedTheme = localStorage.getItem('linq_theme') || localStorage.getItem('novacode-theme');
     if (savedTheme === 'light') {
       applyTheme(true, false);
     }
   } catch (_) {}
 
   // =========================================================================
-  // INITIALIZATION
+  // AUTO-SAVE ENGINE & EDITOR REAL-TIME SYNC
   // =========================================================================
+
+  let isAutoSaveEnabled = true;
+  let autoSaveTimer = null;
+  const btnAutoSaveToggle = document.getElementById('btnAutoSaveToggle');
+  const autoSavePillLabel = document.getElementById('autoSavePillLabel');
+  const autoSaveSlider = document.getElementById('autoSaveSlider');
+  const autoSaveDesc = document.getElementById('autoSaveDesc');
+  const tabDot = document.querySelector('.tab-dot');
+
+  // Load saved Auto-Save preference from localStorage (default: true)
+  try {
+    const savedAutoSave = localStorage.getItem('linq_autosave') || localStorage.getItem('novacode_autosave');
+    if (savedAutoSave !== null) {
+      isAutoSaveEnabled = savedAutoSave === 'true';
+    }
+  } catch (_) {}
+
+  function updateAutoSaveUI() {
+    if (isAutoSaveEnabled) {
+      if (autoSavePillLabel) autoSavePillLabel.textContent = 'On';
+      if (autoSaveSlider) {
+        autoSaveSlider.classList.add('active');
+        autoSaveSlider.style.background = 'var(--accent-green)';
+      }
+      if (autoSaveDesc) autoSaveDesc.textContent = 'Saves to local storage automatically';
+    } else {
+      if (autoSavePillLabel) autoSavePillLabel.textContent = 'Off';
+      if (autoSaveSlider) {
+        autoSaveSlider.classList.remove('active');
+        autoSaveSlider.style.background = 'var(--text-muted)';
+      }
+      if (autoSaveDesc) autoSaveDesc.textContent = 'Auto-save disabled';
+    }
+  }
+
+  updateAutoSaveUI();
+
+  if (btnAutoSaveToggle) {
+    btnAutoSaveToggle.addEventListener('click', () => {
+      isAutoSaveEnabled = !isAutoSaveEnabled;
+      try {
+        localStorage.setItem('linq_autosave', isAutoSaveEnabled.toString());
+      } catch (_) {}
+      updateAutoSaveUI();
+      showToast(isAutoSaveEnabled ? 'Auto-Save enabled' : 'Auto-Save disabled');
+    });
+  }
+
+  function updateLineNumbers(code) {
+    const lines = (code || '').split('\n').length;
+    let lineNumHtml = '';
+    for (let i = 1; i <= lines; i++) {
+      lineNumHtml += `${i}<br>`;
+    }
+    lineNumbers.innerHTML = lineNumHtml;
+  }
+
+  function saveCurrentFile(showNotification = true) {
+    const activeNode = findNodeById(fileTreeData, activeFileId);
+    if (!activeNode) return;
+
+    const currentText = codeContent.innerText || codeContent.textContent || '';
+    activeNode.content = currentText;
+
+    try {
+      localStorage.setItem(`linq_file_${activeNode.id}`, currentText);
+      localStorage.setItem('linq_last_saved', Date.now().toString());
+      if (showNotification) {
+        showToast(`Auto-saved ${activeNode.name}`);
+      }
+      if (tabDot) {
+        tabDot.classList.remove('dirty');
+      }
+    } catch (e) {
+      console.warn('Storage quota or error:', e);
+    }
+  }
+
+  // Restore saved file contents from localStorage
+  function restoreSavedFiles(tree) {
+    for (const node of tree) {
+      if (node.type === 'file') {
+        try {
+          const saved = localStorage.getItem(`linq_file_${node.id}`) || localStorage.getItem(`novacode_file_${node.id}`);
+          if (saved !== null) {
+            node.content = saved;
+          }
+        } catch (_) {}
+      }
+      if (node.children) {
+        restoreSavedFiles(node.children);
+      }
+    }
+  }
+
+  // Real-time Editor Input Listener
+  codeContent.addEventListener('input', () => {
+    const currentCode = codeContent.innerText || codeContent.textContent || '';
+    updateLineNumbers(currentCode);
+
+    const activeNode = findNodeById(fileTreeData, activeFileId);
+    if (activeNode) {
+      activeNode.content = currentCode;
+    }
+
+    if (tabDot) {
+      tabDot.classList.add('dirty');
+    }
+
+    if (isAutoSaveEnabled) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        saveCurrentFile(true);
+      }, 700);
+    }
+  });
+
+  // =========================================================================
+  // 11. DUAL TERMINAL SYSTEM (Project CLI & Termux Linux Shell)
+  // =========================================================================
+
+  // Session Switcher Elements
+  const btnTermTabCli = document.getElementById('btnTermTabCli');
+  const btnTermTabTermux = document.getElementById('btnTermTabTermux');
+  const termSessionCli = document.getElementById('termSessionCli');
+  const termSessionTermux = document.getElementById('termSessionTermux');
+  const btnClearActiveTerm = document.getElementById('btnClearActiveTerm');
+  const btnResetActiveTerm = document.getElementById('btnResetActiveTerm');
+
+  let activeTerminalMode = 'cli'; // 'cli' | 'termux'
+
+  function switchTerminalSession(mode) {
+    activeTerminalMode = mode;
+    if (mode === 'cli') {
+      btnTermTabCli.classList.add('active');
+      btnTermTabTermux.classList.remove('active');
+      termSessionCli.classList.add('active');
+      termSessionTermux.classList.remove('active');
+      cliCommandInput.focus();
+    } else {
+      btnTermTabCli.classList.remove('active');
+      btnTermTabTermux.classList.add('active');
+      termSessionCli.classList.remove('active');
+      termSessionTermux.classList.add('active');
+      termuxCommandInput.focus();
+    }
+  }
+
+  if (btnTermTabCli && btnTermTabTermux) {
+    btnTermTabCli.addEventListener('click', () => switchTerminalSession('cli'));
+    btnTermTabTermux.addEventListener('click', () => switchTerminalSession('termux'));
+  }
+
+  // Clear / Reset Active Terminal
+  if (btnClearActiveTerm) {
+    btnClearActiveTerm.addEventListener('click', () => {
+      if (activeTerminalMode === 'cli') {
+        cliOutput.innerHTML = '';
+        showToast('Project CLI screen cleared');
+      } else {
+        termuxOutput.innerHTML = '';
+        showToast('Termux screen cleared');
+      }
+    });
+  }
+
+  if (btnResetActiveTerm) {
+    btnResetActiveTerm.addEventListener('click', () => {
+      if (activeTerminalMode === 'cli') {
+        initCliSession();
+        showToast('Project CLI restarted');
+      } else {
+        initTermuxSession();
+        showToast('Termux Shell restarted');
+      }
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // TERMINAL 1: PROJECT SCRIPTS CLI
+  // -------------------------------------------------------------------------
+
+  const cliOutput = document.getElementById('cliOutput');
+  const cliInputForm = document.getElementById('cliInputForm');
+  const cliCommandInput = document.getElementById('cliCommandInput');
+  const cliChips = document.querySelectorAll('.cli-chip');
+
+  const cliHistory = [];
+  let cliHistoryIndex = -1;
+
+  function appendCliLine(html, className = 'term-line') {
+    const line = document.createElement('div');
+    line.className = className;
+    line.innerHTML = html;
+    cliOutput.appendChild(line);
+    cliOutput.scrollTop = cliOutput.scrollHeight;
+  }
+
+  function initCliSession() {
+    cliOutput.innerHTML = '';
+    appendCliLine('<span class="term-cyan term-bold">Linq Studio Project CLI v2.4.0</span> (Node.js v20.14.0)', 'term-line');
+    appendCliLine('<span class="term-dim">Workspace root: ~/project (Type "help" or tap chips above)</span>', 'term-line');
+    appendCliLine('');
+  }
+
+  function executeCliCommand(rawCmd) {
+    const cmd = rawCmd.trim();
+    if (!cmd) return;
+
+    // Echo command
+    appendCliLine(`<span class="cli-prompt-label">project$</span> <span class="term-bold">${escapeHtml(cmd)}</span>`);
+    cliHistory.push(cmd);
+    cliHistoryIndex = cliHistory.length;
+
+    const parts = cmd.split(/\s+/);
+    const main = parts[0].toLowerCase();
+    const arg = parts.slice(1).join(' ').toLowerCase();
+
+    if (cmd === 'help') {
+      appendCliLine('<span class="term-yellow term-bold">Available Project Scripts:</span>');
+      appendCliLine('  <span class="term-green">npm run dev</span>     - Launch local Vite dev server with HMR');
+      appendCliLine('  <span class="term-green">npm test</span>        - Run project test suites (Vitest)');
+      appendCliLine('  <span class="term-green">npm run build</span>   - Compile production bundles');
+      appendCliLine('  <span class="term-green">npm i [package]</span> - Install project dependencies');
+      appendCliLine('  <span class="term-green">node [file]</span>     - Execute JavaScript file');
+      appendCliLine('  <span class="term-green">git status</span>      - Check repository status');
+      appendCliLine('  <span class="term-green">ls</span> / <span class="term-green">cat [file]</span>   - Browse project workspace files');
+      appendCliLine('  <span class="term-green">clear</span>           - Clear CLI output buffer');
+    } else if (cmd === 'npm run dev' || cmd === 'npm start') {
+      appendCliLine('<span class="term-dim">> linq-studio-mobile@1.0.0 dev</span>');
+      appendCliLine('<span class="term-dim">> vite --host 0.0.0.0 --port 5173</span>');
+      appendCliLine('');
+      appendCliLine('<span class="term-green term-bold">  VITE v5.3.1</span>  <span class="term-dim">ready in 184 ms</span>');
+      appendCliLine('');
+      appendCliLine('  <span class="term-green">➜</span>  <span class="term-bold">Local:</span>   <span class="term-cyan">http://localhost:5173/</span>');
+      appendCliLine('  <span class="term-green">➜</span>  <span class="term-bold">Network:</span> <span class="term-cyan">http://192.168.1.104:5173/</span>');
+      appendCliLine('  <span class="term-dim">➜  press h + enter to show help</span>');
+      showToast('🚀 Dev server live at http://localhost:5173');
+    } else if (cmd === 'npm test' || cmd === 'npm t') {
+      appendCliLine('<span class="term-dim">> linq-studio-mobile@1.0.0 test</span>');
+      appendCliLine('<span class="term-dim">> vitest run</span>');
+      appendCliLine('');
+      appendCliLine('<span class="term-green"> ✓</span> tests/explorer.test.ts <span class="term-dim">(4 tests) 18ms</span>');
+      appendCliLine('<span class="term-green"> ✓</span> tests/syntax-highlighter.test.ts <span class="term-dim">(6 tests) 22ms</span>');
+      appendCliLine('<span class="term-green"> ✓</span> tests/auto-save.test.ts <span class="term-dim">(3 tests) 14ms</span>');
+      appendCliLine('');
+      appendCliLine('<span class="term-bold"> Test Files</span>  <span class="term-green term-bold">3 passed</span> (3)');
+      appendCliLine('<span class="term-bold">      Tests</span>  <span class="term-green term-bold">13 passed</span> (13)');
+      appendCliLine('<span class="term-bold">   Duration</span>  <span class="term-dim">214ms</span>');
+    } else if (cmd === 'npm run build' || cmd === 'npm build') {
+      appendCliLine('<span class="term-dim">> vite build</span>');
+      appendCliLine('<span class="term-cyan">vite v5.3.1 building for production...</span>');
+      appendCliLine('<span class="term-dim">transforming (28) ...</span>');
+      appendCliLine('<span class="term-green">✓ 28 modules transformed.</span>');
+      appendCliLine('dist/index.html                   <span class="term-dim">1.48 kB │ gzip: 0.65 kB</span>');
+      appendCliLine('dist/assets/style-Dv8.css         <span class="term-dim">6.24 kB │ gzip: 1.82 kB</span>');
+      appendCliLine('dist/assets/app-Bg9.js           <span class="term-dim">44.12 kB │ gzip: 13.91 kB</span>');
+      appendCliLine('<span class="term-green term-bold">✓ built in 294ms</span>');
+      showToast('📦 Production build generated in dist/');
+    } else if (main === 'npm' && (parts[1] === 'i' || parts[1] === 'install')) {
+      const pkg = parts[2] || 'dependencies';
+      appendCliLine(`<span class="term-dim">Fetching ${pkg}...</span>`);
+      appendCliLine(`<span class="term-green">+ ${pkg}</span>`);
+      appendCliLine('<span class="term-dim">added 18 packages, and audited 164 packages in 1.2s</span>');
+      appendCliLine('<span class="term-green">found 0 vulnerabilities</span>');
+    } else if (main === 'node') {
+      const target = parts[1] || 'app.js';
+      appendCliLine(`<span class="term-cyan">[Node.js]</span> Executing ${target}...`);
+      appendCliLine('<span class="term-green">Process finished with exit code 0</span>');
+    } else if (cmd === 'git status') {
+      appendCliLine('On branch <span class="term-green">main</span>');
+      appendCliLine('Your branch is up to date with \'origin/main\'.');
+      appendCliLine('');
+      appendCliLine('nothing to commit, working tree clean');
+    } else if (cmd === 'ls') {
+      const fileNames = fileTreeData.map((f) => f.type === 'folder' ? `<span class="term-cyan term-bold">${f.name}/</span>` : f.name);
+      appendCliLine(fileNames.join('   '));
+    } else if (main === 'cat' && parts[1]) {
+      const target = findNodeByName(fileTreeData, parts[1]);
+      if (target && target.type === 'file') {
+        appendCliLine(escapeHtml(target.content || '// Empty file'));
+      } else {
+        appendCliLine(`<span class="term-red">cat: ${parts[1]}: No such file</span>`);
+      }
+    } else if (cmd === 'clear') {
+      cliOutput.innerHTML = '';
+    } else {
+      appendCliLine(`<span class="term-red">linq-studio: command not found: ${escapeHtml(cmd)}</span>`);
+      appendCliLine('<span class="term-dim">Type "help" to see available commands or tap the quick scripts above.</span>');
+    }
+
+    cliOutput.scrollTop = cliOutput.scrollHeight;
+  }
+
+  // Quick Chips Click
+  cliChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const cmd = chip.dataset.cmd;
+      cliCommandInput.value = '';
+      executeCliCommand(cmd);
+    });
+  });
+
+  // CLI Input Submit
+  if (cliInputForm) {
+    cliInputForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = cliCommandInput.value;
+      cliCommandInput.value = '';
+      executeCliCommand(val);
+    });
+  }
+
+  // Key navigation for CLI history
+  if (cliCommandInput) {
+    cliCommandInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (cliHistory.length > 0 && cliHistoryIndex > 0) {
+          cliHistoryIndex--;
+          cliCommandInput.value = cliHistory[cliHistoryIndex];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (cliHistoryIndex < cliHistory.length - 1) {
+          cliHistoryIndex++;
+          cliCommandInput.value = cliHistory[cliHistoryIndex];
+        } else {
+          cliHistoryIndex = cliHistory.length;
+          cliCommandInput.value = '';
+        }
+      }
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // TERMINAL 2: TERMUX / ANDROID LINUX SHELL (BASH)
+  // -------------------------------------------------------------------------
+
+  const termuxOutput = document.getElementById('termuxOutput');
+  const termuxInputForm = document.getElementById('termuxInputForm');
+  const termuxCommandInput = document.getElementById('termuxCommandInput');
+  const termuxPromptLabel = document.getElementById('termuxPromptLabel');
+  const termuxKeys = document.querySelectorAll('.termux-key');
+
+  let termuxCwd = '~';
+  const termuxHistory = [];
+  let termuxHistoryIndex = -1;
+
+  function appendTermuxLine(html, className = 'term-line') {
+    const line = document.createElement('div');
+    line.className = className;
+    line.innerHTML = html;
+    termuxOutput.appendChild(line);
+    termuxOutput.scrollTop = termuxOutput.scrollHeight;
+  }
+
+  function getTermuxPrompt() {
+    return `u0_a249@localhost:${termuxCwd}$`;
+  }
+
+  function updateTermuxPrompt() {
+    termuxPromptLabel.textContent = `${getTermuxPrompt()} `;
+  }
+
+  function initTermuxSession() {
+    termuxOutput.innerHTML = '';
+    termuxCwd = '~';
+    updateTermuxPrompt();
+
+    appendTermuxLine('<span class="term-green term-bold">Welcome to Termux!</span>');
+    appendTermuxLine('<span class="term-dim">Community forum:  https://termux.dev/community</span>');
+    appendTermuxLine('<span class="term-dim">Packages search:  pkg search &lt;query&gt;</span>');
+    appendTermuxLine('<span class="term-dim">Package install:  pkg install &lt;package&gt;</span>');
+    appendTermuxLine('<span class="term-dim">Type </span><span class="term-yellow">neofetch</span><span class="term-dim"> for device specs or </span><span class="term-yellow">help</span><span class="term-dim"> for shell commands.</span>');
+    appendTermuxLine('');
+  }
+
+  function executeTermuxCommand(rawCmd) {
+    const cmd = rawCmd.trim();
+    if (!cmd) return;
+
+    // Echo command
+    appendTermuxLine(`<span class="termux-prompt-label">${escapeHtml(getTermuxPrompt())}</span> <span class="term-bold">${escapeHtml(cmd)}</span>`);
+    termuxHistory.push(cmd);
+    termuxHistoryIndex = termuxHistory.length;
+
+    const parts = cmd.split(/\s+/);
+    const main = parts[0].toLowerCase();
+    const arg = parts.slice(1).join(' ');
+
+    if (cmd === 'help') {
+      appendTermuxLine('<span class="term-green term-bold">Termux Android Shell Commands:</span>');
+      appendTermuxLine('  <span class="term-yellow">neofetch</span>        - Display system hardware & OS banner');
+      appendTermuxLine('  <span class="term-yellow">pkg [install|help]</span> - Termux package manager');
+      appendTermuxLine('  <span class="term-yellow">uname -a</span>        - Display Linux kernel version');
+      appendTermuxLine('  <span class="term-yellow">whoami</span> / <span class="term-yellow">id</span>      - Display current user & UID');
+      appendTermuxLine('  <span class="term-yellow">pwd</span> / <span class="term-yellow">cd [dir]</span>    - Print/change working directory');
+      appendTermuxLine('  <span class="term-yellow">ls</span> / <span class="term-yellow">ls -la</span>      - List files & permissions');
+      appendTermuxLine('  <span class="term-yellow">cat [file]</span>      - Display file contents');
+      appendTermuxLine('  <span class="term-yellow">mkdir</span> / <span class="term-yellow">touch</span>    - Create directory or file');
+      appendTermuxLine('  <span class="term-yellow">rm [file]</span>       - Remove file');
+      appendTermuxLine('  <span class="term-yellow">ps</span> / <span class="term-yellow">top</span>         - Process list');
+      appendTermuxLine('  <span class="term-yellow">free -m</span> / <span class="term-yellow">df -h</span>   - Memory & disk usage');
+      appendTermuxLine('  <span class="term-yellow">echo [text]</span>     - Echo text to stdout');
+      appendTermuxLine('  <span class="term-yellow">python -V</span> / <span class="term-yellow">node -v</span> - Runtime version checks');
+      appendTermuxLine('  <span class="term-yellow">clear</span>           - Clear screen');
+    } else if (cmd === 'neofetch' || cmd === 'screenfetch') {
+      const neofetchArt = [
+        '<span class="term-green">      .-.      </span> <span class="term-green term-bold">u0_a249@localhost</span>',
+        '<span class="term-green">     (o.o)     </span> <span class="term-dim">-----------------</span>',
+        '<span class="term-green">      |=|      </span> <span class="term-yellow">OS:</span> Android 14 aarch64 (Termux VM)',
+        '<span class="term-green">     __|__     </span> <span class="term-yellow">Host:</span> Google Pixel 8 Pro [Mobile IDE]',
+        '<span class="term-green">   //.=|=.\\\\   </span> <span class="term-yellow">Kernel:</span> 6.1.75-android14-arm64',
+        '<span class="term-green">  // .=|=. \\\\  </span> <span class="term-yellow">Uptime:</span> 3 days, 14 hours, 28 mins',
+        '<span class="term-green">  \\\\ .=|=. //  </span> <span class="term-yellow">Packages:</span> 342 (dpkg), 12 (pkg)',
+        '<span class="term-green">   \\\\(_=_)//   </span> <span class="term-yellow">Shell:</span> bash 5.2.26-termux',
+        '<span class="term-green">    (:| |:)    </span> <span class="term-yellow">Terminal:</span> linq-pty0',
+        '<span class="term-green">     || ||     </span> <span class="term-yellow">CPU:</span> Google Tensor G3 (9) @ 2.91GHz',
+        '<span class="term-green">     () ()     </span> <span class="term-yellow">Memory:</span> 4.12GiB / 11.58GiB (35%)',
+        '',
+        '<span class="term-red">███</span><span class="term-green">███</span><span class="term-yellow">███</span><span class="term-blue">███</span><span class="term-purple">███</span><span class="term-cyan">███</span>'
+      ];
+      neofetchArt.forEach((l) => appendTermuxLine(l));
+    } else if (main === 'pkg') {
+      if (parts[1] === 'install' || parts[1] === 'in') {
+        const pkgName = parts[2] || 'curl';
+        appendTermuxLine(`<span class="term-dim">Updating package repository...</span>`);
+        appendTermuxLine(`Reading package lists... Done`);
+        appendTermuxLine(`Building dependency tree... Done`);
+        appendTermuxLine(`The following NEW packages will be installed:`);
+        appendTermuxLine(`  <span class="term-green">${pkgName}</span>`);
+        appendTermuxLine(`Get:1 https://packages.termux.dev/termux-main stable [148 kB]`);
+        appendTermuxLine(`Setting up ${pkgName} (1.4.2)... Done!`);
+        showToast(`📦 Installed ${pkgName} in Termux`);
+      } else {
+        appendTermuxLine('Usage: <span class="term-yellow">pkg install &lt;package&gt;</span> | <span class="term-yellow">pkg upgrade</span> | <span class="term-yellow">pkg search &lt;query&gt;</span>');
+      }
+    } else if (cmd === 'uname -a') {
+      appendTermuxLine('Linux localhost 6.1.75-android-aarch64 #1 SMP PREEMPT aarch64 Android');
+    } else if (cmd === 'whoami') {
+      appendTermuxLine('u0_a249');
+    } else if (cmd === 'id') {
+      appendTermuxLine('uid=10249(u0_a249) gid=10249(u0_a249) groups=10249(u0_a249),3003(inet),9997(everybody)');
+    } else if (cmd === 'pwd') {
+      appendTermuxLine(termuxCwd === '~' ? '/data/data/com.termux/files/home' : `/data/data/com.termux/files/home/${termuxCwd.replace(/^~\/?/, '')}`);
+    } else if (main === 'cd') {
+      const targetDir = parts[1] || '~';
+      if (targetDir === '~' || targetDir === '') {
+        termuxCwd = '~';
+      } else if (targetDir === '..') {
+        if (termuxCwd !== '~') {
+          const parts = termuxCwd.split('/');
+          parts.pop();
+          termuxCwd = parts.join('/') || '~';
+        }
+      } else {
+        const clean = targetDir.replace(/^\//, '');
+        termuxCwd = termuxCwd === '~' ? `~/${clean}` : `${termuxCwd}/${clean}`;
+      }
+      updateTermuxPrompt();
+    } else if (main === 'ls') {
+      const isLong = cmd.includes('-l');
+      if (termuxCwd === '~') {
+        if (isLong) {
+          appendTermuxLine('<span class="term-dim">total 28</span>');
+          appendTermuxLine('drwxr-xr-x 4 u0_a249 u0_a249 4096 Oct  6 03:00 <span class="term-cyan term-bold">project</span>');
+          appendTermuxLine('drwxr-xr-x 2 u0_a249 u0_a249 4096 Oct  6 02:40 <span class="term-cyan term-bold">storage</span>');
+          appendTermuxLine('-rw-r--r-- 1 u0_a249 u0_a249  820 Oct  6 02:15 <span class="term-green">.bashrc</span>');
+          appendTermuxLine('-rw-r--r-- 1 u0_a249 u0_a249 1240 Oct  6 02:22 <span class="term-green">setup.sh</span>');
+        } else {
+          appendTermuxLine('<span class="term-cyan term-bold">project/</span>   <span class="term-cyan term-bold">storage/</span>   <span class="term-green">.bashrc</span>   <span class="term-green">setup.sh</span>');
+        }
+      } else {
+        // Project files view
+        if (isLong) {
+          appendTermuxLine('<span class="term-dim">total 48</span>');
+          fileTreeData.forEach((node) => {
+            const isDir = node.type === 'folder';
+            const perm = isDir ? 'drwxr-xr-x' : '-rw-r--r--';
+            const size = isDir ? '4096' : (node.content ? node.content.length : '1024');
+            const nameSpan = isDir ? `<span class="term-cyan term-bold">${node.name}/</span>` : `<span class="term-green">${node.name}</span>`;
+            appendTermuxLine(`${perm} 1 u0_a249 u0_a249 ${size.padStart(5, ' ')} Oct  6 03:00 ${nameSpan}`);
+          });
+        } else {
+          const names = fileTreeData.map((f) => f.type === 'folder' ? `<span class="term-cyan term-bold">${f.name}/</span>` : `<span class="term-green">${f.name}</span>`);
+          appendTermuxLine(names.join('   '));
+        }
+      }
+    } else if (main === 'echo') {
+      appendTermuxLine(escapeHtml(arg));
+    } else if (cmd === 'date') {
+      appendTermuxLine(new Date().toUTCString());
+    } else if (cmd === 'uptime') {
+      appendTermuxLine(' 03:10:00 up 3 days, 14:28,  1 user,  load average: 0.18, 0.24, 0.20');
+    } else if (cmd === 'python -v' || cmd === 'python -V' || cmd === 'python --version') {
+      appendTermuxLine('Python 3.11.8 (main, Feb 12 2024, 14:52:10) [Clang 17.0.2] on linux');
+    } else if (cmd === 'node -v' || cmd === 'node --version') {
+      appendTermuxLine('v20.14.0');
+    } else if (cmd === 'ps' || cmd === 'top') {
+      appendTermuxLine('<span class="term-dim">  PID TTY          TIME CMD</span>');
+      appendTermuxLine(' 2814 pts/0    00:00:00 bash');
+      appendTermuxLine(' 3120 pts/0    00:00:01 node');
+      appendTermuxLine(' 4182 pts/0    00:00:00 ps');
+    } else if (cmd === 'free -m') {
+      appendTermuxLine('<span class="term-dim">               total        used        free      shared  buff/cache   available</span>');
+      appendTermuxLine('Mem:           11860        4210        4820         120        2830        7420');
+      appendTermuxLine('Swap:           4096           0        4096');
+    } else if (cmd === 'df -h') {
+      appendTermuxLine('<span class="term-dim">Filesystem      Size  Used Avail Use% Mounted on</span>');
+      appendTermuxLine('/dev/root       128G   42G   86G  33% /');
+      appendTermuxLine('/data           128G   18G  110G  14% /data');
+    } else if (main === 'mkdir' && parts[1]) {
+      appendTermuxLine(`<span class="term-green">Created directory '${parts[1]}'</span>`);
+    } else if (main === 'touch' && parts[1]) {
+      appendTermuxLine(`<span class="term-green">Created file '${parts[1]}'</span>`);
+    } else if (main === 'cat' && parts[1]) {
+      const found = findNodeByName(fileTreeData, parts[1]);
+      if (found && found.content) {
+        appendTermuxLine(escapeHtml(found.content));
+      } else {
+        appendTermuxLine(`<span class="term-red">cat: ${parts[1]}: No such file or directory</span>`);
+      }
+    } else if (cmd === 'clear') {
+      termuxOutput.innerHTML = '';
+    } else {
+      appendTermuxLine(`<span class="term-red">bash: ${escapeHtml(main)}: command not found</span>`);
+    }
+
+    termuxOutput.scrollTop = termuxOutput.scrollHeight;
+  }
+
+  // Termux Extra Keys Click Handlers
+  termuxKeys.forEach((keyBtn) => {
+    keyBtn.addEventListener('click', () => {
+      const char = keyBtn.dataset.char;
+      const key = keyBtn.dataset.key;
+
+      if (char) {
+        termuxCommandInput.value += char;
+        termuxCommandInput.focus();
+      } else if (key === 'ESC') {
+        termuxCommandInput.value = '';
+        termuxCommandInput.focus();
+      } else if (key === 'TAB') {
+        // Tab Completion
+        const val = termuxCommandInput.value.trim();
+        const candidates = ['neofetch', 'pkg', 'install', 'uname', 'whoami', 'pwd', 'clear', 'help', 'uptime', 'python', 'node', 'project'];
+        const match = candidates.find((c) => c.startsWith(val));
+        if (match) {
+          termuxCommandInput.value = match + ' ';
+        }
+        termuxCommandInput.focus();
+      } else if (key === 'UP') {
+        if (termuxHistory.length > 0 && termuxHistoryIndex > 0) {
+          termuxHistoryIndex--;
+          termuxCommandInput.value = termuxHistory[termuxHistoryIndex];
+        }
+        termuxCommandInput.focus();
+      } else if (key === 'DOWN') {
+        if (termuxHistoryIndex < termuxHistory.length - 1) {
+          termuxHistoryIndex++;
+          termuxCommandInput.value = termuxHistory[termuxHistoryIndex];
+        } else {
+          termuxHistoryIndex = termuxHistory.length;
+          termuxCommandInput.value = '';
+        }
+        termuxCommandInput.focus();
+      } else if (key === 'CTRL' || key === 'ALT') {
+        showToast(`Pressed ${key}`);
+        termuxCommandInput.focus();
+      }
+    });
+  });
+
+  // Termux Input Submit
+  if (termuxInputForm) {
+    termuxInputForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = termuxCommandInput.value;
+      termuxCommandInput.value = '';
+      executeTermuxCommand(val);
+    });
+  }
+
+  // Termux Arrow Key Listener
+  if (termuxCommandInput) {
+    termuxCommandInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (termuxHistory.length > 0 && termuxHistoryIndex > 0) {
+          termuxHistoryIndex--;
+          termuxCommandInput.value = termuxHistory[termuxHistoryIndex];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (termuxHistoryIndex < termuxHistory.length - 1) {
+          termuxHistoryIndex++;
+          termuxCommandInput.value = termuxHistory[termuxHistoryIndex];
+        } else {
+          termuxHistoryIndex = termuxHistory.length;
+          termuxCommandInput.value = '';
+        }
+      }
+    });
+  }
+
+  function findNodeByName(nodes, name) {
+    for (const node of nodes) {
+      if (node.name.toLowerCase() === name.toLowerCase()) return node;
+      if (node.children) {
+        const found = findNodeByName(node.children, name);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Initialize both terminal sessions
+  initCliSession();
+  initTermuxSession();
+
+  // Restore any previously auto-saved file contents from localStorage
+  restoreSavedFiles(fileTreeData);
 
   renderTree();
 

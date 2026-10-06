@@ -109,7 +109,7 @@ fun TerminalSheet(
                     )
 
                     Text(
-                        text = "NovaCode Terminal",
+                        text = "Linq Studio Terminal",
                         color = Color(0xFFE2E8F0),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,

@@ -43,12 +43,12 @@ class GitServiceTest {
     @Test
     fun testCloneRepository() = runTest(testDispatcher) {
         val targetDir = tempFolder.newFolder("cloned_repo")
-        val repoUrl = "https://github.com/novacode/sample-project.git"
+        val repoUrl = "https://github.com/linqstudio/sample-project.git"
 
         val result = gitService.clone(
             repoUrl = repoUrl,
             targetDirectory = targetDir,
-            credentials = GitCredentials(username = "novadev", tokenOrPassword = "secret_token")
+            credentials = GitCredentials(username = "linqdev", tokenOrPassword = "secret_token")
         )
 
         assertTrue(result is GitResult.Success)

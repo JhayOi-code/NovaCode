@@ -39,36 +39,39 @@ data class EditorTheme(
     val attributeColor: Color
 ) {
     companion object {
-        // 1. Nova Dark (Default)
-        val NovaDark = EditorTheme(
-            id = "nova_dark",
-            name = "Nova Dark",
+        // 1. Linq Dark (Default) - Sophisticated, muted studio palette easy on the eyes
+        val LinqDark = EditorTheme(
+            id = "linq_dark",
+            name = "Linq Dark",
             isDark = true,
-            editorBackground = Color(0xFF0F141C),
-            gutterBackground = Color(0xFF0A0E14),
-            lineNumberColor = Color(0xFF4A5568),
-            currentLineNumberColor = Color(0xFF00E5FF),
-            currentLineBackground = Color(0xFF161E2E),
-            selectionColor = Color(0x4400E5FF),
-            cursorColor = Color(0xFF00E5FF),
-            searchHighlightColor = Color(0x66FFD600),
-            surfaceColor = Color(0xFF131A26),
+            editorBackground = Color(0xFF0F1218),
+            gutterBackground = Color(0xFF0B0E14),
+            lineNumberColor = Color(0xFF64748B),
+            currentLineNumberColor = Color(0xFF818CF8),
+            currentLineBackground = Color(0xFF181D29),
+            selectionColor = Color(0x3D818CF8),
+            cursorColor = Color(0xFF818CF8),
+            searchHighlightColor = Color(0x55EAB308),
+            surfaceColor = Color(0xFF141822),
             onSurfaceColor = Color(0xFFE2E8F0),
-            primaryColor = Color(0xFF00E5FF),
-            onPrimaryColor = Color(0xFF09101D),
-            secondaryColor = Color(0xFF7C4DFF),
-            cardBackgroundColor = Color(0xFF182232),
-            borderColor = Color(0xFF233044),
-            keywordColor = Color(0xFFFF5252),
-            stringColor = Color(0xFF69F0AE),
+            primaryColor = Color(0xFF6366F1), // Gentle, refined modern indigo (not bright blinding cyan)
+            onPrimaryColor = Color(0xFFFFFFFF),
+            secondaryColor = Color(0xFF8B5CF6),
+            cardBackgroundColor = Color(0xFF1A1F2C),
+            borderColor = Color(0xFF272E3D),
+            keywordColor = Color(0xFFF472B6),
+            stringColor = Color(0xFF34D399),
             commentColor = Color(0xFF64748B),
-            numberColor = Color(0xFFFFAB40),
-            typeColor = Color(0xFF40C4FF),
-            functionColor = Color(0xFFFFD740),
-            operatorColor = Color(0xFFE040FB),
-            tagColor = Color(0xFFFF5252),
-            attributeColor = Color(0xFF40C4FF)
+            numberColor = Color(0xFFFBBF24),
+            typeColor = Color(0xFF818CF8),
+            functionColor = Color(0xFFA78BFA),
+            operatorColor = Color(0xFFC084FC),
+            tagColor = Color(0xFFF472B6),
+            attributeColor = Color(0xFF818CF8)
         )
+
+        // Compatibility alias
+        val NovaDark = LinqDark
 
         // 2. Liquid Glass (Translucent frosted acrylic with specular borders)
         val LiquidGlass = EditorTheme(
@@ -464,7 +467,7 @@ data class EditorTheme(
         }
 
         val AllThemes = listOf(
-            NovaDark,
+            LinqDark,
             LiquidGlass,
             Dracula,
             OneDark,
@@ -476,7 +479,7 @@ data class EditorTheme(
             Light
         )
 
-        fun getById(id: String): EditorTheme = AllThemes.firstOrNull { it.id == id } ?: NovaDark
+        fun getById(id: String): EditorTheme = AllThemes.firstOrNull { it.id == id || (id == "nova_dark" && it.id == "linq_dark") } ?: LinqDark
     }
 
     fun toJson(): String {

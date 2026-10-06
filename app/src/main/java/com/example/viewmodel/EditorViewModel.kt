@@ -40,7 +40,7 @@ data class EditorUiState(
     val currentPathOrUri: String,
     val directoryFiles: List<FileItem> = emptyList(),
     val storageRoots: List<FileItem> = emptyList(),
-    val currentTheme: EditorTheme = EditorTheme.NovaDark,
+    val currentTheme: EditorTheme = EditorTheme.LinqDark,
     val fontSizeSp: Int = 13,
     val isWordWrapEnabled: Boolean = false,
     val reduceTransparency: Boolean = false,

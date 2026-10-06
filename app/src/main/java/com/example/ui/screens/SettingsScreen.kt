@@ -452,7 +452,7 @@ fun SettingsScreen(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "NovaCode v1.0.0",
+                        text = "Linq Studio v1.0.0",
                         color = currentTheme.lineNumberColor.copy(alpha = 0.6f),
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center

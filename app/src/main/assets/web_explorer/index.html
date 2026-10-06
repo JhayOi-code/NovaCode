@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NovaCode - Mobile Code Editor & Explorer</title>
+  <title>Linq Studio - Mobile Code Editor & Explorer</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,7 +45,7 @@
       <!-- Editor Content & Line Numbers -->
       <div class="editor-body">
         <div id="lineNumbers" class="line-numbers"></div>
-        <pre class="code-area"><code id="codeContent" class="language-html"></code></pre>
+        <pre class="code-area"><code id="codeContent" class="language-html" contenteditable="plaintext-only" spellcheck="false" autocomplete="off" autocapitalize="off" role="textbox" aria-multiline="true" aria-label="Code Editor Area"></code></pre>
       </div>
 
       <!-- Editor Status Bar -->
@@ -114,7 +114,15 @@
           </svg>
         </button>
 
-        <!-- 5. Profile -->
+        <!-- 5. Terminal (Project CLI + Termux Shell) -->
+        <button class="nav-tab" data-tab="terminal" aria-label="Terminal and Shell" title="Terminal (CLI & Termux)">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+        </button>
+
+        <!-- 6. Profile -->
         <button class="nav-tab" data-tab="profile" aria-label="User Profile" title="Profile">
           <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -255,6 +263,89 @@
           </div>
         </section>
 
+        <!-- TAB PANEL: TERMINAL (Project CLI + Termux Linux Shell) -->
+        <section id="panelTerminal" class="tab-panel" aria-labelledby="tab-terminal">
+          <div class="terminal-container">
+            <!-- Terminal Session Switcher Bar -->
+            <div class="terminal-topbar">
+              <div class="terminal-tabs-group">
+                <button id="btnTermTabCli" class="term-session-tab active" data-term="cli">
+                  <span class="session-dot cli-dot"></span>
+                  <span>Project CLI</span>
+                </button>
+                <button id="btnTermTabTermux" class="term-session-tab" data-term="termux">
+                  <span class="session-dot termux-dot"></span>
+                  <span>Termux Shell</span>
+                </button>
+              </div>
+
+              <div class="term-top-actions">
+                <button id="btnClearActiveTerm" class="btn-term-tool" title="Clear Screen" aria-label="Clear Screen">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+                <button id="btnResetActiveTerm" class="btn-term-tool" title="Reset Session" aria-label="Reset Session">
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- SESSION 1: PROJECT SCRIPTS CLI -->
+            <div id="termSessionCli" class="terminal-session active">
+              <!-- Quick Scripts Chips Row -->
+              <div class="cli-quick-chips">
+                <span class="chips-label">Run:</span>
+                <button class="cli-chip" data-cmd="npm run dev">npm run dev</button>
+                <button class="cli-chip" data-cmd="npm test">npm test</button>
+                <button class="cli-chip" data-cmd="npm run build">npm build</button>
+                <button class="cli-chip" data-cmd="git status">git status</button>
+                <button class="cli-chip" data-cmd="help">help</button>
+              </div>
+
+              <!-- Output Screen -->
+              <div id="cliOutput" class="terminal-screen" role="log" aria-live="polite"></div>
+
+              <!-- Input Row -->
+              <form id="cliInputForm" class="terminal-input-bar">
+                <span class="cli-prompt-label">project$</span>
+                <input type="text" id="cliCommandInput" class="terminal-input" placeholder="npm run dev, test, build..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <button type="submit" class="terminal-submit-btn" aria-label="Execute Command">↵</button>
+              </form>
+            </div>
+
+            <!-- SESSION 2: TERMUX / ANDROID LINUX SHELL -->
+            <div id="termSessionTermux" class="terminal-session">
+              <!-- Termux Extra Keys Row -->
+              <div class="termux-keys-row" aria-label="Termux Touch Keyboard Shortcuts">
+                <button type="button" class="termux-key" data-key="ESC">ESC</button>
+                <button type="button" class="termux-key" data-key="TAB">TAB</button>
+                <button type="button" class="termux-key" data-key="CTRL">CTRL</button>
+                <button type="button" class="termux-key" data-key="ALT">ALT</button>
+                <button type="button" class="termux-key" data-char="-">-</button>
+                <button type="button" class="termux-key" data-char="/">/</button>
+                <button type="button" class="termux-key" data-char="|">|</button>
+                <button type="button" class="termux-key" data-key="UP">▲</button>
+                <button type="button" class="termux-key" data-key="DOWN">▼</button>
+              </div>
+
+              <!-- Termux Output Screen -->
+              <div id="termuxOutput" class="terminal-screen termux-screen" role="log" aria-live="polite"></div>
+
+              <!-- Termux Input Row -->
+              <form id="termuxInputForm" class="terminal-input-bar termux-input-bar">
+                <span id="termuxPromptLabel" class="termux-prompt-label">u0_a249@localhost:~$</span>
+                <input type="text" id="termuxCommandInput" class="terminal-input termux-input" placeholder="neofetch, ls -la, pkg, uname..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <button type="submit" class="terminal-submit-btn" aria-label="Execute Shell Command">↵</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
         <!-- TAB PANEL: DEPLOY (Placeholder) -->
         <section id="panelDeploy" class="tab-panel" aria-labelledby="tab-deploy">
           <div class="panel-placeholder">
@@ -272,10 +363,10 @@
         <section id="panelProfile" class="tab-panel" aria-labelledby="tab-profile">
           <div class="panel-profile-content">
             <div class="profile-header-card">
-              <div class="profile-avatar">NC</div>
+              <div class="profile-avatar"><img src="logo.png" alt="Linq Studio Logo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div>
               <div class="profile-info">
-                <h3>Developer Studio</h3>
-                <p>developer@novacode.io</p>
+                <h3>Linq Studio</h3>
+                <p>developer@linqstudio.dev</p>
                 <span class="profile-badge">Pro Edition</span>
               </div>
             </div>
@@ -308,6 +399,32 @@
                 <div class="theme-switch-pill">
                   <span id="themePillLabel" class="theme-pill-text">Dark</span>
                   <span class="theme-switch-slider"></span>
+                </div>
+              </button>
+            </div>
+
+            <div class="profile-settings-group">
+              <span class="settings-group-label">EDITOR PREFERENCES</span>
+
+              <!-- AUTO-SAVE TOGGLE BUTTON -->
+              <button id="btnAutoSaveToggle" class="theme-toggle-row" aria-label="Toggle Auto-Save">
+                <div class="theme-toggle-left">
+                  <span id="autoSaveIcon" class="theme-icon auto-save-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                  </span>
+                  <div class="theme-toggle-text">
+                    <span class="theme-title">Auto-Save</span>
+                    <span id="autoSaveDesc" class="theme-desc">Saves to local storage automatically</span>
+                  </div>
+                </div>
+
+                <div class="theme-switch-pill" id="autoSavePill">
+                  <span id="autoSavePillLabel" class="theme-pill-text">On</span>
+                  <span id="autoSaveSlider" class="theme-switch-slider active"></span>
                 </div>
               </button>
             </div>

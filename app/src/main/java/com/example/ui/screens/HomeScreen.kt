@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -99,22 +101,14 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Clean, minimal code icon
-                        Box(
+                        // Linq Studio App Logo
+                        Image(
+                            painter = painterResource(R.drawable.ic_app_logo_1791043580196),
+                            contentDescription = "Linq Studio",
                             modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(theme.primaryColor.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "< / >",
-                                color = theme.primaryColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
 
                         Column {
                             Text(
@@ -300,7 +294,7 @@ fun HomeScreen(
                                 Text(
                                     text = if (isServerRunning) serverStatus.urlOrNull ?: "http://127.0.0.1:8080/"
                                     else "NanoHTTPD embedded server for workspace web preview",
-                                    color = if (isServerRunning) Color(0xFF38BDF8) else theme.lineNumberColor,
+                                    color = if (isServerRunning) theme.primaryColor else theme.lineNumberColor,
                                     fontSize = 11.sp,
                                     fontFamily = if (isServerRunning) FontFamily.Monospace else FontFamily.Default
                                 )
@@ -500,7 +494,7 @@ fun HomeScreen(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "NovaCode v1.0.0",
+                        text = "Linq Studio v1.0.0",
                         color = theme.lineNumberColor.copy(alpha = 0.6f),
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center

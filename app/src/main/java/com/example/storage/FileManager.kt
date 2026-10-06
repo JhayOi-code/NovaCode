@@ -36,12 +36,12 @@ class FileManager(private val context: Context) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaCode Web Preview</title>
+    <title>Linq Studio Web Preview</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="card">
-        <h1>⚡ NovaCode Studio</h1>
+        <h1>⚡ Linq Studio</h1>
         <p>Live dev server and in-app responsive preview are ready.</p>
         <button id="counterBtn">Clicks: <span id="count">0</span></button>
     </div>
@@ -71,8 +71,8 @@ class FileManager(private val context: Context) {
     max-width: 400px;
 }
 button {
-    background: #00e5ff;
-    color: #0b1120;
+    background: #6366f1;
+    color: #ffffff;
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 9999px;
@@ -101,11 +101,11 @@ btn.addEventListener('click', () => {
         // 2. Python Starter
         val pyDir = File(workspace, "PythonStarter").apply { mkdirs() }
         File(pyDir, "main.py").writeText(
-            """# NovaCode Python Starter
+            """# Linq Studio Python Starter
 import sys
 
 def main():
-    print("Welcome to NovaCode IDE on Android!")
+    print("Welcome to Linq Studio on Android!")
     print(f"Python Version: {sys.version}")
     
     # Calculate Fibonacci numbers
@@ -125,13 +125,13 @@ if __name__ == "__main__":
         // 3. Kotlin Starter
         val ktDir = File(workspace, "KotlinStarter").apply { mkdirs() }
         File(ktDir, "Main.kt").writeText(
-            """package com.novacode.demo
+            """package com.linqstudio.demo
 
 data class Developer(val name: String, val role: String)
 
 fun main() {
-    val dev = Developer("Ljhay", "Android Architect")
-    println("Hello from NovaCode Kotlin Engine!")
+    val dev = Developer("Developer", "Android Engineer")
+    println("Hello from Linq Studio Kotlin Engine!")
     println("Active Lead: " + dev.name + ", Role: " + dev.role)
 }
 """
@@ -139,9 +139,9 @@ fun main() {
 
         // 4. README
         File(workspace, "README.md").writeText(
-            """# 🚀 Welcome to NovaCode IDE
+            """# 🚀 Welcome to Linq Studio
 
-NovaCode is an ultra-fast, professional mobile development environment built for Android.
+Linq Studio is an ultra-fast, professional mobile development environment built for Android.
 
 ### Features
 - **Touch-First Syntax Editor**: Ultra-smooth syntax highlighting with extra-keys row.
@@ -150,7 +150,7 @@ NovaCode is an ultra-fast, professional mobile development environment built for
 - **Live Preview & Dev Server**: Test HTML/CSS/JS with live DOM rendering and split-screen.
 - **Multi-File Search & Git Integration Ready**.
 
-*Developed by Ljhay • Ljhay Softworks LLC*
+*Linq Studio • Professional Mobile IDE*
 """
         )
     }

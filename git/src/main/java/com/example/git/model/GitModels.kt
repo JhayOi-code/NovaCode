@@ -37,8 +37,8 @@ data class GitCommit(
 )
 
 data class GitAuthor(
-    val name: String = "NovaCode Developer",
-    val email: String = "dev@novacode.local"
+    val name: String = "Linq Studio Developer",
+    val email: String = "dev@linqstudio.local"
 )
 
 data class GitCredentials(

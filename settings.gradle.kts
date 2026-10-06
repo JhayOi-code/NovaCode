@@ -22,7 +22,7 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "NovaCode"
+rootProject.name = "Linq Studio"
 
 include(":app")
 include(":permissions")

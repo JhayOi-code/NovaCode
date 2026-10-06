@@ -1,7 +1,13 @@
 <resources>
-    <string name="app_name">NovaCode</string>
-    <string name="company_name">Ljhay Softworks LLC</string>
-    <string name="footer_credit">Developed by Ljhay • %1$s</string>
+    <string name="app_name">Linq Studio</string>
+    <string name="company_name">Linq Studio LLC</string>
+    <string name="footer_credit">Founded by Ljhay &amp; Mavic • %1$s</string>
     <string name="tagline">Ultra-Fast Mobile IDE &amp; Code Studio</string>
     <string name="welcome_heading">Code anywhere without compromise.</string>
+    <string name="founders_heading">Founders</string>
+    <string name="founders_names">Ljhay &amp; Mavic</string>
+    <string name="founder_ljhay">Ljhay</string>
+    <string name="founder_mavic">Mavic</string>
+    <string name="founder_ljhay_role">Co-Founder &amp; Lead Systems Architect</string>
+    <string name="founder_mavic_role">Co-Founder &amp; Product Visionary</string>
 </resources>

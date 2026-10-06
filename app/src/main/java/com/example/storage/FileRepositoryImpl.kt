@@ -56,12 +56,12 @@ class FileRepositoryImpl(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NovaCode - Mobile Code Editor & Explorer</title>
+  <title>Linq Studio - Mobile Code Editor & Explorer</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app" class="app-container">
-    <div style="padding: 20px; color: #fff;">NovaCode Mobile Explorer</div>
+    <div style="padding: 20px; color: #fff;">Linq Studio Mobile Explorer</div>
   </div>
   <script src="app.js"></script>
 </body>
@@ -70,21 +70,21 @@ class FileRepositoryImpl(
 
         copyAssetOrDefault(
             "style.css",
-            """body { margin: 0; background: #050810; color: #f3f4f6; font-family: sans-serif; }"""
+            """body { margin: 0; background: #0F1218; color: #f3f4f6; font-family: sans-serif; }"""
         )
 
         copyAssetOrDefault(
             "app.js",
-            """console.log("NovaCode Mobile Explorer loaded");"""
+            """console.log("Linq Studio Mobile Explorer loaded");"""
         )
 
         val pyDir = File(workspace, "PythonStarter").apply { mkdirs() }
         File(pyDir, "main.py").writeText(
-            """# NovaCode Python Starter
+            """# Linq Studio Python Starter
 import sys
 
 def main():
-    print("Welcome to NovaCode IDE on Android!")
+    print("Welcome to Linq Studio on Android!")
     print(f"Python Version: {sys.version}")
     
     def fib(n):
@@ -102,22 +102,22 @@ if __name__ == "__main__":
 
         val ktDir = File(workspace, "KotlinStarter").apply { mkdirs() }
         File(ktDir, "Main.kt").writeText(
-            """package com.novacode.demo
+            """package com.linqstudio.demo
 
 data class Developer(val name: String, val role: String)
 
 fun main() {
-    val dev = Developer("Ljhay", "Android Architect")
-    println("Hello from NovaCode Kotlin Engine!")
+    val dev = Developer("Developer", "Android Engineer")
+    println("Hello from Linq Studio Kotlin Engine!")
     println("Active Lead: " + dev.name + ", Role: " + dev.role)
 }
 """
         )
 
         File(workspace, "README.md").writeText(
-            """# 🚀 Welcome to NovaCode IDE
+            """# 🚀 Welcome to Linq Studio
 
-NovaCode is an ultra-fast, professional mobile development environment built for Android.
+Linq Studio is an ultra-fast, professional mobile development environment built for Android.
 
 ### Features
 - **Touch-First Syntax Editor**: Ultra-smooth syntax highlighting with extra-keys row.

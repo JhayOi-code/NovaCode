@@ -129,7 +129,7 @@ class NanoHttpDevServer : LocalDevServer {
             response.addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD")
             response.addHeader("Access-Control-Allow-Headers", "*")
             response.addHeader("Cache-Control", "no-cache, no-store, must-revalidate")
-            response.addHeader("Server", "NovaCode-DevServer/1.0 (NanoHTTPD)")
+            response.addHeader("Server", "LinqStudio-DevServer/1.0 (NanoHTTPD)")
 
             val duration = System.currentTimeMillis() - startTime
             val clientIp = session.headers["http-client-ip"]
@@ -241,19 +241,19 @@ class NanoHttpDevServer : LocalDevServer {
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <title>404 Not Found - NovaCode Dev Server</title>
+                    <title>404 Not Found - Linq Studio Dev Server</title>
                     <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0F19; color: #E2E8F0; padding: 40px 20px; text-align: center; }
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F1218; color: #E2E8F0; padding: 40px 20px; text-align: center; }
                         h1 { color: #F43F5E; font-size: 28px; margin-bottom: 8px; }
                         p { color: #94A3B8; font-size: 15px; }
-                        .uri { font-family: monospace; background: #1E293B; padding: 4px 8px; border-radius: 4px; color: #38BDF8; }
-                        .badge { display: inline-block; margin-top: 24px; padding: 6px 12px; background: #131D31; border: 1px solid #1E293B; border-radius: 20px; font-size: 12px; color: #64748B; }
+                        .uri { font-family: monospace; background: #1E293B; padding: 4px 8px; border-radius: 4px; color: #818CF8; }
+                        .badge { display: inline-block; margin-top: 24px; padding: 6px 12px; background: #161D2C; border: 1px solid #272E3D; border-radius: 20px; font-size: 12px; color: #64748B; }
                     </style>
                 </head>
                 <body>
                     <h1>404 Not Found</h1>
                     <p>The requested file <span class="uri">$uri</span> does not exist in the active workspace root.</p>
-                    <div class="badge">NovaCode Local Dev Server</div>
+                    <div class="badge">Linq Studio Local Dev Server</div>
                 </body>
                 </html>
             """.trimIndent()
@@ -284,18 +284,18 @@ class NanoHttpDevServer : LocalDevServer {
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <title>Index of $currentUri - NovaCode Dev Server</title>
+                    <title>Index of $currentUri - Linq Studio Dev Server</title>
                     <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0B0F19; color: #E2E8F0; padding: 24px; margin: 0; }
-                        h1 { color: #38BDF8; font-size: 20px; margin-bottom: 16px; border-bottom: 1px solid #1E293B; padding-bottom: 8px; }
+                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F1218; color: #E2E8F0; padding: 24px; margin: 0; }
+                        h1 { color: #818CF8; font-size: 20px; margin-bottom: 16px; border-bottom: 1px solid #272E3D; padding-bottom: 8px; }
                         ul { list-style: none; padding: 0; margin: 0; }
                         li { padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-                        li:hover { background: #131D31; }
+                        li:hover { background: #161D2C; }
                         a { color: #F1F5F9; text-decoration: none; font-size: 14px; font-family: monospace; }
                         a.folder { color: #FBBF24; font-weight: bold; }
-                        a:hover { color: #38BDF8; }
+                        a:hover { color: #818CF8; }
                         .size { color: #64748B; font-size: 12px; font-family: monospace; }
-                        .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #1E293B; font-size: 12px; color: #64748B; }
+                        .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #272E3D; font-size: 12px; color: #64748B; }
                     </style>
                 </head>
                 <body>
@@ -303,7 +303,7 @@ class NanoHttpDevServer : LocalDevServer {
                     <ul>
                         $rows
                     </ul>
-                    <div class="footer">Serving from workspace &bull; NovaCode Local Dev Server</div>
+                    <div class="footer">Serving from workspace &bull; Linq Studio Local Dev Server</div>
                 </body>
                 </html>
             """.trimIndent()

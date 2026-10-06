@@ -200,7 +200,7 @@ fun PermissionWizardDialog(
                         .testTag("btn_done_permission_wizard"),
                     colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = theme.onPrimaryColor)
                 ) {
-                    Text("Continue to NovaCode", fontWeight = FontWeight.Bold)
+                    Text("Continue to Linq Studio", fontWeight = FontWeight.Bold)
                 }
             }
         }
