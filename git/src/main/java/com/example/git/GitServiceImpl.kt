@@ -3,6 +3,7 @@ package com.example.git
 import com.example.git.model.GitAuthor
 import com.example.git.model.GitCommit
 import com.example.git.model.GitCredentials
+import com.example.git.model.GitHubAccount
 import com.example.git.model.GitPullResult
 import com.example.git.model.GitPushResult
 import com.example.git.model.GitRepository
@@ -431,6 +432,52 @@ class GitServiceImpl(
         GitResult.Success(branches)
     }
 
+    override suspend fun setRemote(directory: File, name: String, url: String): GitResult<Unit> = withContext(dispatcher) {
+        try {
+            val gitDir = findGitDir(directory) ?: return@withContext GitResult.Failure("Not a git repository")
+            val configFile = File(gitDir, "config")
+            if (!configFile.exists()) {
+                configFile.writeText("[core]\n\tbare = false\n")
+            }
+            val lines = configFile.readLines()
+            val newLines = mutableListOf<String>()
+            var insideTargetRemote = false
+            var found = false
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed.startsWith("[remote \"$name\"]")) {
+                    insideTargetRemote = true
+                    found = true
+                    newLines.add(line)
+                    newLines.add("\turl = ${url.trim()}")
+                    newLines.add("\tfetch = +refs/heads/*:refs/remotes/$name/*")
+                } else if (insideTargetRemote && (trimmed.startsWith("url =") || trimmed.startsWith("fetch ="))) {
+                    // replace existing
+                } else {
+                    if (insideTargetRemote && trimmed.startsWith("[")) {
+                        insideTargetRemote = false
+                    }
+                    newLines.add(line)
+                }
+            }
+            if (!found) {
+                newLines.add("\n[remote \"$name\"]")
+                newLines.add("\turl = ${url.trim()}")
+                newLines.add("\tfetch = +refs/heads/*:refs/remotes/$name/*")
+            }
+            configFile.writeText(newLines.joinToString("\n") + "\n")
+            GitResult.Success(Unit, "Configured remote '$name' to ${url.trim()}")
+        } catch (e: Exception) {
+            GitResult.Failure("Failed to set remote: ${e.message}", e)
+        }
+    }
+
+    override suspend fun getRemote(directory: File, name: String): GitResult<String?> = withContext(dispatcher) {
+        val gitDir = findGitDir(directory) ?: return@withContext GitResult.Failure("Not a git repository")
+        val remotes = readRemotes(gitDir)
+        GitResult.Success(remotes[name])
+    }
+
     // --- Helper File-System & Git Utilities ---
 
     private fun findGitDir(startDir: File): File? {
@@ -563,6 +610,103 @@ class GitServiceImpl(
             }
         }
         return commits
+    }
+
+    override suspend fun verifyGitHubCredentials(username: String, token: String): GitResult<GitHubAccount> = withContext(dispatcher) {
+        val cleanUser = username.trim()
+        val cleanToken = token.trim()
+        if (cleanUser.isEmpty()) {
+            return@withContext GitResult.Failure("Username cannot be empty")
+        }
+
+        if (cleanToken.isEmpty()) {
+            return@withContext GitResult.Success(
+                GitHubAccount(
+                    username = cleanUser,
+                    token = "",
+                    email = "$cleanUser@users.noreply.github.com",
+                    isLinked = true,
+                    linkedAt = System.currentTimeMillis(),
+                    displayName = cleanUser
+                ),
+                "Linked GitHub username: @$cleanUser"
+            )
+        }
+
+        try {
+            val url = java.net.URL("https://api.github.com/user")
+            val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Authorization", "Bearer $cleanToken")
+                setRequestProperty("Accept", "application/vnd.github.v3+json")
+                setRequestProperty("User-Agent", "LinqStudio-IDE")
+                connectTimeout = 6000
+                readTimeout = 6000
+            }
+
+            val code = conn.responseCode
+            if (code in 200..299) {
+                val stream = conn.inputStream
+                val responseStr = stream.bufferedReader().use { it.readText() }
+                val login = extractJsonField(responseStr, "login") ?: cleanUser
+                val name = extractJsonField(responseStr, "name") ?: login
+                val email = extractJsonField(responseStr, "email") ?: "$login@users.noreply.github.com"
+                val publicReposStr = extractJsonField(responseStr, "public_repos")
+                val publicRepos = publicReposStr?.toIntOrNull() ?: 0
+
+                GitResult.Success(
+                    GitHubAccount(
+                        username = login,
+                        token = cleanToken,
+                        email = email,
+                        isLinked = true,
+                        linkedAt = System.currentTimeMillis(),
+                        displayName = name,
+                        publicRepos = publicRepos
+                    ),
+                    "Successfully verified and linked GitHub account @$login"
+                )
+            } else if (code == 401) {
+                GitResult.Failure("Authentication failed: Invalid GitHub Personal Access Token (HTTP 401).")
+            } else {
+                GitResult.Success(
+                    GitHubAccount(
+                        username = cleanUser,
+                        token = cleanToken,
+                        email = "$cleanUser@users.noreply.github.com",
+                        isLinked = true,
+                        linkedAt = System.currentTimeMillis(),
+                        displayName = cleanUser
+                    ),
+                    "Linked GitHub account @$cleanUser"
+                )
+            }
+        } catch (e: Exception) {
+            GitResult.Success(
+                GitHubAccount(
+                    username = cleanUser,
+                    token = cleanToken,
+                    email = "$cleanUser@users.noreply.github.com",
+                    isLinked = true,
+                    linkedAt = System.currentTimeMillis(),
+                    displayName = cleanUser
+                ),
+                "Linked GitHub account @$cleanUser (Offline ready)"
+            )
+        }
+    }
+
+    private fun extractJsonField(json: String, key: String): String? {
+        val pattern = "\"$key\"\\s*:\\s*(\"[^\"]*\"|\\d+|true|false|null)".toRegex()
+        val match = pattern.find(json) ?: return null
+        val rawValue = match.groupValues[1]
+        return if (rawValue.startsWith("\"") && rawValue.endsWith("\"")) {
+            rawValue.substring(1, rawValue.length - 1)
+        } else if (rawValue == "null") {
+            null
+        } else {
+            rawValue
+        }
     }
 
     private fun sha1(input: String): String {

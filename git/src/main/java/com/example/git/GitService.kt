@@ -3,6 +3,7 @@ package com.example.git
 import com.example.git.model.GitAuthor
 import com.example.git.model.GitCommit
 import com.example.git.model.GitCredentials
+import com.example.git.model.GitHubAccount
 import com.example.git.model.GitPullResult
 import com.example.git.model.GitPushResult
 import com.example.git.model.GitRepository
@@ -53,4 +54,10 @@ interface GitService {
     suspend fun currentBranch(directory: File): GitResult<String>
 
     suspend fun branches(directory: File): GitResult<List<String>>
+
+    suspend fun setRemote(directory: File, name: String = "origin", url: String): GitResult<Unit>
+
+    suspend fun getRemote(directory: File, name: String = "origin"): GitResult<String?>
+
+    suspend fun verifyGitHubCredentials(username: String, token: String): GitResult<GitHubAccount>
 }

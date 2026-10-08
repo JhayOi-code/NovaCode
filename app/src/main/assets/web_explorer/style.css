@@ -248,20 +248,29 @@ body {
   box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
 }
 
-/* Syntax Highlighting Token Styles */
+/* Syntax Highlighting Token Styles (Prism.js compatible) */
 .token.keyword { color: var(--syntax-keyword); font-weight: 600; }
 .token.function { color: var(--syntax-function); }
 .token.string { color: var(--syntax-string); }
 .token.number { color: var(--syntax-number); }
+.token.boolean { color: var(--syntax-number); font-weight: 600; }
 .token.comment { color: var(--syntax-comment); font-style: italic; }
 .token.tag { color: var(--syntax-tag); font-weight: 600; }
 .token.attr-name { color: var(--syntax-attr-name); }
-.token.attr-val { color: var(--syntax-attr-val); }
+.token.attr-val, .token.attr-value { color: var(--syntax-attr-val); }
 .token.property { color: var(--syntax-property); }
 .token.selector { color: var(--syntax-selector); font-weight: 600; }
 .token.operator { color: var(--syntax-operator); }
 .token.punctuation { color: var(--syntax-punctuation); }
-.token.type { color: var(--syntax-type); font-weight: 600; }
+.token.type, .token.class-name { color: var(--syntax-type); font-weight: 600; }
+.token.annotation { color: #f59e0b; font-style: italic; font-weight: 500; }
+.token.constant { color: #38bdf8; font-weight: 600; }
+.token.regex { color: #f43f5e; }
+.token.doctype { color: var(--syntax-keyword); font-weight: 600; }
+.token.prolog { color: var(--syntax-comment); }
+.token.cdata { color: var(--syntax-string); }
+.token.namespace { color: #818cf8; opacity: 0.85; }
+.token.unit { color: var(--syntax-number); }
 .token.variable { color: var(--text-primary); }
 
 .editor-statusbar {

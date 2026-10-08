@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Card
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,54 +73,72 @@ fun AboutScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp, horizontal = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.ic_app_logo_1791043580196),
-                        contentDescription = "Linq Studio Logo",
+                    // Logo centered in the middle with a dedicated frame
+                    Box(
                         modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                    )
+                            .size(76.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(theme.editorBackground)
+                            .border(1.dp, theme.borderColor, RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_app_logo_1791043580196),
+                            contentDescription = "Linq Studio Logo",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                        )
+                    }
 
                     Text(
                         text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = theme.onSurfaceColor
+                        color = theme.onSurfaceColor,
+                        textAlign = TextAlign.Center
                     )
 
                     Text(
                         text = stringResource(R.string.tagline),
                         color = theme.primaryColor,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
                     )
 
                     Text(
                         text = "Version 1.0.0 (API 36, Target 36, Min 24)",
                         color = theme.lineNumberColor,
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
 
-        // Founders of the App Section
+        // Main Founder & Developer Section (Ljhay)
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("about_founders_section"),
+                    .testTag("about_founder_section"),
                 colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
                 shape = RoundedCornerShape(16.dp),
                 border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
             ) {
                 Column(
-                    modifier = Modifier.padding(18.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
@@ -133,7 +153,7 @@ fun AboutScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.People,
+                                imageVector = Icons.Default.Person,
                                 contentDescription = null,
                                 tint = theme.primaryColor,
                                 modifier = Modifier.size(20.dp)
@@ -142,48 +162,101 @@ fun AboutScreen(
 
                         Column {
                             Text(
-                                text = stringResource(R.string.founders_heading),
+                                text = stringResource(R.string.founder_heading),
                                 fontWeight = FontWeight.Bold,
                                 color = theme.onSurfaceColor,
                                 fontSize = 15.sp
                             )
                             Text(
-                                text = "Founders & Creators of Linq Studio",
+                                text = "Creator & Sole Developer of Linq Studio",
                                 color = theme.lineNumberColor,
                                 fontSize = 11.sp
                             )
                         }
                     }
 
-                    // Founder Profile Cards
-                    Row(
+                    // Main Founder Profile Showcase Card
+                    Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        color = theme.editorBackground,
+                        shape = RoundedCornerShape(14.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor.copy(alpha = 0.8f))
                     ) {
-                        // Founder 1: Ljhay
-                        FounderProfileCard(
-                            name = stringResource(R.string.founder_ljhay),
-                            role = stringResource(R.string.founder_ljhay_role),
-                            initials = "LJ",
-                            badgeText = "Systems & Arch",
-                            accentColor = theme.primaryColor,
-                            theme = theme,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Avatar Badge
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(theme.primaryColor, Color(0xFF6366F1))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "LJ",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 19.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
 
-                        // Founder 2: Mavic
-                        FounderProfileCard(
-                            name = stringResource(R.string.founder_mavic),
-                            role = stringResource(R.string.founder_mavic_role),
-                            initials = "MV",
-                            badgeText = "Product & Vision",
-                            accentColor = Color(0xFF10B981),
-                            theme = theme,
-                            modifier = Modifier.weight(1f)
-                        )
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.founder_name),
+                                        fontWeight = FontWeight.Bold,
+                                        color = theme.onSurfaceColor,
+                                        fontSize = 17.sp
+                                    )
+
+                                    Surface(
+                                        color = theme.primaryColor.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "MAIN FOUNDER",
+                                            color = theme.primaryColor,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = stringResource(R.string.founder_role),
+                                    color = theme.primaryColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+
+                                Text(
+                                    text = stringResource(R.string.founder_bio),
+                                    color = theme.lineNumberColor,
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
                     }
 
-                    // Founders Mission Statement Card
+                    // Developer Mission & Craft Note
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = theme.editorBackground.copy(alpha = 0.6f),
@@ -191,7 +264,7 @@ fun AboutScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor.copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = "“Founded with passion by Ljhay and Mavic to build a fast, uncompromising mobile IDE empowering creators and engineers anywhere.”",
+                            text = "“Engineered from concept to execution solely by Ljhay — dedicated to creating the most efficient, fluid mobile coding studio on Android.”",
                             color = theme.onSurfaceColor.copy(alpha = 0.85f),
                             fontSize = 11.5.sp,
                             lineHeight = 16.sp,
@@ -305,78 +378,5 @@ private fun SpecRow(label: String, value: String, theme: EditorTheme) {
     ) {
         Text(text = label, color = theme.lineNumberColor, fontSize = 12.sp)
         Text(text = value, color = theme.onSurfaceColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun FounderProfileCard(
-    name: String,
-    role: String,
-    initials: String,
-    badgeText: String,
-    accentColor: Color,
-    theme: EditorTheme,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        color = theme.editorBackground,
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor.copy(alpha = 0.8f))
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Avatar badge
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(accentColor, accentColor.copy(alpha = 0.6f))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = initials,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-
-            Text(
-                text = name,
-                fontWeight = FontWeight.Bold,
-                color = theme.onSurfaceColor,
-                fontSize = 14.sp
-            )
-
-            Text(
-                text = role,
-                color = theme.lineNumberColor,
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 13.sp
-            )
-
-            Surface(
-                color = accentColor.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = badgeText,
-                    color = accentColor,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-        }
     }
 }

@@ -1188,7 +1188,7 @@
   }
 
   // =========================================================================
-  // 7. LIGHTWEIGHT SYNTAX HIGHLIGHTING ENGINE (JS, TS, HTML, CSS, JSON)
+  // 7. SYNTAX HIGHLIGHTING ENGINE (PRISM.JS & ADVANCED FALLBACK FOR HTML, CSS, JS, JAVA)
   // =========================================================================
 
   const SyntaxHighlighter = {
@@ -1202,10 +1202,65 @@
         .replace(/'/g, '&#39;');
     },
 
+    getPrismLanguage(ext) {
+      if (!ext) return null;
+      const lang = ext.toLowerCase();
+      const prismObj = typeof window !== 'undefined' ? window.Prism : (typeof Prism !== 'undefined' ? Prism : null);
+      if (!prismObj || !prismObj.languages) return null;
+
+      switch (lang) {
+        case 'html':
+        case 'htm':
+        case 'xml':
+        case 'svg':
+          return { grammar: prismObj.languages.markup, name: 'markup' };
+        case 'css':
+        case 'scss':
+        case 'sass':
+        case 'less':
+          return { grammar: prismObj.languages.css, name: 'css' };
+        case 'js':
+        case 'javascript':
+        case 'mjs':
+        case 'cjs':
+          return { grammar: prismObj.languages.javascript, name: 'javascript' };
+        case 'ts':
+        case 'mts':
+        case 'cts':
+        case 'jsx':
+        case 'tsx':
+        case 'vue':
+        case 'svelte':
+          return { grammar: prismObj.languages.javascript || prismObj.languages.clike, name: 'javascript' };
+        case 'java':
+        case 'jav':
+          return { grammar: prismObj.languages.java, name: 'java' };
+        case 'json':
+          return { grammar: prismObj.languages.json, name: 'json' };
+        case 'py':
+        case 'python':
+          return { grammar: prismObj.languages.python, name: 'python' };
+        default:
+          return prismObj.languages[lang] ? { grammar: prismObj.languages[lang], name: lang } : null;
+      }
+    },
+
     highlight(code, ext) {
       if (!code) return '';
-      const lang = (ext || '').toLowerCase();
+      const prismLang = this.getPrismLanguage(ext);
+      const prismObj = typeof window !== 'undefined' ? window.Prism : (typeof Prism !== 'undefined' ? Prism : null);
 
+      // 1. Primary engine: Library syntax highlighting via Prism.js
+      if (prismLang && prismLang.grammar && prismObj) {
+        try {
+          return prismObj.highlight(code, prismLang.grammar, prismLang.name);
+        } catch (err) {
+          console.warn('[SyntaxHighlighter] Prism highlighting fallback:', err);
+        }
+      }
+
+      // 2. High-speed Fallback Engine: Dedicated tokenizers for HTML, CSS, JS, JAVA, etc.
+      const lang = (ext || '').toLowerCase();
       switch (lang) {
         case 'html':
         case 'htm':
@@ -1218,6 +1273,7 @@
         case 'less':
           return this.highlightCss(code);
         case 'js':
+        case 'javascript':
         case 'mjs':
         case 'cjs':
           return this.highlightJs(code, false);
@@ -1229,6 +1285,9 @@
         case 'vue':
         case 'svelte':
           return this.highlightJs(code, true);
+        case 'java':
+        case 'jav':
+          return this.highlightJava(code);
         case 'json':
           return this.highlightJson(code);
         case 'py':
@@ -1364,6 +1423,38 @@
         if (builtin) return `<span class="token function">${self.escapeHtml(builtin)}</span>`;
         if (num) return `<span class="token number">${self.escapeHtml(num)}</span>`;
         if (fnCall) return `<span class="token function">${self.escapeHtml(fnCall)}</span>`;
+        if (punct) return `<span class="token punctuation">${self.escapeHtml(punct)}</span>`;
+        return self.escapeHtml(match);
+      });
+    },
+
+    highlightJava(code) {
+      const self = this;
+      const javaKeywords = 'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|exports|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|module|native|new|non-sealed|null|open|opens|package|permits|private|protected|provides|public|record|return|sealed|short|static|strictfp|super|switch|synchronized|this|throw|throws|to|transient|transitive|try|uses|var|void|volatile|while|with|yield|true|false';
+      const regex = new RegExp(
+        '(\\/\\*[\\s\\S]*?\\*\\/)' +
+        '|(\\/\\/.*)' +
+        '|(@[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*)*)' +
+        '|("""[\\s\\S]*?""")' +
+        '|("(?:\\\\.|[^"\\\\])*")' +
+        '|(\'(?:\\\\.|[^\'\\\\])*\')' +
+        '|(\\b(?:' + javaKeywords + ')\\b)' +
+        '|(\\b[A-Z][a-zA-Z0-9_$]*\\b)' +
+        '|(\\b(?:0x[0-9a-fA-F]+(?:_[0-9a-fA-F]+)*[lL]?|0b[01]+(?:_[01]+)*[lL]?|\\d+(?:_\\d+)*(?:\\.(?:\\d+(?:_\\d+)*)?)?(?:[eE][+-]?\\d+)?[fFdDlL]?)\\b)' +
+        '|([a-zA-Z_$][a-zA-Z0-9_$]*(?=\\s*\\())' +
+        '|(->|::|==|!=|<=|>=|&&|\\|\\||\\+\\+|--|[-+*/%=&|^~<>!?])' +
+        '|([{}[\\],.;:])',
+        'g'
+      );
+      return code.replace(regex, (match, mComment, sComment, annotation, tStr, dStr, sStr, kw, typeName, num, fnCall, op, punct) => {
+        if (mComment || sComment) return `<span class="token comment">${self.escapeHtml(mComment || sComment)}</span>`;
+        if (annotation) return `<span class="token annotation">${self.escapeHtml(annotation)}</span>`;
+        if (tStr || dStr || sStr) return `<span class="token string">${self.escapeHtml(tStr || dStr || sStr)}</span>`;
+        if (kw) return `<span class="token keyword">${self.escapeHtml(kw)}</span>`;
+        if (typeName) return `<span class="token class-name">${self.escapeHtml(typeName)}</span>`;
+        if (num) return `<span class="token number">${self.escapeHtml(num)}</span>`;
+        if (fnCall) return `<span class="token function">${self.escapeHtml(fnCall)}</span>`;
+        if (op) return `<span class="token operator">${self.escapeHtml(op)}</span>`;
         if (punct) return `<span class="token punctuation">${self.escapeHtml(punct)}</span>`;
         return self.escapeHtml(match);
       });

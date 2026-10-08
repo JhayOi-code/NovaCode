@@ -1,6 +1,7 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -9,7 +10,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.git.GitService
 import com.example.git.GitServiceImpl
+import com.example.git.model.GitAuthor
+import com.example.git.model.GitCommit
+import com.example.git.model.GitCredentials
+import com.example.git.model.GitHubAccount
 import com.example.git.model.GitResult
+import com.example.git.model.GitStatus
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
 import com.example.model.FileItem
@@ -53,6 +59,13 @@ data class EditorUiState(
     val isTerminalOpen: Boolean = false,
     val terminalLines: List<TerminalLine> = emptyList(),
     val isTerminalRunning: Boolean = false,
+    val isGitPanelOpen: Boolean = false,
+    val githubAccount: GitHubAccount = GitHubAccount(),
+    val gitStatus: GitStatus? = null,
+    val gitLogs: List<GitCommit> = emptyList(),
+    val gitCurrentBranch: String = "main",
+    val gitRemoteUrl: String = "",
+    val isGitLoading: Boolean = false,
     val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Settings, 4: About
 )
 
@@ -82,6 +95,8 @@ class EditorViewModel(
     }
 
     init {
+        val account = loadGitHubAccount()
+        _uiState.update { it.copy(githubAccount = account) }
         refreshPermissions()
         observeStorageRoots()
         loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
@@ -471,19 +486,127 @@ class EditorViewModel(
         localDevServer.stop()
     }
 
-    // --- Git Lifecycle Operations ---
+    // --- Git & GitHub Account Operations ---
 
-    fun gitClone(repoUrl: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+    private fun loadGitHubAccount(): GitHubAccount {
+        val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
+        val isLinked = prefs.getBoolean("is_linked", false)
+        val username = prefs.getString("username", "") ?: ""
+        val token = prefs.getString("token", "") ?: ""
+        val email = prefs.getString("email", "") ?: ""
+        val displayName = prefs.getString("display_name", "") ?: ""
+        val publicRepos = prefs.getInt("public_repos", 0)
+        val linkedAt = prefs.getLong("linked_at", 0L)
+        return GitHubAccount(
+            username = username,
+            token = token,
+            email = email,
+            isLinked = isLinked && username.isNotBlank(),
+            linkedAt = linkedAt,
+            displayName = displayName,
+            publicRepos = publicRepos
+        )
+    }
+
+    fun linkGitHubAccount(username: String, token: String, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
+        val cleanUser = username.trim().removePrefix("@")
+        val cleanToken = token.trim()
+        val cleanEmail = email.trim().ifEmpty { "$cleanUser@users.noreply.github.com" }
+
+        if (cleanUser.isEmpty()) {
+            Toast.makeText(getApplication(), "GitHub username cannot be empty", Toast.LENGTH_SHORT).show()
+            onResult(false, "Username is required")
+            return
+        }
+
         viewModelScope.launch {
-            val targetName = repoUrl.substringAfterLast('/').removeSuffix(".git").ifEmpty { "repo" }
-            val targetDir = File(fileRepository.internalWorkspaceDir, targetName)
-            when (val res = gitService.clone(repoUrl, targetDir)) {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val verifyResult = gitService.verifyGitHubCredentials(cleanUser, cleanToken)
+            _uiState.update { it.copy(isGitLoading = false) }
+
+            when (verifyResult) {
                 is GitResult.Success -> {
-                    loadDirectory(_uiState.value.currentPathOrUri)
+                    val verifiedAccount = verifyResult.data
+                    val finalEmail = if (cleanEmail.isNotEmpty() && cleanEmail != "$cleanUser@users.noreply.github.com") cleanEmail else verifiedAccount.email
+                    val accountToSave = verifiedAccount.copy(email = finalEmail)
+
+                    val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putBoolean("is_linked", true)
+                        .putString("username", accountToSave.username)
+                        .putString("token", accountToSave.token)
+                        .putString("email", accountToSave.email)
+                        .putString("display_name", accountToSave.displayName)
+                        .putInt("public_repos", accountToSave.publicRepos)
+                        .putLong("linked_at", accountToSave.linkedAt)
+                        .apply()
+
+                    _uiState.update { it.copy(githubAccount = accountToSave) }
+                    Toast.makeText(getApplication(), verifyResult.message.ifEmpty { "Linked GitHub account: @${accountToSave.username}" }, Toast.LENGTH_SHORT).show()
+                    onResult(true, verifyResult.message)
+                }
+                is GitResult.Failure -> {
+                    Toast.makeText(getApplication(), verifyResult.error, Toast.LENGTH_LONG).show()
+                    onResult(false, verifyResult.error)
+                }
+            }
+        }
+    }
+
+    fun unlinkGitHubAccount() {
+        val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+        _uiState.update { it.copy(githubAccount = GitHubAccount()) }
+        Toast.makeText(getApplication(), "Unlinked GitHub account", Toast.LENGTH_SHORT).show()
+    }
+
+    fun toggleGitPanel(open: Boolean? = null) {
+        val nextOpen = open ?: !_uiState.value.isGitPanelOpen
+        _uiState.update { it.copy(isGitPanelOpen = nextOpen) }
+        if (nextOpen) {
+            refreshGitStatus()
+        }
+    }
+
+    fun refreshGitStatus() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val dir = _uiState.value.currentDirectory
+            val statusResult = gitService.status(dir)
+            val branchResult = gitService.currentBranch(dir)
+            val remoteResult = gitService.getRemote(dir, "origin")
+            val logsResult = gitService.log(dir, 15)
+
+            _uiState.update {
+                it.copy(
+                    isGitLoading = false,
+                    gitStatus = statusResult.getOrNull(),
+                    gitCurrentBranch = branchResult.getOrNull() ?: "main",
+                    gitRemoteUrl = remoteResult.getOrNull() ?: "",
+                    gitLogs = logsResult.getOrNull() ?: emptyList()
+                )
+            }
+        }
+    }
+
+    fun gitInitRepo(initialBranch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGitLoading = true) }
+            when (val res = gitService.init(_uiState.value.currentDirectory, initialBranch)) {
+                is GitResult.Success -> {
+                    // Auto-configure remote if user has linked GitHub account
+                    val account = _uiState.value.githubAccount
+                    if (account.isLinked && account.username.isNotBlank()) {
+                        val folderName = _uiState.value.currentDirectory.name.lowercase().replace(' ', '-')
+                        val defaultRemote = "https://github.com/${account.username}/$folderName.git"
+                        gitService.setRemote(_uiState.value.currentDirectory, "origin", defaultRemote)
+                    }
+                    refreshGitStatus()
                     Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
                     onFinished(true, res.message)
                 }
                 is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
                     Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
                     onFinished(false, res.error)
                 }
@@ -491,14 +614,38 @@ class EditorViewModel(
         }
     }
 
-    fun gitCommit(message: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+    fun gitSetRemote(url: String, remote: String = "origin", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
-            when (val res = gitService.commit(_uiState.value.currentDirectory, message)) {
+            _uiState.update { it.copy(isGitLoading = true) }
+            when (val res = gitService.setRemote(_uiState.value.currentDirectory, remote, url)) {
                 is GitResult.Success -> {
+                    refreshGitStatus()
                     Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
                     onFinished(true, res.message)
                 }
                 is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
+                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
+                    onFinished(false, res.error)
+                }
+            }
+        }
+    }
+
+    fun gitPull(remote: String = "origin", branch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val account = _uiState.value.githubAccount
+            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
+            when (val res = gitService.pull(_uiState.value.currentDirectory, remote, branch, creds)) {
+                is GitResult.Success -> {
+                    refreshGitStatus()
+                    loadDirectory(_uiState.value.currentDirectory)
+                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
+                    onFinished(true, res.message)
+                }
+                is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
                     Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
                     onFinished(false, res.error)
                 }
@@ -508,12 +655,86 @@ class EditorViewModel(
 
     fun gitPush(remote: String = "origin", branch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
         viewModelScope.launch {
-            when (val res = gitService.push(_uiState.value.currentDirectory, remote, branch)) {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val account = _uiState.value.githubAccount
+            val dir = _uiState.value.currentDirectory
+
+            // Ensure at least one commit exists before pushing
+            val statusRes = gitService.status(dir)
+            val logsRes = gitService.log(dir, 1)
+            val commitsExist = (logsRes as? GitResult.Success)?.data?.isNotEmpty() == true
+            val hasChanges = (statusRes as? GitResult.Success)?.data?.isClean == false
+
+            if (!commitsExist && hasChanges) {
+                val author = if (account.isLinked) GitAuthor(name = account.username, email = account.email) else GitAuthor()
+                gitService.add(dir, ".")
+                gitService.commit(dir, "Initial commit from Linq Studio", author)
+            } else if (!commitsExist && !hasChanges) {
+                val readme = File(dir, "README.md")
+                if (!readme.exists()) {
+                    readme.writeText("# ${dir.name}\n\nManaged with Linq Studio Git Engine.\n")
+                }
+                val author = if (account.isLinked) GitAuthor(name = account.username, email = account.email) else GitAuthor()
+                gitService.add(dir, ".")
+                gitService.commit(dir, "Initial commit", author)
+            }
+
+            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
+            when (val res = gitService.push(dir, remote, branch, creds)) {
                 is GitResult.Success -> {
+                    refreshGitStatus()
                     Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
                     onFinished(true, res.message)
                 }
                 is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
+                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
+                    onFinished(false, res.error)
+                }
+            }
+        }
+    }
+
+    fun gitCommit(message: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val account = _uiState.value.githubAccount
+            val author = if (account.isLinked) {
+                GitAuthor(name = account.username, email = account.email)
+            } else {
+                GitAuthor()
+            }
+            when (val res = gitService.commit(_uiState.value.currentDirectory, message, author)) {
+                is GitResult.Success -> {
+                    refreshGitStatus()
+                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
+                    onFinished(true, res.message)
+                }
+                is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
+                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
+                    onFinished(false, res.error)
+                }
+            }
+        }
+    }
+
+    fun gitClone(repoUrl: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGitLoading = true) }
+            val account = _uiState.value.githubAccount
+            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
+            val targetName = repoUrl.substringAfterLast('/').removeSuffix(".git").ifEmpty { "repo" }
+            val targetDir = File(fileRepository.internalWorkspaceDir, targetName)
+            when (val res = gitService.clone(repoUrl, targetDir, creds)) {
+                is GitResult.Success -> {
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    refreshGitStatus()
+                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
+                    onFinished(true, res.message)
+                }
+                is GitResult.Failure -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
                     Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
                     onFinished(false, res.error)
                 }

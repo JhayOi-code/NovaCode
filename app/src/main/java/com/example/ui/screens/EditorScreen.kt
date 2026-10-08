@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
@@ -75,6 +76,8 @@ fun EditorScreen(
     onSendTerminalCommand: (String) -> Unit = {},
     onClearTerminal: () -> Unit = {},
     onRerunTerminal: () -> Unit = {},
+    onOpenGitPanel: () -> Unit = {},
+    isGitLinked: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showExplorerDrawer by remember { mutableStateOf(false) }
@@ -190,6 +193,18 @@ fun EditorScreen(
                                 imageVector = Icons.Default.Terminal,
                                 contentDescription = "Toggle Terminal",
                                 tint = if (isTerminalOpen) theme.primaryColor else theme.onSurfaceColor
+                            )
+                        }
+
+                        // Git & GitHub VCS Button
+                        IconButton(
+                            onClick = onOpenGitPanel,
+                            modifier = Modifier.testTag("btn_open_git_panel")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.CallSplit,
+                                contentDescription = "Git VCS & GitHub",
+                                tint = if (isGitLinked) theme.primaryColor else theme.onSurfaceColor
                             )
                         }
 

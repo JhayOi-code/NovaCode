@@ -61,3 +61,16 @@ data class GitPullResult(
     val commitsReceived: Int,
     val summary: String
 )
+
+data class GitHubAccount(
+    val username: String = "",
+    val token: String = "",
+    val email: String = "",
+    val isLinked: Boolean = false,
+    val linkedAt: Long = 0L,
+    val displayName: String = "",
+    val publicRepos: Int = 0
+) {
+    val maskedToken: String
+        get() = if (token.length > 8) "${token.take(4)}••••••••${token.takeLast(4)}" else "••••••••"
+}

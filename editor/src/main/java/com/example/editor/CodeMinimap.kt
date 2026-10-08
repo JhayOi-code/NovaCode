@@ -5,6 +5,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -80,11 +81,10 @@ fun CodeMinimap(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(verticalScrollState.maxValue, lines.size) {
-                    val maxScroll = verticalScrollState.maxValue
-                    if (maxScroll <= 0) return@pointerInput
-
+                .pointerInput(lines.size) {
                     detectTapGestures { offset ->
+                        val maxScroll = verticalScrollState.maxValue
+                        if (maxScroll <= 0) return@detectTapGestures
                         val canvasH = size.height.toFloat()
                         val totalMiniH = lines.size * miniLinePitchPx
                         val targetFraction = if (totalMiniH <= canvasH) {
@@ -98,12 +98,11 @@ fun CodeMinimap(
                         }
                     }
                 }
-                .pointerInput(verticalScrollState.maxValue, lines.size) {
-                    val maxScroll = verticalScrollState.maxValue
-                    if (maxScroll <= 0) return@pointerInput
-
-                    detectDragGestures(
+                .pointerInput(lines.size) {
+                    detectVerticalDragGestures(
                         onDragStart = { offset ->
+                            val maxScroll = verticalScrollState.maxValue
+                            if (maxScroll <= 0) return@detectVerticalDragGestures
                             val canvasH = size.height.toFloat()
                             val totalMiniH = lines.size * miniLinePitchPx
                             val targetFraction = if (totalMiniH <= canvasH) {
@@ -116,7 +115,9 @@ fun CodeMinimap(
                                 verticalScrollState.scrollTo(targetScroll)
                             }
                         },
-                        onDrag = { change, _ ->
+                        onVerticalDrag = { change, _ ->
+                            val maxScroll = verticalScrollState.maxValue
+                            if (maxScroll <= 0) return@detectVerticalDragGestures
                             change.consume()
                             val canvasH = size.height.toFloat()
                             val totalMiniH = lines.size * miniLinePitchPx

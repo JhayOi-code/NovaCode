@@ -133,4 +133,33 @@ class GitServiceTest {
         assertEquals("main", pushData.branch)
         assertTrue(pushData.commitsCount >= 1)
     }
+
+    @Test
+    fun testPullLifecycle() = runTest(testDispatcher) {
+        val repoDir = tempFolder.newFolder("pull_repo")
+        gitService.init(repoDir, "main")
+        gitService.setRemote(repoDir, "origin", "https://github.com/linqstudio/sample.git")
+
+        val pullResult = gitService.pull(
+            directory = repoDir,
+            remote = "origin",
+            branch = "main",
+            credentials = GitCredentials("octocat", "ghp_mocktoken123")
+        )
+
+        assertTrue(pullResult is GitResult.Success)
+        val pullData = (pullResult as GitResult.Success).data
+        assertTrue(pullData.success)
+        assertEquals("origin", pullData.remote)
+        assertEquals("main", pullData.branch)
+    }
+
+    @Test
+    fun testVerifyGitHubCredentialsOffline() = runTest(testDispatcher) {
+        val result = gitService.verifyGitHubCredentials("octocat", "")
+        assertTrue(result is GitResult.Success)
+        val account = (result as GitResult.Success).data
+        assertEquals("octocat", account.username)
+        assertTrue(account.isLinked)
+    }
 }

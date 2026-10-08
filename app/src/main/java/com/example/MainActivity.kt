@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.EditorTheme
 import com.example.storage.StoragePermissionHelper
 import com.example.permissions.rememberPermissionManager
+import com.example.ui.components.GitPanelSheet
 import com.example.ui.components.PermissionWizardDialog
 import com.example.ui.components.WebPreviewDialog
 import com.example.ui.screens.AboutScreen
@@ -185,7 +186,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToEditor = { viewModel.setNavTab(1) },
                                 serverStatus = uiState.serverStatus,
                                 onStartDevServer = { viewModel.startDevServer() },
-                                onStopDevServer = { viewModel.stopDevServer() }
+                                onStopDevServer = { viewModel.stopDevServer() },
+                                githubAccount = uiState.githubAccount,
+                                onOpenGitPanel = { viewModel.toggleGitPanel(true) }
                             )
 
                             1 -> EditorScreen(
@@ -218,7 +221,9 @@ class MainActivity : ComponentActivity() {
                                 onToggleTerminal = { viewModel.toggleTerminal() },
                                 onSendTerminalCommand = { viewModel.sendTerminalCommand(it) },
                                 onClearTerminal = { viewModel.clearTerminal() },
-                                onRerunTerminal = { viewModel.rerunActiveFile() }
+                                onRerunTerminal = { viewModel.rerunActiveFile() },
+                                onOpenGitPanel = { viewModel.toggleGitPanel(true) },
+                                isGitLinked = uiState.githubAccount.isLinked
                             )
 
                             2 -> FilesScreen(
@@ -284,6 +289,33 @@ class MainActivity : ComponentActivity() {
                                 serverStatus = uiState.serverStatus,
                                 onRestartServer = { viewModel.restartDevServer() },
                                 onClose = { viewModel.closePreview() }
+                            )
+                        }
+
+                        // Git & GitHub VCS Bottom Sheet
+                        if (uiState.isGitPanelOpen) {
+                            GitPanelSheet(
+                                theme = theme,
+                                isOpen = uiState.isGitPanelOpen,
+                                onClose = { viewModel.toggleGitPanel(false) },
+                                githubAccount = uiState.githubAccount,
+                                gitStatus = uiState.gitStatus,
+                                gitCurrentBranch = uiState.gitCurrentBranch,
+                                gitRemoteUrl = uiState.gitRemoteUrl,
+                                gitLogs = uiState.gitLogs,
+                                isLoading = uiState.isGitLoading,
+                                currentDirectory = uiState.currentDirectory,
+                                onLinkGitHub = { username, token, email ->
+                                    viewModel.linkGitHubAccount(username, token, email)
+                                },
+                                onUnlinkGitHub = { viewModel.unlinkGitHubAccount() },
+                                onInitRepo = { viewModel.gitInitRepo() },
+                                onSetRemote = { url -> viewModel.gitSetRemote(url) },
+                                onPull = { viewModel.gitPull() },
+                                onPush = { viewModel.gitPush() },
+                                onCommit = { message -> viewModel.gitCommit(message) },
+                                onClone = { repoUrl -> viewModel.gitClone(repoUrl) },
+                                onRefreshStatus = { viewModel.refreshGitStatus() }
                             )
                         }
                     }

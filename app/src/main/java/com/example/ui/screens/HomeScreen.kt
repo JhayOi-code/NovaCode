@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.CallSplit
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.FolderOpen
@@ -49,9 +50,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.git.model.GitHubAccount
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
 import com.example.model.PermissionStatus
@@ -72,6 +75,8 @@ fun HomeScreen(
     serverStatus: ServerStatus = ServerStatus.Stopped,
     onStartDevServer: () -> Unit = {},
     onStopDevServer: () -> Unit = {},
+    githubAccount: GitHubAccount = GitHubAccount(),
+    onOpenGitPanel: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val companyName = stringResource(R.string.company_name)
@@ -352,6 +357,86 @@ fun HomeScreen(
                 }
             }
         }
+
+        // Git & GitHub VCS Dashboard Card
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenGitPanel)
+                    .testTag("card_git_vcs"),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(theme.primaryColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.CallSplit,
+                                contentDescription = null,
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Git & GitHub VCS",
+                                    fontWeight = FontWeight.Bold,
+                                    color = theme.onSurfaceColor,
+                                    fontSize = 13.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = if (githubAccount.isLinked) Color(0xFF10B981).copy(alpha = 0.15f) else theme.primaryColor.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (githubAccount.isLinked) "Linked" else "Connect",
+                                        color = if (githubAccount.isLinked) Color(0xFF10B981) else theme.primaryColor,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = if (githubAccount.isLinked) "Connected as @${githubAccount.username} • Push & Pull code repos" else "Link your GitHub account to push & pull repositories",
+                                color = theme.lineNumberColor,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Open Git Panel",
+                        tint = theme.lineNumberColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+
         item {
             Text(
                 text = "Quick Launch",
