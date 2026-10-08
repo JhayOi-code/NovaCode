@@ -77,6 +77,7 @@ fun HomeScreen(
     onStopDevServer: () -> Unit = {},
     githubAccount: GitHubAccount = GitHubAccount(),
     onOpenGitPanel: () -> Unit = {},
+    isLinqStudioCardVisible: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val companyName = stringResource(R.string.company_name)
@@ -90,88 +91,90 @@ fun HomeScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Minimalist Hero Card
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
-                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+        // Minimalist Hero Card (Hideable via setting, reflows cleanly)
+        if (isLinqStudioCardVisible) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().testTag("linq_studio_hero_card"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Linq Studio App Logo
-                        Image(
-                            painter = painterResource(R.drawable.ic_app_logo_1791043580196),
-                            contentDescription = "Linq Studio",
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Linq Studio App Logo
+                            Image(
+                                painter = painterResource(R.drawable.ic_linq_logo),
+                                contentDescription = "Linq Studio",
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.app_name),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = theme.onSurfaceColor
+                                )
+                                Text(
+                                    text = "Simple, Fast Mobile IDE",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = theme.primaryColor,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Lightweight code editor with fast syntax highlighting, full device storage access, and responsive web preview.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = theme.lineNumberColor,
+                            lineHeight = 18.sp
                         )
 
-                        Column {
-                            Text(
-                                text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.onSurfaceColor
-                            )
-                            Text(
-                                text = "Simple, Fast Mobile IDE",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = theme.primaryColor,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "Lightweight code editor with fast syntax highlighting, full device storage access, and responsive web preview.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = theme.lineNumberColor,
-                        lineHeight = 18.sp
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = onNavigateToEditor,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = theme.primaryColor,
-                                contentColor = theme.onPrimaryColor
-                            ),
-                            shape = RoundedCornerShape(8.dp),
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .testTag("btn_open_editor_hero")
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Open Editor", fontWeight = FontWeight.Bold)
-                        }
+                            Button(
+                                onClick = onNavigateToEditor,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = theme.primaryColor,
+                                    contentColor = theme.onPrimaryColor
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("btn_open_editor_hero")
+                            ) {
+                                Icon(Icons.Default.Code, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Open Editor", fontWeight = FontWeight.Bold)
+                            }
 
-                        Button(
-                            onClick = onOpenWebDemo,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = theme.cardBackgroundColor,
-                                contentColor = theme.onSurfaceColor
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.testTag("btn_quick_web_demo")
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Web Demo")
+                            Button(
+                                onClick = onOpenWebDemo,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = theme.cardBackgroundColor,
+                                    contentColor = theme.onSurfaceColor
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.testTag("btn_quick_web_demo")
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Web Demo")
+                            }
                         }
                     }
                 }

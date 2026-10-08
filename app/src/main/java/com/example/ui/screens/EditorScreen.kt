@@ -78,6 +78,8 @@ fun EditorScreen(
     onRerunTerminal: () -> Unit = {},
     onOpenGitPanel: () -> Unit = {},
     isGitLinked: Boolean = false,
+    isBirdsEyeViewEnabled: Boolean = true,
+    onNavigatePath: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showExplorerDrawer by remember { mutableStateOf(false) }
@@ -239,7 +241,9 @@ fun EditorScreen(
                         onContentChange = onContentChange,
                         onSaveCurrent = onSaveCurrent,
                         fontSizeSp = fontSizeSp,
-                        isWordWrapEnabled = isWordWrapEnabled
+                        isWordWrapEnabled = isWordWrapEnabled,
+                        isBirdsEyeViewEnabled = isBirdsEyeViewEnabled,
+                        onNavigatePath = onNavigatePath
                     )
                 }
 

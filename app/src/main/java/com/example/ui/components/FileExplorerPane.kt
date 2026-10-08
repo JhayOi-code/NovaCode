@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -118,20 +120,50 @@ fun FileExplorerPane(
                         )
                     }
 
-                    Column {
+                    Column(modifier = Modifier.padding(start = 4.dp)) {
                         Text(
                             text = currentDirectory.name.ifEmpty { "Root" },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = theme.onSurfaceColor
                         )
-                        Text(
-                            text = currentDirectory.absolutePath,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = theme.lineNumberColor,
-                            fontSize = 11.sp,
-                            maxLines = 1
-                        )
+                        // Interactive Clickable Breadcrumb Bar
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val pathSegments = currentDirectory.absolutePath.split("/").filter { it.isNotEmpty() }
+                            Text(
+                                text = "root",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = theme.primaryColor,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier
+                                    .clickable { onNavigateDir(File("/")) }
+                                    .padding(end = 2.dp)
+                            )
+                            pathSegments.forEachIndexed { idx, segment ->
+                                Text(text = " / ", color = theme.lineNumberColor.copy(alpha = 0.5f), fontSize = 10.sp)
+                                val segmentPath = "/" + pathSegments.take(idx + 1).joinToString("/")
+                                val isCurrent = idx == pathSegments.lastIndex
+                                Text(
+                                    text = segment,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isCurrent) theme.onSurfaceColor else theme.primaryColor,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier
+                                        .clickable(enabled = !isCurrent) {
+                                            onNavigateDir(File(segmentPath))
+                                        }
+                                        .padding(horizontal = 1.dp)
+                                )
+                            }
+                        }
                     }
                 }
 

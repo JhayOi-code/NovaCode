@@ -5,12 +5,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import java.io.File
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -353,17 +356,32 @@ fun WebPreviewDialog(
                     AndroidView(
                         modifier = widthModifier.background(Color.White),
                         factory = { ctx ->
+                            // Clean up any corrupt/stale dummy Code Cache folders left from older runs
+                            try {
+                                val codeCacheDir = File(ctx.cacheDir, "WebView/Default/HTTP Cache/Code Cache")
+                                if (codeCacheDir.exists()) {
+                                    val files = codeCacheDir.listFiles()
+                                    if (files.isNullOrEmpty() || files.any { it.isDirectory && it.name in listOf("js", "wasm") && it.list().isNullOrEmpty() }) {
+                                        codeCacheDir.deleteRecursively()
+                                    }
+                                }
+                            } catch (_: Exception) {}
+
                             WebView(ctx).apply {
                                 layoutParams = ViewGroup.LayoutParams(
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
                                 )
+                                // Render via software layer to avoid missing GPU DRI rendernode in emulator environments
+                                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
                                 settings.allowFileAccess = true
                                 settings.allowContentAccess = true
                                 settings.loadWithOverviewMode = true
                                 settings.useWideViewPort = true
+                                settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
                                 webChromeClient = object : WebChromeClient() {
                                     override fun onConsoleMessage(msg: ConsoleMessage?): Boolean {
@@ -394,6 +412,15 @@ fun WebPreviewDialog(
                             } else if (serverUrl == null && htmlContent != null) {
                                 webView.loadDataWithBaseURL("https://localhost/", htmlContent, "text/html", "UTF-8", null)
                             }
+                        },
+                        onRelease = { webView ->
+                            try {
+                                webView.stopLoading()
+                                webView.loadUrl("about:blank")
+                                webView.clearHistory()
+                                webView.removeAllViews()
+                                webView.destroy()
+                            } catch (_: Exception) {}
                         }
                     )
                 }

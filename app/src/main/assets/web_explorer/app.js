@@ -756,6 +756,12 @@
           content: `# Linq Studio Python Micro-Engine\nimport sys\n\ndef run():\n    print("Running Python 3.12...")\n    for i in range(5):\n        print(f"Step {i+1}")\n\nif __name__ == '__main__':\n    run()`
         },
         {
+          id: 'file-main-java',
+          name: 'Main.java',
+          type: 'file',
+          content: `package com.example.studio;\n\nimport java.util.List;\nimport java.util.ArrayList;\n\n/**\n * Linq Studio Java Highlighting & Runner\n */\npublic class Main {\n    private static final String APP_NAME = "Linq Studio";\n\n    public static void main(String[] args) {\n        System.out.println("⚡ Running " + APP_NAME + " on Android runtime...");\n        List<String> features = new ArrayList<>();\n        features.add("Syntax Highlighting (Prism.js)");\n        features.add("Git & GitHub VCS Sync");\n        features.add("Dual Terminal Shell");\n\n        for (int i = 0; i < features.size(); i++) {\n            System.out.printf("[%d] Active: %s%n", i + 1, features.get(i));\n        }\n    }\n}`
+        },
+        {
           id: 'file-server-go',
           name: 'server.go',
           type: 'file',
@@ -1519,6 +1525,13 @@
 
     updateLineNumbers(sampleCode);
 
+    // Update Breadcrumb Navigation
+    const breadcrumbFolder = document.getElementById('breadcrumbFolder');
+    const breadcrumbFile = document.getElementById('breadcrumbFile');
+    if (breadcrumbFolder && breadcrumbFile) {
+      breadcrumbFile.textContent = node.name;
+    }
+
     // Mobile: automatically close drawer on file selection for immediate editing
     if (window.innerWidth < 640) {
       setTimeout(closeDrawer, 180);
@@ -1907,9 +1920,23 @@
     const lines = (code || '').split('\n').length;
     let lineNumHtml = '';
     for (let i = 1; i <= lines; i++) {
-      lineNumHtml += `${i}<br>`;
+      lineNumHtml += `<div class="line-num-row" data-line="${i}">${i}</div>`;
     }
     lineNumbers.innerHTML = lineNumHtml;
+    syncLineNumbersScroll();
+  }
+
+  function syncLineNumbersScroll() {
+    const codeArea = codeContent.closest('.code-area') || codeContent;
+    if (codeArea && lineNumbers) {
+      lineNumbers.scrollTop = codeArea.scrollTop;
+    }
+  }
+
+  // Bind scroll event to synchronize lineNumbers with codeContent scrolling
+  const codeAreaContainer = codeContent.closest('.code-area');
+  if (codeAreaContainer) {
+    codeAreaContainer.addEventListener('scroll', syncLineNumbersScroll, { passive: true });
   }
 
   function saveCurrentFile(showNotification = true) {
@@ -1970,6 +1997,17 @@
         saveCurrentFile(true);
       }, 700);
     }
+  });
+
+  // Re-highlight syntax tokens when leaving editor focus
+  codeContent.addEventListener('blur', () => {
+    const activeNode = findNodeById(fileTreeData, activeFileId);
+    if (!activeNode) return;
+    const dotIdx = activeNode.name.lastIndexOf('.');
+    const ext = dotIdx !== -1 ? activeNode.name.substring(dotIdx + 1).toLowerCase() : '';
+    const currentText = codeContent.innerText || codeContent.textContent || '';
+    codeContent.className = `language-${ext || 'txt'}`;
+    codeContent.innerHTML = SyntaxHighlighter.highlight(currentText, ext);
   });
 
   // =========================================================================

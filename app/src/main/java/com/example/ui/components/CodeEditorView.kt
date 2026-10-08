@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.editor.EditorColorScheme
@@ -49,6 +50,8 @@ fun CodeEditorView(
     onSaveCurrent: () -> Unit,
     fontSizeSp: Int = 13,
     isWordWrapEnabled: Boolean = false,
+    isBirdsEyeViewEnabled: Boolean = true,
+    onNavigatePath: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val activeFile = openFiles.getOrNull(activeFileIndex)
@@ -151,6 +154,53 @@ fun CodeEditorView(
             }
         }
 
+        // Breadcrumb Navigation Row for Active File
+        if (activeFile != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(26.dp),
+                color = theme.surfaceColor,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, theme.borderColor.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val segments = activeFile.path.split("/").filter { it.isNotEmpty() }
+                    segments.forEachIndexed { idx, segment ->
+                        val isLast = idx == segments.lastIndex
+                        val subPath = "/" + segments.take(idx + 1).joinToString("/")
+
+                        Text(
+                            text = segment,
+                            color = if (isLast) theme.primaryColor else theme.lineNumberColor,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier
+                                .clickable(enabled = onNavigatePath != null) {
+                                    onNavigatePath?.invoke(subPath)
+                                }
+                                .padding(horizontal = 2.dp, vertical = 2.dp)
+                        )
+
+                        if (!isLast) {
+                            Text(
+                                text = "›",
+                                color = theme.lineNumberColor.copy(alpha = 0.6f),
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // High-Performance Virtualized Code Editor
         if (activeFile != null) {
             VirtualizedCodeEditor(
@@ -169,6 +219,7 @@ fun CodeEditorView(
                     val redone = activeFile.redo()
                     onContentChange(redone.content)
                 },
+                isBirdsEyeViewEnabled = isBirdsEyeViewEnabled,
                 modifier = Modifier.weight(1f)
             )
         } else {

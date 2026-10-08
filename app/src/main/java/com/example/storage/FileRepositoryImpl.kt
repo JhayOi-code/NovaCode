@@ -28,8 +28,8 @@ class FileRepositoryImpl(
         File(context.filesDir, "workspace").apply {
             if (!exists()) {
                 mkdirs()
-                createStarterProjects(this)
             }
+            createStarterProjects(this)
         }
     }
 
@@ -38,6 +38,7 @@ class FileRepositoryImpl(
 
         fun copyAssetOrDefault(assetName: String, fallback: String) {
             val destFile = File(webDir, assetName)
+            if (destFile.exists() && destFile.length() > 0L) return
             try {
                 context.assets.open("web_explorer/$assetName").use { input ->
                     destFile.outputStream().use { out ->
@@ -78,8 +79,46 @@ class FileRepositoryImpl(
             """console.log("Linq Studio Mobile Explorer loaded");"""
         )
 
+        copyAssetOrDefault(
+            "prism.min.js",
+            ""
+        )
+
+        copyAssetOrDefault(
+            "logo.png",
+            ""
+        )
+
+        val javaDir = File(workspace, "JavaStarter").apply { mkdirs() }
+        val javaFile = File(javaDir, "Main.java")
+        if (!javaFile.exists()) {
+            javaFile.writeText(
+                """package com.linqstudio.demo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from Linq Studio Java Runner!");
+        List<String> modules = new ArrayList<>();
+        modules.add("Syntax Highlighting Engine");
+        modules.add("HTML, CSS, JS, and Java Support");
+        modules.add("Prism.js Tokenizer");
+
+        for (int i = 0; i < modules.size(); i++) {
+            System.out.println("✓ Module: " + modules.get(i));
+        }
+    }
+}
+"""
+            )
+        }
+
         val pyDir = File(workspace, "PythonStarter").apply { mkdirs() }
-        File(pyDir, "main.py").writeText(
+        val pyFile = File(pyDir, "main.py")
+        if (!pyFile.exists()) {
+            pyFile.writeText(
             """# Linq Studio Python Starter
 import sys
 
@@ -98,11 +137,14 @@ def main():
 if __name__ == "__main__":
     main()
 """
-        )
+            )
+        }
 
         val ktDir = File(workspace, "KotlinStarter").apply { mkdirs() }
-        File(ktDir, "Main.kt").writeText(
-            """package com.linqstudio.demo
+        val ktFile = File(ktDir, "Main.kt")
+        if (!ktFile.exists()) {
+            ktFile.writeText(
+                """package com.linqstudio.demo
 
 data class Developer(val name: String, val role: String)
 
@@ -112,9 +154,12 @@ fun main() {
     println("Active Lead: " + dev.name + ", Role: " + dev.role)
 }
 """
-        )
+            )
+        }
 
-        File(workspace, "README.md").writeText(
+        val readmeFile = File(workspace, "README.md")
+        if (!readmeFile.exists()) {
+            readmeFile.writeText(
             """# 🚀 Welcome to Linq Studio
 
 Linq Studio is an ultra-fast, professional mobile development environment built for Android.
@@ -128,7 +173,8 @@ Linq Studio is an ultra-fast, professional mobile development environment built 
 
 *Developed by Ljhay • Ljhay Softworks LLC*
 """
-        )
+            )
+        }
     }
 
     override fun getStorageRoots(): Flow<List<FileItem>> = flow {

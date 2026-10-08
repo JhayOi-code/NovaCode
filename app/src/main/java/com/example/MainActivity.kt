@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -34,8 +35,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.model.EditorTheme
+import java.io.File
 import com.example.storage.StoragePermissionHelper
 import com.example.permissions.rememberPermissionManager
 import com.example.ui.components.GitPanelSheet
@@ -46,6 +49,7 @@ import com.example.ui.screens.EditorScreen
 import com.example.ui.screens.FilesScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.TerminalScreen
 import com.example.viewmodel.EditorViewModel
 
 class MainActivity : ComponentActivity() {
@@ -55,6 +59,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Clean up any empty/corrupted dummy cache directories left from previous builds
+        cleanupCorruptedWebViewCache()
 
         // Check if opened via "Open with" / "Share to" Intent
         intent?.data?.let { uri ->
@@ -125,8 +132,9 @@ class MainActivity : ComponentActivity() {
                                 Triple(0, "Home", Icons.Default.Home),
                                 Triple(1, "Editor", Icons.Default.Code),
                                 Triple(2, "Files", Icons.Default.Folder),
-                                Triple(3, "Settings", Icons.Default.Settings),
-                                Triple(4, "About", Icons.Default.Info)
+                                Triple(3, "Terminal", Icons.Default.Terminal),
+                                Triple(4, "Settings", Icons.Default.Settings),
+                                Triple(5, "About", Icons.Default.Info)
                             )
 
                             items.forEach { (tabIndex, label, icon) ->
@@ -144,7 +152,8 @@ class MainActivity : ComponentActivity() {
                                     label = {
                                         Text(
                                             text = label,
-                                            color = if (isSelected) theme.primaryColor else theme.lineNumberColor
+                                            color = if (isSelected) theme.primaryColor else theme.lineNumberColor,
+                                            fontSize = 11.sp
                                         )
                                     },
                                     colors = NavigationBarItemDefaults.colors(
@@ -188,7 +197,8 @@ class MainActivity : ComponentActivity() {
                                 onStartDevServer = { viewModel.startDevServer() },
                                 onStopDevServer = { viewModel.stopDevServer() },
                                 githubAccount = uiState.githubAccount,
-                                onOpenGitPanel = { viewModel.toggleGitPanel(true) }
+                                onOpenGitPanel = { viewModel.toggleGitPanel(true) },
+                                isLinqStudioCardVisible = uiState.isLinqStudioCardVisible
                             )
 
                             1 -> EditorScreen(
@@ -223,7 +233,15 @@ class MainActivity : ComponentActivity() {
                                 onClearTerminal = { viewModel.clearTerminal() },
                                 onRerunTerminal = { viewModel.rerunActiveFile() },
                                 onOpenGitPanel = { viewModel.toggleGitPanel(true) },
-                                isGitLinked = uiState.githubAccount.isLinked
+                                isGitLinked = uiState.githubAccount.isLinked,
+                                isBirdsEyeViewEnabled = uiState.isBirdsEyeViewEnabled,
+                                onNavigatePath = { path ->
+                                    val target = File(path)
+                                    if (target.isDirectory) {
+                                        viewModel.loadDirectory(target)
+                                        viewModel.setNavTab(2)
+                                    }
+                                }
                             )
 
                             2 -> FilesScreen(
@@ -248,20 +266,42 @@ class MainActivity : ComponentActivity() {
                                 onRefresh = { viewModel.loadDirectory(uiState.currentPathOrUri) }
                             )
 
-                            3 -> SettingsScreen(
+                            3 -> TerminalScreen(
+                                theme = theme,
+                                sessions = uiState.terminalSessions,
+                                activeSessionId = uiState.activeSessionId,
+                                onSelectSession = { viewModel.selectTerminalSession(it) },
+                                onNewSession = { viewModel.newTerminalSession() },
+                                onCloseSession = { viewModel.closeTerminalSession(it) },
+                                onSendCommand = { viewModel.sendTerminalCommand(it) },
+                                onCtrlC = { viewModel.ctrlCTerminal() },
+                                onClearTerminal = { viewModel.clearTerminal() },
+                                installedPackages = uiState.installedPackages,
+                                onUninstallPackage = { viewModel.uninstallPackage(it) },
+                                onOpenFileInEditor = {
+                                    viewModel.openFile(it)
+                                    viewModel.setNavTab(1)
+                                }
+                            )
+
+                            4 -> SettingsScreen(
                                 currentTheme = theme,
                                 onSelectTheme = { viewModel.selectTheme(it) },
                                 fontSizeSp = uiState.fontSizeSp,
                                 onFontSizeChange = { viewModel.setFontSize(it) },
                                 isWordWrapEnabled = uiState.isWordWrapEnabled,
                                 onToggleWordWrap = { viewModel.toggleWordWrap(it) },
+                                isBirdsEyeViewEnabled = uiState.isBirdsEyeViewEnabled,
+                                onToggleBirdsEyeView = { viewModel.toggleBirdsEyeView(it) },
+                                isLinqStudioCardVisible = uiState.isLinqStudioCardVisible,
+                                onToggleLinqStudioCard = { viewModel.toggleLinqStudioCard(it) },
                                 reduceTransparency = uiState.reduceTransparency,
                                 onToggleReduceTransparency = { viewModel.toggleReduceTransparency(it) },
                                 onOpenStorageWizard = { viewModel.togglePermissionWizard(true) },
                                 onImportJsonTheme = { viewModel.importJsonTheme(it) }
                             )
 
-                            4 -> AboutScreen(theme = theme)
+                            5 -> AboutScreen(theme = theme)
                         }
 
                         // Storage Permission Wizard Dialog
@@ -334,6 +374,20 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         intent.data?.let { uri ->
             viewModel.openFromUri(uri)
+        }
+    }
+
+    private fun cleanupCorruptedWebViewCache() {
+        try {
+            val codeCacheDir = java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache")
+            if (codeCacheDir.exists()) {
+                val files = codeCacheDir.listFiles()
+                // If it contains empty mock directories without Chromium indexes, wipe it cleanly
+                if (files.isNullOrEmpty() || files.any { it.isDirectory && it.name in listOf("js", "wasm") && it.list().isNullOrEmpty() }) {
+                    codeCacheDir.deleteRecursively()
+                }
+            }
+        } catch (_: Exception) {
         }
     }
 }

@@ -82,6 +82,10 @@ fun SettingsScreen(
     onFontSizeChange: (Int) -> Unit,
     isWordWrapEnabled: Boolean,
     onToggleWordWrap: (Boolean) -> Unit,
+    isBirdsEyeViewEnabled: Boolean = true,
+    onToggleBirdsEyeView: (Boolean) -> Unit = {},
+    isLinqStudioCardVisible: Boolean = true,
+    onToggleLinqStudioCard: (Boolean) -> Unit = {},
     reduceTransparency: Boolean,
     onToggleReduceTransparency: (Boolean) -> Unit,
     onOpenStorageWizard: () -> Unit,
@@ -384,6 +388,42 @@ fun SettingsScreen(
                             onCheckedChange = onToggleWordWrap,
                             colors = SwitchDefaults.colors(checkedThumbColor = currentTheme.primaryColor),
                             modifier = Modifier.testTag("switch_word_wrap")
+                        )
+                    }
+
+                    // Bird's-eye view (Minimap) Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = "Bird's-Eye View (Minimap)", fontWeight = FontWeight.Medium, color = currentTheme.onSurfaceColor, fontSize = 13.sp)
+                            Text(text = "Show minimap overview on right side of code editor", color = currentTheme.lineNumberColor, fontSize = 11.sp)
+                        }
+                        Switch(
+                            checked = isBirdsEyeViewEnabled,
+                            onCheckedChange = onToggleBirdsEyeView,
+                            colors = SwitchDefaults.colors(checkedThumbColor = currentTheme.primaryColor),
+                            modifier = Modifier.testTag("switch_birds_eye_view")
+                        )
+                    }
+
+                    // Homepage "Linq Studio" Hero Card Visibility Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(text = "Show Linq Studio Hero Card", fontWeight = FontWeight.Medium, color = currentTheme.onSurfaceColor, fontSize = 13.sp)
+                            Text(text = "Toggle the top Linq Studio banner on the homepage", color = currentTheme.lineNumberColor, fontSize = 11.sp)
+                        }
+                        Switch(
+                            checked = isLinqStudioCardVisible,
+                            onCheckedChange = onToggleLinqStudioCard,
+                            colors = SwitchDefaults.colors(checkedThumbColor = currentTheme.primaryColor),
+                            modifier = Modifier.testTag("switch_linq_card_visible")
                         )
                     }
                 }

@@ -231,6 +231,7 @@ class NanoHttpDevServer : LocalDevServer {
                 "mp3" -> "audio/mpeg"
                 "xml" -> "application/xml"
                 "txt", "md", "py", "kt", "ts", "java", "c", "cpp" -> "text/plain; charset=utf-8"
+                "wasm" -> "application/wasm"
                 else -> "application/octet-stream"
             }
         }

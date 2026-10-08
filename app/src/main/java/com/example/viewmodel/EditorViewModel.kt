@@ -22,6 +22,7 @@ import com.example.model.FileItem
 import com.example.model.PermissionStatus
 import com.example.model.SupportedLanguage
 import com.example.model.TerminalLine
+import com.example.model.TerminalLineType
 import com.example.permissions.StoragePermissionState
 import com.example.server.LocalDevServer
 import com.example.server.NanoHttpDevServer
@@ -30,6 +31,8 @@ import com.example.server.ServerStartResult
 import com.example.server.ServerStatus
 import com.example.storage.FileRepository
 import com.example.storage.FileRepositoryImpl
+import com.example.terminal.LinuxProcessRunner
+import com.example.terminal.ShellSession
 import com.example.terminal.TerminalEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +52,8 @@ data class EditorUiState(
     val currentTheme: EditorTheme = EditorTheme.LinqDark,
     val fontSizeSp: Int = 13,
     val isWordWrapEnabled: Boolean = false,
+    val isBirdsEyeViewEnabled: Boolean = true,
+    val isLinqStudioCardVisible: Boolean = true,
     val reduceTransparency: Boolean = false,
     val permissionStatus: PermissionStatus = PermissionStatus(),
     val showPermissionWizard: Boolean = false,
@@ -59,6 +64,9 @@ data class EditorUiState(
     val isTerminalOpen: Boolean = false,
     val terminalLines: List<TerminalLine> = emptyList(),
     val isTerminalRunning: Boolean = false,
+    val terminalSessions: List<ShellSession> = emptyList(),
+    val activeSessionId: String = "session_1",
+    val installedPackages: List<String> = emptyList(),
     val isGitPanelOpen: Boolean = false,
     val githubAccount: GitHubAccount = GitHubAccount(),
     val gitStatus: GitStatus? = null,
@@ -66,7 +74,7 @@ data class EditorUiState(
     val gitCurrentBranch: String = "main",
     val gitRemoteUrl: String = "",
     val isGitLoading: Boolean = false,
-    val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Settings, 4: About
+    val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Terminal, 4: Settings, 5: About
 )
 
 class EditorViewModel(
@@ -79,10 +87,24 @@ class EditorViewModel(
         FileRepositoryImpl(application)
     )
 
+    private val prefs = application.getSharedPreferences("linq_settings_prefs", Context.MODE_PRIVATE)
+    val linuxRunner: LinuxProcessRunner by lazy { LinuxProcessRunner(application) }
+
     private val _uiState = MutableStateFlow(
         EditorUiState(
             currentDirectory = fileRepository.internalWorkspaceDir,
-            currentPathOrUri = fileRepository.internalWorkspaceDir.absolutePath
+            currentPathOrUri = fileRepository.internalWorkspaceDir.absolutePath,
+            isBirdsEyeViewEnabled = prefs.getBoolean("pref_birds_eye_view", true),
+            isLinqStudioCardVisible = prefs.getBoolean("pref_linq_card_visible", true),
+            isWordWrapEnabled = prefs.getBoolean("pref_word_wrap", false),
+            fontSizeSp = prefs.getInt("pref_font_size", 13),
+            terminalSessions = listOf(
+                ShellSession(
+                    id = "session_1",
+                    name = "Session 1",
+                    workingDir = fileRepository.internalWorkspaceDir
+                )
+            )
         )
     )
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
@@ -96,7 +118,12 @@ class EditorViewModel(
 
     init {
         val account = loadGitHubAccount()
-        _uiState.update { it.copy(githubAccount = account) }
+        _uiState.update {
+            it.copy(
+                githubAccount = account,
+                installedPackages = linuxRunner.getInstalledPackages()
+            )
+        }
         refreshPermissions()
         observeStorageRoots()
         loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
@@ -165,11 +192,23 @@ class EditorViewModel(
     }
 
     fun setFontSize(sizeSp: Int) {
+        prefs.edit().putInt("pref_font_size", sizeSp).apply()
         _uiState.update { it.copy(fontSizeSp = sizeSp) }
     }
 
     fun toggleWordWrap(enabled: Boolean) {
+        prefs.edit().putBoolean("pref_word_wrap", enabled).apply()
         _uiState.update { it.copy(isWordWrapEnabled = enabled) }
+    }
+
+    fun toggleBirdsEyeView(enabled: Boolean) {
+        prefs.edit().putBoolean("pref_birds_eye_view", enabled).apply()
+        _uiState.update { it.copy(isBirdsEyeViewEnabled = enabled) }
+    }
+
+    fun toggleLinqStudioCard(visible: Boolean) {
+        prefs.edit().putBoolean("pref_linq_card_visible", visible).apply()
+        _uiState.update { it.copy(isLinqStudioCardVisible = visible) }
     }
 
     fun toggleReduceTransparency(enabled: Boolean) {
@@ -781,6 +820,69 @@ class EditorViewModel(
         }
     }
 
+    fun selectTerminalSession(sessionId: String) {
+        _uiState.update { it.copy(activeSessionId = sessionId) }
+    }
+
+    fun newTerminalSession() {
+        val nextNum = _uiState.value.terminalSessions.size + 1
+        val newSess = ShellSession(
+            id = "session_$nextNum",
+            name = "Session $nextNum",
+            workingDir = _uiState.value.currentDirectory
+        )
+        _uiState.update {
+            it.copy(
+                terminalSessions = it.terminalSessions + newSess,
+                activeSessionId = newSess.id
+            )
+        }
+    }
+
+    fun closeTerminalSession(sessionId: String) {
+        val current = _uiState.value.terminalSessions
+        if (current.size <= 1) return
+        val remaining = current.filter { it.id != sessionId }
+        val newActive = if (_uiState.value.activeSessionId == sessionId) remaining.first().id else _uiState.value.activeSessionId
+        _uiState.update {
+            it.copy(
+                terminalSessions = remaining,
+                activeSessionId = newActive
+            )
+        }
+    }
+
+    fun ctrlCTerminal() {
+        linuxRunner.sendCtrlC()
+        appendTerminalLineToActiveSession(TerminalLine("^C [Process interrupted]", TerminalLineType.STDERR))
+        _uiState.update { it.copy(isTerminalRunning = false) }
+    }
+
+    fun uninstallPackage(pkgName: String) {
+        val success = linuxRunner.uninstallPackage(pkgName)
+        _uiState.update {
+            it.copy(installedPackages = linuxRunner.getInstalledPackages())
+        }
+        if (success) {
+            Toast.makeText(getApplication(), "Uninstalled $pkgName", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun appendTerminalLineToActiveSession(line: TerminalLine) {
+        val activeId = _uiState.value.activeSessionId
+        _uiState.update { state ->
+            val updatedSessions = state.terminalSessions.map { sess ->
+                if (sess.id == activeId) {
+                    sess.copy(lines = sess.lines + line)
+                } else sess
+            }
+            state.copy(
+                terminalSessions = updatedSessions,
+                terminalLines = state.terminalLines + line
+            )
+        }
+    }
+
     fun sendTerminalCommand(command: String) {
         val trimmed = command.trim()
         if (trimmed.equals("clear", ignoreCase = true)) {
@@ -788,22 +890,78 @@ class EditorViewModel(
             return
         }
 
+        val activeSession = _uiState.value.terminalSessions.firstOrNull { it.id == _uiState.value.activeSessionId }
+            ?: _uiState.value.terminalSessions.firstOrNull()
+        val currentDir = activeSession?.workingDir ?: _uiState.value.currentDirectory
+
+        // Echo command
+        appendTerminalLineToActiveSession(TerminalLine("$ $trimmed", TerminalLineType.COMMAND))
+
+        // Handle cd command synchronously
+        if (trimmed.startsWith("cd ") || trimmed == "cd") {
+            val targetPath = trimmed.removePrefix("cd").trim()
+            val targetDir = when {
+                targetPath.isEmpty() || targetPath == "~" -> linuxRunner.homeDir
+                targetPath == ".." -> currentDir.parentFile ?: currentDir
+                targetPath.startsWith("/") -> File(targetPath)
+                else -> File(currentDir, targetPath)
+            }
+
+            if (targetDir.exists() && targetDir.isDirectory) {
+                _uiState.update { state ->
+                    val updatedSessions = state.terminalSessions.map { sess ->
+                        if (sess.id == state.activeSessionId) {
+                            sess.copy(workingDir = targetDir)
+                        } else sess
+                    }
+                    state.copy(
+                        terminalSessions = updatedSessions,
+                        currentDirectory = targetDir,
+                        currentPathOrUri = targetDir.absolutePath
+                    )
+                }
+                loadDirectory(targetDir.absolutePath)
+                appendTerminalLineToActiveSession(TerminalLine("Changed directory to: ${targetDir.absolutePath}", TerminalLineType.INFO))
+            } else {
+                appendTerminalLineToActiveSession(TerminalLine("cd: $targetPath: No such directory", TerminalLineType.STDERR))
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isTerminalRunning = true) }
-            val currentDir = _uiState.value.currentDirectory
-            val outputLines = terminalEngine.executeCommand(trimmed, currentDir)
 
+            // Execute in real Linux process with live output streaming
+            linuxRunner.executeShellCommand(
+                cmd = trimmed,
+                workingDir = currentDir,
+                onOutputLine = { outLine ->
+                    appendTerminalLineToActiveSession(outLine)
+                }
+            )
+
+            // Auto-refresh file manager list in case command created or altered files
+            loadDirectory(currentDir.absolutePath)
             _uiState.update {
                 it.copy(
-                    terminalLines = it.terminalLines + outputLines,
-                    isTerminalRunning = false
+                    isTerminalRunning = false,
+                    installedPackages = linuxRunner.getInstalledPackages()
                 )
             }
         }
     }
 
     fun clearTerminal() {
-        _uiState.update { it.copy(terminalLines = emptyList()) }
+        val activeId = _uiState.value.activeSessionId
+        _uiState.update { state ->
+            val updated = state.terminalSessions.map {
+                if (it.id == activeId) it.copy(lines = emptyList()) else it
+            }
+            state.copy(
+                terminalSessions = updated,
+                terminalLines = emptyList()
+            )
+        }
     }
 
     fun toggleTerminal(open: Boolean? = null) {

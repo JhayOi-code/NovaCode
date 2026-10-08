@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,14 +83,14 @@ fun AboutScreen(
                     // Logo centered in the middle with a dedicated frame
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(80.dp)
                             .clip(RoundedCornerShape(18.dp))
-                            .background(theme.editorBackground)
+                            .background(Color.White)
                             .border(1.dp, theme.borderColor, RoundedCornerShape(18.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            painter = painterResource(R.drawable.ic_app_logo_1791043580196),
+                            painter = painterResource(R.drawable.ic_linq_logo),
                             contentDescription = "Linq Studio Logo",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
@@ -332,6 +333,87 @@ fun AboutScreen(
                         fontSize = 12.sp,
                         lineHeight = 17.sp
                     )
+                }
+            }
+        }
+
+        // Quick Links & Community Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().testTag("about_links_section"),
+                colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Resources & Links",
+                        fontWeight = FontWeight.Bold,
+                        color = theme.onSurfaceColor,
+                        fontSize = 14.sp
+                    )
+
+                    val context = androidx.compose.ui.platform.LocalContext.current
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://github.com")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "GitHub Repository", color = theme.primaryColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(text = "github.com ›", color = theme.lineNumberColor, fontSize = 12.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://prismjs.com")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Prism.js Syntax Engine", color = theme.primaryColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(text = "prismjs.com ›", color = theme.lineNumberColor, fontSize = 12.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://nanohttpd.github.io")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "NanoHTTPD Embedded Server", color = theme.primaryColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(text = "nanohttpd.org ›", color = theme.lineNumberColor, fontSize = 12.sp)
+                    }
                 }
             }
         }

@@ -62,6 +62,7 @@ fun VirtualizedCodeEditor(
     canRedo: Boolean = false,
     onUndo: () -> Unit = {},
     onRedo: () -> Unit = {},
+    isBirdsEyeViewEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var textFieldValue by remember(text) {
@@ -70,7 +71,7 @@ fun VirtualizedCodeEditor(
 
     var isFindOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var isMinimapVisible by remember { mutableStateOf(true) }
+    var isMinimapVisible by remember(isBirdsEyeViewEnabled) { mutableStateOf(isBirdsEyeViewEnabled) }
 
     val verticalScroll = rememberScrollState()
     val horizontalScroll = rememberScrollState()
@@ -221,8 +222,8 @@ fun VirtualizedCodeEditor(
                 }
             }
 
-            // Vertical Code Mini-Map on the right side
-            if (isMinimapVisible) {
+            // Vertical Code Mini-Map / Bird's-Eye View on the right side
+            if (isBirdsEyeViewEnabled && isMinimapVisible) {
                 CodeMinimap(
                     lines = lines,
                     verticalScrollState = verticalScroll,
@@ -281,19 +282,21 @@ fun VirtualizedCodeEditor(
                     )
                 }
 
-                // Minimap toggle
-                IconButton(
-                    onClick = { isMinimapVisible = !isMinimapVisible },
-                    modifier = Modifier
-                        .size(34.dp)
-                        .testTag("btn_toggle_minimap")
-                ) {
-                    Icon(
-                        Icons.Default.Layers,
-                        contentDescription = "Toggle Minimap",
-                        tint = if (isMinimapVisible) colorScheme.cursorColor else colorScheme.lineNumber.copy(alpha = 0.5f),
-                        modifier = Modifier.size(18.dp)
-                    )
+                // Minimap / Bird's eye toggle (only visible if enabled in settings)
+                if (isBirdsEyeViewEnabled) {
+                    IconButton(
+                        onClick = { isMinimapVisible = !isMinimapVisible },
+                        modifier = Modifier
+                            .size(34.dp)
+                            .testTag("btn_toggle_minimap")
+                    ) {
+                        Icon(
+                            Icons.Default.Layers,
+                            contentDescription = "Toggle Minimap",
+                            tint = if (isMinimapVisible) colorScheme.cursorColor else colorScheme.lineNumber.copy(alpha = 0.5f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
                 // Quick Keys
