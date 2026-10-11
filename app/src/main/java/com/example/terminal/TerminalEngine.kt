@@ -102,7 +102,7 @@ class TerminalEngine(
 
         when (action) {
             "help" -> {
-                lines.add(TerminalLine("Linq Studio Shell v1.0.0 built-in commands:", TerminalLineType.INFO))
+                lines.add(TerminalLine("Linq Studio Shell v2.0.0 built-in commands:", TerminalLineType.INFO))
                 lines.add(TerminalLine("  help               Show this help manual", TerminalLineType.STDOUT))
                 lines.add(TerminalLine("  clear              Clear the terminal buffer", TerminalLineType.STDOUT))
                 lines.add(TerminalLine("  git <command>      Git VCS (status, commit, push, clone, add, log)", TerminalLineType.STDOUT))

@@ -44,7 +44,10 @@ data class GitAuthor(
 data class GitCredentials(
     val username: String = "",
     val tokenOrPassword: String = ""
-)
+) {
+    val token: String get() = tokenOrPassword
+    val password: String get() = tokenOrPassword
+}
 
 data class GitPushResult(
     val success: Boolean,

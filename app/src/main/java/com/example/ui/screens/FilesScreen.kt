@@ -41,6 +41,9 @@ fun FilesScreen(
     onNewFolder: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRename: (String, String) -> Unit,
+    onMove: (String, String) -> Unit = { _, _ -> },
+    onShare: (FileItem) -> Unit = {},
+    onClone: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onExportZip: (File) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
@@ -94,6 +97,9 @@ fun FilesScreen(
                 onNewFolder = onNewFolder,
                 onDelete = onDelete,
                 onRename = onRename,
+                onMove = onMove,
+                onShare = onShare,
+                onClone = onClone,
                 onExportZip = onExportZip,
                 onRefresh = onRefresh,
                 modifier = Modifier.weight(1f)

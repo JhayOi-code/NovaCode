@@ -12,11 +12,16 @@ import com.example.git.model.GitStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.zip.ZipInputStream
 
 class GitServiceImpl(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -73,7 +78,8 @@ class GitServiceImpl(
     override suspend fun clone(
         repoUrl: String,
         targetDirectory: File,
-        credentials: GitCredentials?
+        credentials: GitCredentials?,
+        branch: String
     ): GitResult<GitRepository> = withContext(dispatcher) {
         try {
             val cleanUrl = repoUrl.trim()
@@ -81,8 +87,14 @@ class GitServiceImpl(
                 return@withContext GitResult.Failure("Repository URL cannot be empty")
             }
 
+            if (!targetDirectory.exists()) {
+                targetDirectory.mkdirs()
+            }
+
+            val effectiveBranch = branch.trim().ifEmpty { "main" }
+
             // 1. Initialize repository directory
-            val initResult = init(targetDirectory, "main")
+            val initResult = init(targetDirectory, effectiveBranch)
             if (initResult is GitResult.Failure) return@withContext initResult
 
             val gitDir = File(targetDirectory, ".git")
@@ -98,7 +110,10 @@ class GitServiceImpl(
             // 3. Extract repository name
             val repoName = cleanUrl.substringAfterLast('/').removeSuffix(".git").ifEmpty { "repository" }
 
-            // 4. Create initial working tree files if directory is empty
+            // 4. Download and unpack remote repository archive across GitHub, GitLab, Bitbucket, Codeberg, etc.
+            val downloadResult = downloadAndExtractRepositoryArchive(cleanUrl, targetDirectory, credentials, effectiveBranch)
+
+            // If empty, create starter files as fallback
             val existingFiles = targetDirectory.listFiles { f -> f.name != ".git" } ?: emptyArray()
             if (existingFiles.isEmpty()) {
                 val readme = File(targetDirectory, "README.md")
@@ -106,14 +121,13 @@ class GitServiceImpl(
                     """
                     |# $repoName
                     |
-                    |Cloned from `$cleanUrl`
+                    |Cloned from `$cleanUrl` (Branch: $effectiveBranch)
                     |Managed with Linq Studio Git Engine.
                     |
                     |Created on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())}
                     """.trimMargin() + "\n"
                 )
 
-                // Add starter .gitignore
                 File(targetDirectory, ".gitignore").writeText(
                     """
                     |.DS_Store
@@ -126,9 +140,14 @@ class GitServiceImpl(
 
             // 5. Stage and make initial cloned commit
             add(targetDirectory, ".")
+            val commitMsg = if (downloadResult.success) {
+                "Initial clone from $cleanUrl (branch: ${downloadResult.branch}, ${downloadResult.fileCount} files)"
+            } else {
+                "Initial clone from $cleanUrl"
+            }
             val commitResult = commit(
                 directory = targetDirectory,
-                message = "Initial clone from $cleanUrl",
+                message = commitMsg,
                 author = GitAuthor(
                     name = credentials?.username?.ifEmpty { "Linq Studio" } ?: "Linq Studio",
                     email = if (!credentials?.username.isNullOrEmpty()) "${credentials?.username}@users.noreply.github.com" else "git@linqstudio.local"
@@ -137,21 +156,229 @@ class GitServiceImpl(
 
             // 6. Set remote tracking branch
             val headCommit = (commitResult as? GitResult.Success)?.data?.id ?: "0000000"
-            val remoteBranchFile = File(gitDir, "refs/remotes/origin/main")
+            val remoteBranchFile = File(gitDir, "refs/remotes/origin/$effectiveBranch")
             remoteBranchFile.parentFile?.mkdirs()
             remoteBranchFile.writeText(headCommit + "\n")
+
+            val msg = if (downloadResult.success) {
+                "Cloned $cleanUrl into ${targetDirectory.name} (${downloadResult.fileCount} files fetched)"
+            } else if (downloadResult.error != null) {
+                "Initialized local repository for $cleanUrl. (${downloadResult.error})"
+            } else {
+                "Cloned $cleanUrl into ${targetDirectory.name}"
+            }
 
             GitResult.Success(
                 data = GitRepository(
                     rootDir = targetDirectory,
-                    branch = "main",
+                    branch = effectiveBranch,
                     remotes = mapOf("origin" to cleanUrl)
                 ),
-                message = "Cloned $cleanUrl into ${targetDirectory.name}"
+                message = msg
             )
         } catch (e: Exception) {
             GitResult.Failure("Clone failed: ${e.message}", e)
         }
+    }
+
+    private data class CloneDownloadResult(
+        val success: Boolean,
+        val fileCount: Int = 0,
+        val branch: String = "main",
+        val error: String? = null
+    )
+
+    private fun downloadAndExtractRepositoryArchive(
+        repoUrl: String,
+        targetDirectory: File,
+        credentials: GitCredentials?,
+        preferredBranch: String
+    ): CloneDownloadResult {
+        var urlStr = repoUrl.trim().removeSuffix(".git").removeSuffix("/")
+        if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+            urlStr = if (urlStr.contains("/")) "https://$urlStr" else "https://github.com/$urlStr"
+        }
+
+        val parsedUrl = try {
+            URL(urlStr)
+        } catch (e: Exception) {
+            return CloneDownloadResult(false, error = "Invalid URL: ${e.message}")
+        }
+
+        val host = parsedUrl.host.lowercase(Locale.US)
+        val path = parsedUrl.path.trim('/')
+        val pathParts = path.split('/').filter { it.isNotBlank() }
+
+        val candidateUrls = mutableListOf<Pair<String, String>>()
+        val branchCandidates = listOf(preferredBranch, "main", "master", "HEAD")
+            .distinct()
+            .filter { it.isNotBlank() }
+
+        if (host.contains("github.com") && pathParts.size >= 2) {
+            val owner = pathParts[0]
+            val repo = pathParts[1]
+            if (!credentials?.token.isNullOrBlank()) {
+                branchCandidates.forEach { b ->
+                    candidateUrls.add("https://api.github.com/repos/$owner/$repo/zipball/$b" to b)
+                }
+            }
+            branchCandidates.forEach { b ->
+                candidateUrls.add("https://github.com/$owner/$repo/archive/refs/heads/$b.zip" to b)
+            }
+            candidateUrls.add("https://github.com/$owner/$repo/archive/HEAD.zip" to "HEAD")
+        } else if (host.contains("gitlab.com") && pathParts.size >= 2) {
+            val owner = pathParts.dropLast(1).joinToString("/")
+            val repo = pathParts.last()
+            branchCandidates.forEach { b ->
+                candidateUrls.add("https://gitlab.com/$owner/$repo/-/archive/$b/$repo-$b.zip" to b)
+            }
+        } else if (host.contains("bitbucket.org") && pathParts.size >= 2) {
+            val owner = pathParts[0]
+            val repo = pathParts[1]
+            branchCandidates.forEach { b ->
+                candidateUrls.add("https://bitbucket.org/$owner/$repo/get/$b.zip" to b)
+            }
+        } else if ((host.contains("codeberg.org") || host.contains("gitea")) && pathParts.size >= 2) {
+            val owner = pathParts[0]
+            val repo = pathParts[1]
+            branchCandidates.forEach { b ->
+                candidateUrls.add("https://$host/$owner/$repo/archive/$b.zip" to b)
+            }
+        } else {
+            if (repoUrl.endsWith(".zip", ignoreCase = true)) {
+                candidateUrls.add(repoUrl to preferredBranch)
+            }
+            branchCandidates.forEach { b ->
+                candidateUrls.add("$urlStr/archive/refs/heads/$b.zip" to b)
+                candidateUrls.add("$urlStr/archive/$b.zip" to b)
+                candidateUrls.add("$urlStr/-/archive/$b/archive.zip" to b)
+            }
+        }
+
+        var lastError: String? = null
+
+        for ((candidateUrl, branchName) in candidateUrls) {
+            try {
+                val downloaded = tryDownloadAndExtractZip(
+                    candidateUrl = candidateUrl,
+                    targetDir = targetDirectory,
+                    credentials = credentials,
+                    host = host
+                )
+                if (downloaded > 0) {
+                    return CloneDownloadResult(success = true, fileCount = downloaded, branch = branchName)
+                }
+            } catch (e: Exception) {
+                lastError = e.message
+            }
+        }
+
+        return CloneDownloadResult(success = false, error = lastError ?: "Remote archive not reachable")
+    }
+
+    private fun tryDownloadAndExtractZip(
+        candidateUrl: String,
+        targetDir: File,
+        credentials: GitCredentials?,
+        host: String
+    ): Int {
+        var currentUrl = candidateUrl
+        var redirects = 0
+        var connection: HttpURLConnection? = null
+
+        while (redirects < 6) {
+            val u = URL(currentUrl)
+            connection = (u.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 8000
+                readTimeout = 20000
+                instanceFollowRedirects = false
+                setRequestProperty("User-Agent", "LinqStudio-IDE")
+                setRequestProperty("Accept", "application/zip, application/octet-stream, */*")
+
+                if (!credentials?.token.isNullOrBlank()) {
+                    if (host.contains("gitlab")) {
+                        setRequestProperty("PRIVATE-TOKEN", credentials.token)
+                    } else {
+                        setRequestProperty("Authorization", "Bearer ${credentials.token}")
+                    }
+                } else if (!credentials?.username.isNullOrBlank() && !credentials?.password.isNullOrBlank()) {
+                    val auth = "${credentials.username}:${credentials.password}"
+                    val b64 = android.util.Base64.encodeToString(auth.toByteArray(), android.util.Base64.NO_WRAP)
+                    setRequestProperty("Authorization", "Basic $b64")
+                }
+            }
+
+            val code = connection.responseCode
+            if (code in 300..399) {
+                val location = connection.getHeaderField("Location") ?: break
+                currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
+                    location
+                } else {
+                    URL(u, location).toString()
+                }
+                redirects++
+                connection.disconnect()
+            } else if (code in 200..299) {
+                break
+            } else {
+                connection.disconnect()
+                return 0
+            }
+        }
+
+        val conn = connection ?: return 0
+        var extractedCount = 0
+
+        conn.inputStream.use { rawIn ->
+            BufferedInputStream(rawIn).use { bufIn ->
+                ZipInputStream(bufIn).use { zipIn ->
+                    val canonicalDestPath = targetDir.canonicalPath
+                    var rootPrefix: String? = null
+
+                    while (true) {
+                        val entry = zipIn.nextEntry ?: break
+                        val rawName = entry.name.replace('\\', '/')
+                        if (rawName.isBlank()) continue
+
+                        if (rootPrefix == null && rawName.contains('/')) {
+                            rootPrefix = rawName.substringBefore('/') + "/"
+                        }
+
+                        val relativePath = if (rootPrefix != null && rawName.startsWith(rootPrefix)) {
+                            rawName.removePrefix(rootPrefix)
+                        } else {
+                            rawName
+                        }
+
+                        if (relativePath.isBlank() || relativePath == ".git" || relativePath.startsWith(".git/")) {
+                            zipIn.closeEntry()
+                            continue
+                        }
+
+                        val outFile = File(targetDir, relativePath)
+                        // Zip-Slip security check
+                        if (!outFile.canonicalPath.startsWith(canonicalDestPath)) {
+                            zipIn.closeEntry()
+                            continue
+                        }
+
+                        if (entry.isDirectory) {
+                            outFile.mkdirs()
+                        } else {
+                            outFile.parentFile?.mkdirs()
+                            FileOutputStream(outFile).use { fos ->
+                                zipIn.copyTo(fos)
+                            }
+                            extractedCount++
+                        }
+                        zipIn.closeEntry()
+                    }
+                }
+            }
+        }
+
+        return extractedCount
     }
 
     override suspend fun status(directory: File): GitResult<GitStatus> = withContext(dispatcher) {

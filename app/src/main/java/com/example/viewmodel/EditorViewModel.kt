@@ -2,10 +2,13 @@ package com.example.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.webkit.MimeTypeMap
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.git.GitService
@@ -74,6 +77,7 @@ data class EditorUiState(
     val gitCurrentBranch: String = "main",
     val gitRemoteUrl: String = "",
     val isGitLoading: Boolean = false,
+    val screenOrientationMode: String = "sensor", // "sensor" (auto rotates to landscape when device is flipped), "portrait", "landscape"
     val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Terminal, 4: Settings, 5: About
 )
 
@@ -98,6 +102,7 @@ class EditorViewModel(
             isLinqStudioCardVisible = prefs.getBoolean("pref_linq_card_visible", true),
             isWordWrapEnabled = prefs.getBoolean("pref_word_wrap", false),
             fontSizeSp = prefs.getInt("pref_font_size", 13),
+            screenOrientationMode = prefs.getString("pref_screen_orientation", "sensor") ?: "sensor",
             terminalSessions = listOf(
                 ShellSession(
                     id = "session_1",
@@ -112,16 +117,37 @@ class EditorViewModel(
     val localDevServer: LocalDevServer = NanoHttpDevServer()
     val gitService: GitService = GitServiceImpl()
 
-    private val terminalEngine by lazy {
-        TerminalEngine(fileRepository.internalWorkspaceDir, gitService)
+    private var terminalEngineInstance: TerminalEngine? = null
+    private fun getTerminalEngine(): TerminalEngine {
+        var engine = terminalEngineInstance
+        if (engine == null) {
+            engine = TerminalEngine(fileRepository.internalWorkspaceDir, gitService)
+            terminalEngineInstance = engine
+        }
+        return engine
+    }
+
+    private var isTerminalInitialized = false
+
+    private val memoryTrimListener = object : com.example.memory.MemoryManager.MemoryTrimListener {
+        override fun onTrimMemory(level: Int) {
+            trimInternalCaches()
+        }
+
+        override fun onLowMemoryPressure() {
+            trimInternalCaches()
+            System.gc()
+        }
     }
 
     init {
+        // Register with MemoryManager
+        com.example.memory.MemoryManager.registerListener(memoryTrimListener)
+
         val account = loadGitHubAccount()
         _uiState.update {
             it.copy(
-                githubAccount = account,
-                installedPackages = linuxRunner.getInstalledPackages()
+                githubAccount = account
             )
         }
         refreshPermissions()
@@ -139,6 +165,46 @@ class EditorViewModel(
             localDevServer.requestLogs.collect { logs ->
                 _uiState.update { it.copy(serverLogs = logs) }
             }
+        }
+    }
+
+    /**
+     * Lazily initializes terminal modules (LinuxProcessRunner environment & installed packages)
+     * only when the user switches to the Terminal panel or executes a terminal command.
+     */
+    fun ensureTerminalInitialized() {
+        if (isTerminalInitialized) return
+        isTerminalInitialized = true
+        viewModelScope.launch {
+            val pkgs = linuxRunner.getInstalledPackages()
+            _uiState.update {
+                it.copy(installedPackages = pkgs)
+            }
+        }
+    }
+
+    /**
+     * Clears syntax tokenizer caches and file tree caches on low-memory condition.
+     */
+    fun trimInternalCaches() {
+        com.example.syntax.SyntaxHighlighter.evictMemory()
+        com.example.editor.FastSyntaxTokenizer.evictMemory()
+        com.example.model.TreeCacheManager.clearCache()
+    }
+
+    /**
+     * Restarts core editor services cleanly following error recovery.
+     */
+    fun restartEditorService() {
+        try {
+            trimInternalCaches()
+            terminalEngineInstance = null
+            isTerminalInitialized = false
+            loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
+            openInitialFiles()
+            Toast.makeText(getApplication(), "Editor core services restarted successfully", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            com.example.crash.CrashReporter.captureException(e, tag = "RestartEditorService")
         }
     }
 
@@ -215,6 +281,16 @@ class EditorViewModel(
         _uiState.update { it.copy(reduceTransparency = enabled) }
     }
 
+    fun setScreenOrientationMode(mode: String) {
+        prefs.edit().putString("pref_screen_orientation", mode).apply()
+        _uiState.update { it.copy(screenOrientationMode = mode) }
+    }
+
+    fun toggleAutoRotate() {
+        val newMode = if (_uiState.value.screenOrientationMode == "portrait") "sensor" else "portrait"
+        setScreenOrientationMode(newMode)
+    }
+
     fun loadDirectory(file: File) {
         loadDirectory(file.absolutePath)
     }
@@ -253,7 +329,7 @@ class EditorViewModel(
         }
     }
 
-    fun openFile(item: FileItem) {
+    fun openFile(item: FileItem, initialCursor: Int = -1, initialContent: String? = null) {
         if (item.isDirectory) {
             loadDirectory(item.path)
             return
@@ -268,17 +344,51 @@ class EditorViewModel(
                 return@launch
             }
 
+            if (initialContent != null) {
+                val lang = SupportedLanguage.fromFilename(item.name)
+                val newCodeFile = CodeFile(
+                    name = item.name,
+                    path = item.path,
+                    content = initialContent,
+                    language = lang,
+                    cursorPosition = if (initialCursor >= 0) initialCursor else initialContent.length
+                )
+                _uiState.update { state ->
+                    val updated = state.openFiles + newCodeFile
+                    state.copy(
+                        openFiles = updated,
+                        activeFileIndex = updated.size - 1,
+                        activeNavTab = 1
+                    )
+                }
+                return@launch
+            }
+
             fileRepository.readFile(item.path)
                 .catch { error ->
                     Toast.makeText(getApplication(), "Could not read ${item.name}: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
-                .collect { content ->
+                .collect { readContent ->
                     val lang = SupportedLanguage.fromFilename(item.name)
+                    var contentToUse = readContent
+                    var cursorToUse = if (initialCursor >= 0) initialCursor else 0
+
+                    // Templates only apply to newly created, empty files. Never overwrite existing content.
+                    if (contentToUse.isEmpty()) {
+                        val template = com.example.editor.FileTemplates.getTemplateForFile(item.name)
+                        if (template != null) {
+                            contentToUse = template.content
+                            cursorToUse = template.cursorPosition
+                            fileRepository.writeFile(item.path, template.content)
+                        }
+                    }
+
                     val newCodeFile = CodeFile(
                         name = item.name,
                         path = item.path,
-                        content = content,
-                        language = lang
+                        content = contentToUse,
+                        language = lang,
+                        cursorPosition = cursorToUse
                     )
                     _uiState.update { state ->
                         val updated = state.openFiles + newCodeFile
@@ -377,10 +487,18 @@ class EditorViewModel(
 
     fun createNewFileInExplorer(fileName: String) {
         viewModelScope.launch {
+            val template = com.example.editor.FileTemplates.getTemplateForFile(fileName)
             fileRepository.createFile(_uiState.value.currentPathOrUri, fileName, false)
                 .onSuccess { item ->
+                    if (template != null) {
+                        fileRepository.writeFile(item.path, template.content)
+                    }
                     loadDirectory(_uiState.value.currentPathOrUri)
-                    openFile(item)
+                    openFile(
+                        item = item,
+                        initialCursor = template?.cursorPosition ?: 0,
+                        initialContent = template?.content
+                    )
                     Toast.makeText(getApplication(), "Created $fileName", Toast.LENGTH_SHORT).show()
                 }
                 .onFailure {
@@ -442,6 +560,114 @@ class EditorViewModel(
         }
     }
 
+    fun moveFileInExplorer(sourceTarget: Any, destinationDir: String) {
+        val srcPath = when (sourceTarget) {
+            is FileItem -> sourceTarget.path
+            is File -> sourceTarget.absolutePath
+            else -> sourceTarget.toString()
+        }
+        viewModelScope.launch {
+            fileRepository.moveFile(srcPath, destinationDir)
+                .onSuccess { moved ->
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    Toast.makeText(getApplication(), "Moved ${moved.name} to destination", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { err ->
+                    Toast.makeText(getApplication(), "Move failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
+    fun duplicateFileInExplorer(target: Any) {
+        val path = when (target) {
+            is FileItem -> target.path
+            is File -> target.absolutePath
+            else -> target.toString()
+        }
+        viewModelScope.launch {
+            fileRepository.duplicateFile(path)
+                .onSuccess { copyItem ->
+                    loadDirectory(_uiState.value.currentPathOrUri)
+                    Toast.makeText(getApplication(), "Duplicated: ${copyItem.name}", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { err ->
+                    Toast.makeText(getApplication(), "Duplicate failed: ${err.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
+    fun shareFile(context: Context, item: FileItem) {
+        try {
+            val file = File(item.path)
+            if (item.isDirectory) {
+                // If it is a directory, compress and share the zip archive
+                viewModelScope.launch {
+                    val tempZip = File(context.cacheDir, "${item.name}.zip")
+                    fileRepository.zipDirectory(item.path, tempZip)
+                        .onSuccess {
+                            val uri = try {
+                                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempZip)
+                            } catch (e: Exception) {
+                                Uri.fromFile(tempZip)
+                            }
+
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/zip"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                putExtra(Intent.EXTRA_SUBJECT, "${item.name}.zip")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share ${item.name}.zip").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                        }
+                        .onFailure {
+                            Toast.makeText(context, "Could not compress folder to share", Toast.LENGTH_SHORT).show()
+                        }
+                }
+                return
+            }
+
+            // Normal file sharing
+            val uri = try {
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            } catch (e: Exception) {
+                null
+            }
+
+            val ext = file.extension.lowercase()
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
+                ?: when (ext) {
+                    "kt", "java", "py", "js", "ts", "html", "css", "json", "xml", "md", "txt", "sh", "c", "cpp", "rs", "go" -> "text/plain"
+                    else -> "*/*"
+                }
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                if (uri != null) {
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                putExtra(Intent.EXTRA_SUBJECT, file.name)
+                // If small text file, also attach text content as fallback
+                if (file.exists() && file.length() < 300_000) {
+                    try {
+                        val text = file.readText(Charsets.UTF_8)
+                        putExtra(Intent.EXTRA_TEXT, text)
+                    } catch (_: Exception) {}
+                }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+
+            context.startActivity(Intent.createChooser(intent, "Share ${file.name}").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to share: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun exportZip(destination: Any) {
         viewModelScope.launch {
             val currentDir = _uiState.value.currentDirectory
@@ -469,8 +695,9 @@ class EditorViewModel(
 
     fun openWebPreviewForActiveFile(file: CodeFile) {
         val targetFile = File(file.path)
-        val parentDir = if (targetFile.parentFile != null && targetFile.parentFile.exists()) {
-            targetFile.parentFile
+        val parent = targetFile.parentFile
+        val parentDir = if (parent != null && parent.exists()) {
+            parent
         } else {
             _uiState.value.currentDirectory
         }
@@ -758,18 +985,39 @@ class EditorViewModel(
         }
     }
 
-    fun gitClone(repoUrl: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
+    fun gitClone(
+        repoUrl: String,
+        targetFolderName: String = "",
+        branch: String = "main",
+        customToken: String = "",
+        onFinished: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isGitLoading = true) }
             val account = _uiState.value.githubAccount
-            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
-            val targetName = repoUrl.substringAfterLast('/').removeSuffix(".git").ifEmpty { "repo" }
-            val targetDir = File(fileRepository.internalWorkspaceDir, targetName)
-            when (val res = gitService.clone(repoUrl, targetDir, creds)) {
+            val creds = when {
+                customToken.isNotBlank() -> GitCredentials(
+                    username = if (account.isLinked) account.username else "git",
+                    tokenOrPassword = customToken
+                )
+                account.isLinked -> GitCredentials(account.username, account.token)
+                else -> null
+            }
+
+            val defaultName = repoUrl.trim().removeSuffix("/").substringAfterLast('/').removeSuffix(".git").ifEmpty { "repo" }
+            val folderName = targetFolderName.trim().ifEmpty { defaultName }
+
+            val baseDir = _uiState.value.currentDirectory.let {
+                if (it.exists() && it.isDirectory && it.canWrite()) it else fileRepository.internalWorkspaceDir
+            }
+            val targetDir = File(baseDir, folderName)
+
+            when (val res = gitService.clone(repoUrl, targetDir, creds, branch.trim().ifEmpty { "main" })) {
                 is GitResult.Success -> {
+                    _uiState.update { it.copy(isGitLoading = false) }
                     loadDirectory(_uiState.value.currentPathOrUri)
                     refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_LONG).show()
                     onFinished(true, res.message)
                 }
                 is GitResult.Failure -> {
@@ -801,7 +1049,7 @@ class EditorViewModel(
             // Slight realistic delay to reflect process spin-up
             kotlinx.coroutines.delay(200)
 
-            val outputLines = terminalEngine.executeCode(file)
+            val outputLines = getTerminalEngine().executeCode(file)
             _uiState.update {
                 it.copy(
                     terminalLines = it.terminalLines + outputLines,
@@ -972,10 +1220,22 @@ class EditorViewModel(
 
     fun setNavTab(tabIndex: Int) {
         _uiState.update { it.copy(activeNavTab = tabIndex) }
+        when (tabIndex) {
+            1 -> {
+                // Switching to Editor panel: initialize syntax highlighter lazily
+                com.example.editor.FastSyntaxTokenizer.ensureInitialized()
+                com.example.syntax.SyntaxHighlighter.ensureInitialized()
+            }
+            3 -> {
+                // Switching to Terminal panel: initialize terminal environment & packages lazily
+                ensureTerminalInitialized()
+            }
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
+        com.example.memory.MemoryManager.unregisterListener(memoryTrimListener)
         localDevServer.stop()
     }
 }

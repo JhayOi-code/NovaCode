@@ -22,7 +22,8 @@ interface GitService {
     suspend fun clone(
         repoUrl: String,
         targetDirectory: File,
-        credentials: GitCredentials? = null
+        credentials: GitCredentials? = null,
+        branch: String = "main"
     ): GitResult<GitRepository>
 
     suspend fun status(directory: File): GitResult<GitStatus>

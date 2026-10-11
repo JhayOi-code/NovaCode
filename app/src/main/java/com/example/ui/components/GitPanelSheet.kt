@@ -618,17 +618,46 @@ fun GitPanelSheet(
 
     // --- DIALOG: Clone Repository ---
     if (showCloneDialog) {
+        var selectedProvider by remember { mutableStateOf("GitHub") }
         AlertDialog(
             onDismissRequest = { showCloneDialog = false },
             containerColor = theme.surfaceColor,
-            title = { Text("Clone GitHub Repository", fontWeight = FontWeight.Bold, color = theme.onSurfaceColor) },
+            title = { Text("Clone Git Repository", fontWeight = FontWeight.Bold, color = theme.onSurfaceColor) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Enter a public or authorized GitHub repo URL to clone into your workspace:",
+                        text = "Clone any public or private repository from GitHub, GitLab, Bitbucket, Codeberg, or any Git URL:",
                         fontSize = 12.sp,
                         color = theme.lineNumberColor
                     )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val providers = listOf(
+                            "GitHub" to "https://github.com/octocat/Hello-World.git",
+                            "GitLab" to "https://gitlab.com/gitlab-org/gitlab-runner.git",
+                            "Bitbucket" to "https://bitbucket.org/atlassian/maven-jgit-buildnumber.git",
+                            "Codeberg" to "https://codeberg.org/forgejo/forgejo.git",
+                            "Custom" to ""
+                        )
+                        providers.forEach { (name, sampleUrl) ->
+                            androidx.compose.material3.FilterChip(
+                                selected = selectedProvider == name,
+                                onClick = {
+                                    selectedProvider = name
+                                    if (sampleUrl.isNotEmpty()) {
+                                        cloneRepoUrl = sampleUrl
+                                    }
+                                },
+                                label = { Text(name, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
                     OutlinedTextField(
                         value = cloneRepoUrl,
                         onValueChange = { cloneRepoUrl = it },

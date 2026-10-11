@@ -582,7 +582,7 @@ fun HomeScreen(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "Linq Studio v1.0.0",
+                        text = "Linq Studio v2.0.0",
                         color = theme.lineNumberColor.copy(alpha = 0.6f),
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center

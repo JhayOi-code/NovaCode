@@ -923,6 +923,10 @@
 
   sideDrawer.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
+    if (e.target.closest('button, input, textarea, select, .btn-row-overflow, .btn-header-action, .nav-tab, .btn-run-html, .popup-item, .termux-key')) {
+      isTouchCandidate = false;
+      return;
+    }
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchCurrentX = touchStartX;
@@ -1525,11 +1529,52 @@
 
     updateLineNumbers(sampleCode);
 
-    // Update Breadcrumb Navigation
-    const breadcrumbFolder = document.getElementById('breadcrumbFolder');
-    const breadcrumbFile = document.getElementById('breadcrumbFile');
-    if (breadcrumbFolder && breadcrumbFile) {
-      breadcrumbFile.textContent = node.name;
+    // Dynamic Breadcrumb Navigation in Editor Header
+    const editorBreadcrumbs = document.getElementById('editorBreadcrumbs');
+    if (editorBreadcrumbs) {
+      function getNodePathChain(items, targetId, pathAcc = []) {
+        for (const item of items) {
+          const next = [...pathAcc, item];
+          if (item.id === targetId) return next;
+          if (item.children && item.children.length > 0) {
+            const res = getNodePathChain(item.children, targetId, next);
+            if (res) return res;
+          }
+        }
+        return null;
+      }
+
+      const pathChain = getNodePathChain(fileTreeData, node.id) || [];
+      let breadcrumbHtml = `<span class="breadcrumb-item breadcrumb-root" data-folder="root">workspace</span>`;
+
+      if (pathChain.length > 0) {
+        pathChain.forEach((item, idx) => {
+          const isLast = idx === pathChain.length - 1;
+          breadcrumbHtml += `<span class="breadcrumb-separator">›</span>`;
+          if (isLast) {
+            breadcrumbHtml += `<span id="breadcrumbFile" class="breadcrumb-item active">${item.name}</span>`;
+          } else {
+            breadcrumbHtml += `<span class="breadcrumb-item breadcrumb-folder" data-node-id="${item.id}" style="cursor:pointer;">${item.name}</span>`;
+          }
+        });
+      } else {
+        breadcrumbHtml += `<span class="breadcrumb-separator">›</span><span id="breadcrumbFile" class="breadcrumb-item active">${node.name}</span>`;
+      }
+
+      editorBreadcrumbs.innerHTML = breadcrumbHtml;
+
+      editorBreadcrumbs.querySelectorAll('.breadcrumb-folder').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = el.getAttribute('data-node-id');
+          const targetFolder = findNodeById(fileTreeData, targetId);
+          if (targetFolder) {
+            targetFolder.isOpen = true;
+            renderFileTree();
+            showToast(`📂 Opened folder ${targetFolder.name}`);
+          }
+        });
+      });
     }
 
     // Mobile: automatically close drawer on file selection for immediate editing
@@ -1566,6 +1611,15 @@
     fileTree.style.display = isRootOpen ? 'flex' : 'none';
   });
 
+  const rootOverflowBtn = document.querySelector('.root-overflow');
+  if (rootOverflowBtn) {
+    rootOverflowBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rootNode = { id: 'workspace-root', name: 'my-project', type: 'folder', isOpen: isRootOpen };
+      showPopupMenu(rootNode, rootOverflowBtn);
+    });
+  }
+
   // =========================================================================
   // 8. INLINE CREATOR (New File / New Folder with LIVE Icon Updating)
   // =========================================================================
@@ -1590,7 +1644,8 @@
   function updateCreatorIcon() {
     const name = creatorInput.value.trim();
     if (creatorMode === 'folder') {
-      creatorIcon.innerHTML = ICON_SVGS.folderClosed.svg;
+      const folderIcon = getFileIcon(name || 'folder', true, false);
+      creatorIcon.innerHTML = folderIcon.svg;
     } else {
       const icon = getFileIcon(name || 'untitled.txt', false);
       creatorIcon.innerHTML = icon.svg;
@@ -1599,6 +1654,32 @@
 
   creatorInput.addEventListener('input', updateCreatorIcon);
 
+  const STARTER_TEMPLATES = {
+    java: `public class {Name} {\n    public static void main(String[] args) {\n        |\n    }\n}`,
+    kt: `fun main() {\n    |\n}`,
+    py: `def main():\n    |\n\nif __name__ == "__main__":\n    main()`,
+    js: `function main() {\n  |\n}\n\nmain();`,
+    html: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>{Name}</title>\n  <link rel="stylesheet" href="{Name}.css">\n</head>\n<body>\n  |\n</body>\n</html>`,
+    css: `/* {Name}.css */\n\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  font-family: sans-serif;\n  |\n}`,
+    c: `#include <stdio.h>\n\nint main(void) {\n    |\n    return 0;\n}`,
+    cpp: `#include <iostream>\n\nint main() {\n    |\n    return 0;\n}`,
+    cs: `using System;\n\nclass {Name}\n{\n    static void Main(string[] args)\n    {\n        |\n    }\n}`,
+    go: `package main\n\nimport "fmt"\n\nfunc main() {\n\t|\n}`,
+    rs: `fn main() {\n    |\n}`,
+    php: `<?php\n\n|`,
+    swift: `import Foundation\n\n|`
+  };
+
+  function getStarterTemplate(fileName) {
+    const dotIdx = fileName.lastIndexOf('.');
+    if (dotIdx === -1) return '';
+    const ext = fileName.substring(dotIdx + 1).toLowerCase();
+    const raw = STARTER_TEMPLATES[ext];
+    if (!raw) return '';
+    const baseName = fileName.substring(0, dotIdx);
+    return raw.replace(/{Name}/g, baseName).replace(/\|/g, '');
+  }
+
   function commitCreation() {
     const rawName = creatorInput.value.trim();
     if (!rawName) {
@@ -1606,13 +1687,15 @@
       return;
     }
 
+    const starterCode = creatorMode === 'file' ? (getStarterTemplate(rawName) || '') : undefined;
+
     const newNode = {
       id: `item-${Date.now()}`,
       name: rawName,
       type: creatorMode,
       isOpen: true,
       children: creatorMode === 'folder' ? [] : undefined,
-      content: creatorMode === 'file' ? `// ${rawName}\n` : undefined
+      content: starterCode
     };
 
     // Prepend to root file tree
@@ -1673,8 +1756,10 @@
     contextTargetNode = node;
     const rect = triggerBtn.getBoundingClientRect();
 
-    rowPopupMenu.style.top = `${rect.bottom + 4}px`;
-    rowPopupMenu.style.left = `${Math.min(rect.left - 100, window.innerWidth - 170)}px`;
+    const top = Math.min(rect.bottom + 4, window.innerHeight - 150);
+    const left = Math.max(12, Math.min(rect.left - 100, window.innerWidth - 180));
+    rowPopupMenu.style.top = `${top}px`;
+    rowPopupMenu.style.left = `${left}px`;
     rowPopupMenu.classList.remove('hidden');
   }
 
@@ -1690,7 +1775,8 @@
   });
 
   rowPopupMenu.querySelectorAll('.popup-item').forEach((item) => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
       const action = item.dataset.action;
       if (!contextTargetNode) return;
 
@@ -1975,6 +2061,1025 @@
         restoreSavedFiles(node.children);
       }
     }
+  }
+
+  // =========================================================================
+  // MULTI-CURSOR ENGINE (SIMULTANEOUS EDITING & SELECTIONS)
+  // =========================================================================
+  let secondaryCursors = []; // Array of { start: number, end: number }
+  const statusMultiCursor = document.getElementById('statusMultiCursor');
+
+  // Overlay container inside .code-area for rendering secondary cursors and selections
+  let multiCursorOverlay = document.getElementById('multiCursorOverlay');
+  if (!multiCursorOverlay) {
+    multiCursorOverlay = document.createElement('div');
+    multiCursorOverlay.id = 'multiCursorOverlay';
+    multiCursorOverlay.className = 'multi-cursor-overlay';
+    multiCursorOverlay.style.position = 'absolute';
+    multiCursorOverlay.style.top = '0';
+    multiCursorOverlay.style.left = '0';
+    multiCursorOverlay.style.right = '0';
+    multiCursorOverlay.style.bottom = '0';
+    multiCursorOverlay.style.pointerEvents = 'none';
+    multiCursorOverlay.style.zIndex = '8';
+    const parentCodeArea = codeContent.closest('.code-area') || codeContent;
+    if (parentCodeArea) {
+      parentCodeArea.style.position = 'relative';
+      parentCodeArea.appendChild(multiCursorOverlay);
+    }
+  }
+
+  function updateMultiCursorStatus() {
+    if (!statusMultiCursor) return;
+    if (secondaryCursors.length > 0) {
+      statusMultiCursor.textContent = `${secondaryCursors.length + 1} cursors`;
+      statusMultiCursor.classList.remove('hidden');
+    } else {
+      statusMultiCursor.classList.add('hidden');
+    }
+  }
+
+  function clearMultiCursors(silent = false) {
+    if (secondaryCursors.length === 0) return;
+    secondaryCursors = [];
+    renderMultiCursors();
+    updateMultiCursorStatus();
+    if (!silent) showToast('Cleared extra cursors');
+  }
+
+  function getRangeForOffsets(startOffset, endOffset) {
+    const range = document.createRange();
+    let current = 0;
+    let startSet = false;
+    let endSet = false;
+
+    function walk(node) {
+      if (startSet && endSet) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const next = current + node.length;
+        if (!startSet && startOffset >= current && startOffset <= next) {
+          range.setStart(node, Math.max(0, startOffset - current));
+          startSet = true;
+        }
+        if (!endSet && endOffset >= current && endOffset <= next) {
+          range.setEnd(node, Math.max(0, endOffset - current));
+          endSet = true;
+        }
+        current = next;
+      } else {
+        for (const child of node.childNodes) {
+          walk(child);
+          if (startSet && endSet) return;
+        }
+      }
+    }
+
+    walk(codeContent);
+    if (!startSet) range.setStart(codeContent, 0);
+    if (!endSet) range.setEnd(codeContent, 0);
+    return range;
+  }
+
+  function renderMultiCursors() {
+    if (!multiCursorOverlay) return;
+    multiCursorOverlay.innerHTML = '';
+    if (secondaryCursors.length === 0) {
+      updateMultiCursorStatus();
+      return;
+    }
+
+    const parentCodeArea = codeContent.closest('.code-area') || codeContent;
+    const parentRect = parentCodeArea.getBoundingClientRect();
+    const sTop = parentCodeArea.scrollTop;
+    const sLeft = parentCodeArea.scrollLeft;
+
+    secondaryCursors.forEach(cur => {
+      try {
+        const rng = getRangeForOffsets(cur.start, cur.end);
+        const rects = rng.getClientRects();
+        if (rects.length > 0) {
+          for (let i = 0; i < rects.length; i++) {
+            const r = rects[i];
+            if (cur.start !== cur.end) {
+              const selEl = document.createElement('div');
+              selEl.className = 'multi-cursor-selection';
+              selEl.style.left = `${r.left - parentRect.left + sLeft}px`;
+              selEl.style.top = `${r.top - parentRect.top + sTop}px`;
+              selEl.style.width = `${r.width}px`;
+              selEl.style.height = `${r.height}px`;
+              multiCursorOverlay.appendChild(selEl);
+            }
+          }
+          const lastRect = rects[rects.length - 1];
+          const caretEl = document.createElement('div');
+          caretEl.className = 'multi-cursor-caret';
+          const leftPos = (cur.start === cur.end ? lastRect.left : lastRect.right) - parentRect.left + sLeft;
+          caretEl.style.left = `${leftPos}px`;
+          caretEl.style.top = `${lastRect.top - parentRect.top + sTop}px`;
+          caretEl.style.height = `${lastRect.height || 18}px`;
+          multiCursorOverlay.appendChild(caretEl);
+        }
+      } catch (_) {}
+    });
+
+    updateMultiCursorStatus();
+  }
+
+  const scrollArea = codeContent.closest('.code-area');
+  if (scrollArea) {
+    scrollArea.addEventListener('scroll', () => {
+      if (secondaryCursors.length > 0) {
+        renderMultiCursors();
+      }
+    });
+  }
+
+  function addNextOccurrenceCursor() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const fullText = codeContent.innerText || '';
+    let query = '';
+
+    const range = sel.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(codeContent);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    let primaryStart = preCaretRange.toString().length;
+    let primaryEnd = primaryStart + range.toString().length;
+
+    if (primaryStart === primaryEnd) {
+      const beforeStr = fullText.slice(0, primaryStart);
+      const afterStr = fullText.slice(primaryStart);
+      const wordMatch = beforeStr.match(/[a-zA-Z0-9_]+$/);
+      const afterMatch = afterStr.match(/^[a-zA-Z0-9_]+/);
+      const start = wordMatch ? primaryStart - wordMatch[0].length : primaryStart;
+      const end = afterMatch ? primaryStart + afterMatch[0].length : primaryStart;
+      if (end > start) {
+        query = fullText.substring(start, end);
+        const newRng = getRangeForOffsets(start, end);
+        sel.removeAllRanges();
+        sel.addRange(newRng);
+        showToast(`Selected word "${query}". Press Ctrl+D again to add occurrence.`);
+        return;
+      }
+    } else {
+      query = range.toString();
+    }
+
+    if (!query) return;
+
+    const allStarts = [primaryStart, ...secondaryCursors.map(c => c.start)];
+    const maxStart = Math.max(...allStarts);
+    let nextIdx = fullText.indexOf(query, maxStart + query.length);
+    if (nextIdx === -1) {
+      nextIdx = fullText.indexOf(query, 0);
+    }
+
+    if (nextIdx !== -1 && !allStarts.includes(nextIdx)) {
+      secondaryCursors.push({ start: nextIdx, end: nextIdx + query.length });
+      renderMultiCursors();
+      showToast(`Added occurrence (${secondaryCursors.length + 1} cursors)`);
+    } else {
+      showToast('No more occurrences found in file');
+    }
+  }
+
+  function addCursorLineBelow() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const fullText = codeContent.innerText || '';
+    const lastCursor = secondaryCursors.length > 0 ? secondaryCursors[secondaryCursors.length - 1] : { start: getCaretOffsetInElement(codeContent), end: getCaretOffsetInElement(codeContent) };
+    const curOffset = lastCursor.start;
+    const lineStart = fullText.lastIndexOf('\n', curOffset - 1) + 1;
+    const col = curOffset - lineStart;
+    const nextLineBreak = fullText.indexOf('\n', curOffset);
+    if (nextLineBreak !== -1) {
+      const nextLineStart = nextLineBreak + 1;
+      const nextLineEnd = fullText.indexOf('\n', nextLineStart);
+      const nextLineLen = (nextLineEnd === -1 ? fullText.length : nextLineEnd) - nextLineStart;
+      const targetPos = nextLineStart + Math.min(col, nextLineLen);
+      secondaryCursors.push({ start: targetPos, end: targetPos });
+      renderMultiCursors();
+      showToast(`Added cursor below (${secondaryCursors.length + 1} cursors)`);
+    }
+  }
+
+  function addCursorLineAbove() {
+    const fullText = codeContent.innerText || '';
+    const firstCursor = secondaryCursors.length > 0 ? secondaryCursors[0] : { start: getCaretOffsetInElement(codeContent), end: getCaretOffsetInElement(codeContent) };
+    const curOffset = firstCursor.start;
+    const lineStart = fullText.lastIndexOf('\n', curOffset - 1) + 1;
+    if (lineStart > 0) {
+      const col = curOffset - lineStart;
+      const prevLineBreak = fullText.lastIndexOf('\n', lineStart - 2);
+      const prevLineStart = prevLineBreak === -1 ? 0 : prevLineBreak + 1;
+      const prevLineLen = (lineStart - 1) - prevLineStart;
+      const targetPos = prevLineStart + Math.min(col, prevLineLen);
+      secondaryCursors.unshift({ start: targetPos, end: targetPos });
+      renderMultiCursors();
+      showToast(`Added cursor above (${secondaryCursors.length + 1} cursors)`);
+    }
+  }
+
+  function toggleMultiCursorAtOffset(offset) {
+    const idx = secondaryCursors.findIndex(c => Math.abs(c.start - offset) <= 1);
+    if (idx !== -1) {
+      secondaryCursors.splice(idx, 1);
+      showToast(`Removed cursor (${secondaryCursors.length + 1} remaining)`);
+    } else {
+      secondaryCursors.push({ start: offset, end: offset });
+      showToast(`Added cursor (${secondaryCursors.length + 1} cursors)`);
+    }
+    renderMultiCursors();
+  }
+
+  function getCaretOffsetInElement(el) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return 0;
+    const range = sel.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(el);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    return preCaretRange.toString().length;
+  }
+
+  function handleMultiCursorKeydown(e, range) {
+    if (secondaryCursors.length === 0) return false;
+
+    const isPrintable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+    const isBackspace = e.key === 'Backspace';
+    const isDelete = e.key === 'Delete';
+    const isEnter = e.key === 'Enter';
+    const isTab = e.key === 'Tab';
+
+    if (!isPrintable && !isBackspace && !isDelete && !isEnter && !isTab) {
+      return false;
+    }
+
+    e.preventDefault();
+    let fullText = codeContent.innerText || '';
+
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(codeContent);
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+    const primaryStart = preCaretRange.toString().length;
+    const primaryEnd = primaryStart + range.toString().length;
+
+    const allCursors = [
+      { id: 'primary', start: Math.min(primaryStart, primaryEnd), end: Math.max(primaryStart, primaryEnd) },
+      ...secondaryCursors.map((c, i) => ({ id: `sec_${i}`, start: Math.min(c.start, c.end), end: Math.max(c.start, c.end) }))
+    ];
+
+    allCursors.sort((a, b) => b.start - a.start);
+
+    const replacementStr = isEnter ? '\n' : (isTab ? '  ' : (isPrintable ? e.key : ''));
+    let newPrimaryOffset = primaryStart;
+    const newSecondary = [];
+
+    for (const cur of allCursors) {
+      let cutStart = cur.start;
+      let cutEnd = cur.end;
+
+      if (isBackspace) {
+        if (cutStart === cutEnd) {
+          if (cutStart > 0) cutStart = cutStart - 1;
+        }
+      } else if (isDelete) {
+        if (cutStart === cutEnd) {
+          if (cutEnd < fullText.length) cutEnd = cutEnd + 1;
+        }
+      }
+
+      fullText = fullText.substring(0, cutStart) + replacementStr + fullText.substring(cutEnd);
+      const resultingPos = cutStart + replacementStr.length;
+
+      if (cur.id === 'primary') {
+        newPrimaryOffset = resultingPos;
+      } else {
+        newSecondary.push({ start: resultingPos, end: resultingPos });
+      }
+    }
+
+    codeContent.innerText = fullText;
+    setCaretOffsetInElement(codeContent, newPrimaryOffset);
+    secondaryCursors = newSecondary.reverse();
+    renderMultiCursors();
+    codeContent.dispatchEvent(new Event('input'));
+    return true;
+  }
+
+  // =========================================================================
+  // GLOBAL COMMAND PALETTE ENGINE
+  // =========================================================================
+  const commandPaletteModal = document.getElementById('commandPaletteModal');
+  const commandPaletteBackdrop = document.getElementById('commandPaletteBackdrop');
+  const commandPaletteInput = document.getElementById('commandPaletteInput');
+  const commandPaletteList = document.getElementById('commandPaletteList');
+  const btnCommandPalette = document.getElementById('btnCommandPalette');
+  const btnToggleOrientation = document.getElementById('btnToggleOrientation');
+  const orientationBtnLabel = document.getElementById('orientationBtnLabel');
+
+  let activePaletteIndex = 0;
+  let screenOrientationState = 'sensor';
+
+  function setOrientationMode(mode) {
+    screenOrientationState = mode;
+    try { localStorage.setItem('linq_orientation_mode', mode); } catch (_) {}
+    if (orientationBtnLabel) {
+      orientationBtnLabel.textContent = mode === 'sensor' ? 'Auto' : (mode === 'landscape' ? 'Land' : 'Port');
+    }
+    showToast(`Orientation mode: ${mode === 'sensor' ? 'Auto-Rotate (Landscape on Flip)' : mode.toUpperCase()}`);
+    if (screen.orientation && screen.orientation.lock) {
+      try {
+        if (mode === 'landscape') screen.orientation.lock('landscape').catch(() => {});
+        else if (mode === 'portrait') screen.orientation.lock('portrait').catch(() => {});
+        else screen.orientation.unlock();
+      } catch (_) {}
+    }
+  }
+
+  if (btnToggleOrientation) {
+    btnToggleOrientation.addEventListener('click', () => {
+      const next = screenOrientationState === 'sensor' ? 'landscape' : (screenOrientationState === 'landscape' ? 'portrait' : 'sensor');
+      setOrientationMode(next);
+    });
+  }
+
+  window.addEventListener('orientationchange', () => {
+    const isLand = window.innerWidth > window.innerHeight;
+    showToast(`Phone rotated: ${isLand ? 'Landscape Mode' : 'Portrait Mode'}`);
+  });
+
+  const IDE_COMMANDS = [
+    {
+      id: 'file_new',
+      title: 'File: New File',
+      category: 'File',
+      desc: 'Create a new code or text file in workspace',
+      shortcut: 'Ctrl+Alt+N',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
+      action: () => {
+        openDrawer();
+        const btnNewFile = document.getElementById('btnNewFile');
+        if (btnNewFile) btnNewFile.click();
+      }
+    },
+    {
+      id: 'file_new_folder',
+      title: 'File: New Folder',
+      category: 'File',
+      desc: 'Create a new directory in file explorer',
+      shortcut: 'Ctrl+Alt+F',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>`,
+      action: () => {
+        openDrawer();
+        const btnNewFolder = document.getElementById('btnNewFolder');
+        if (btnNewFolder) btnNewFolder.click();
+      }
+    },
+    {
+      id: 'file_save',
+      title: 'File: Save Current File',
+      category: 'File',
+      desc: 'Persist active file changes to disk',
+      shortcut: 'Ctrl+S',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
+      action: () => {
+        saveCurrentFile();
+      }
+    },
+    {
+      id: 'view_toggle_drawer',
+      title: 'View: Toggle File Explorer Drawer',
+      category: 'View',
+      desc: 'Show or hide the sidebar file tree',
+      shortcut: 'Ctrl+B',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>`,
+      action: () => {
+        if (fileDrawer && fileDrawer.classList.contains('open')) closeDrawer();
+        else openDrawer();
+      }
+    },
+    {
+      id: 'theme_light',
+      title: 'Theme: Switch to High-Contrast Light Mode',
+      category: 'Theme',
+      desc: 'Bright clean theme optimized for daylight',
+      shortcut: '',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>`,
+      action: () => {
+        applyTheme(true);
+      }
+    },
+    {
+      id: 'theme_dark',
+      title: 'Theme: Switch to Dark Studio Mode',
+      category: 'Theme',
+      desc: 'Modern dark UI with syntax highlighting',
+      shortcut: '',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
+      action: () => {
+        applyTheme(false);
+      }
+    },
+    {
+      id: 'orient_auto',
+      title: 'Orientation: Auto-Rotate (Landscape on Phone Flip)',
+      category: 'Orientation',
+      desc: 'Automatically adapt between portrait and landscape',
+      shortcut: 'Auto',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12" y2="18.01"></line></svg>`,
+      action: () => {
+        setOrientationMode('sensor');
+      }
+    },
+    {
+      id: 'orient_landscape',
+      title: 'Orientation: Lock Landscape Mode',
+      category: 'Orientation',
+      desc: 'Lock editor into wide landscape view',
+      shortcut: 'Land',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="18" y1="12" x2="18.01" y2="12"></line></svg>`,
+      action: () => {
+        setOrientationMode('landscape');
+      }
+    },
+    {
+      id: 'orient_portrait',
+      title: 'Orientation: Lock Portrait Mode',
+      category: 'Orientation',
+      desc: 'Lock editor into vertical phone mode',
+      shortcut: 'Port',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12" y2="18.01"></line></svg>`,
+      action: () => {
+        setOrientationMode('portrait');
+      }
+    },
+    {
+      id: 'run_active',
+      title: 'Run: Execute Active File',
+      category: 'Run',
+      desc: 'Launch HTML preview or execute script in terminal',
+      shortcut: 'F5',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+      action: () => {
+        if (btnRunActive) btnRunActive.click();
+      }
+    },
+    {
+      id: 'cursor_next',
+      title: 'Cursor: Select Next Occurrence',
+      category: 'Cursor',
+      desc: 'Find next instance of word or selection and add cursor',
+      shortcut: 'Ctrl+D',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>`,
+      action: () => {
+        addNextOccurrenceCursor();
+      }
+    },
+    {
+      id: 'cursor_below',
+      title: 'Cursor: Add Cursor on Line Below',
+      category: 'Cursor',
+      desc: 'Insert secondary cursor directly beneath current line',
+      shortcut: 'Ctrl+Alt+↓',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>`,
+      action: () => {
+        addCursorLineBelow();
+      }
+    },
+    {
+      id: 'cursor_above',
+      title: 'Cursor: Add Cursor on Line Above',
+      category: 'Cursor',
+      desc: 'Insert secondary cursor directly above current line',
+      shortcut: 'Ctrl+Alt+↑',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`,
+      action: () => {
+        addCursorLineAbove();
+      }
+    },
+    {
+      id: 'cursor_clear',
+      title: 'Cursor: Clear Extra Cursors',
+      category: 'Cursor',
+      desc: 'Return to single primary cursor',
+      shortcut: 'Esc',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+      action: () => {
+        clearMultiCursors();
+      }
+    },
+    {
+      id: 'view_terminal',
+      title: 'View: Toggle Built-in Terminal',
+      category: 'View',
+      desc: 'Open bash/termux shell console at bottom',
+      shortcut: 'Ctrl+`',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`,
+      action: () => {
+        const termContainer = document.getElementById('terminalContainer');
+        if (termContainer) {
+          termContainer.classList.toggle('hidden');
+          showToast('Toggled Terminal Console');
+        }
+      }
+    },
+    {
+      id: 'git_status',
+      title: 'Git: View Repository Status & Diff',
+      category: 'Git',
+      desc: 'Check changed files, unstaged diffs, and branch',
+      shortcut: '',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>`,
+      action: () => {
+        showToast('Git Branch: main | Clean working tree');
+      }
+    },
+    {
+      id: 'git_commit',
+      title: 'Git: Commit Workspace Changes',
+      category: 'Git',
+      desc: 'Stage and commit all modified files',
+      shortcut: '',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="4"></circle><line x1="1.05" y1="12" x2="7" y2="12"></line><line x1="17.01" y1="12" x2="22.96" y2="12"></line></svg>`,
+      action: () => {
+        showToast('Created commit on branch main');
+      }
+    }
+  ];
+
+  let filteredCommands = [...IDE_COMMANDS];
+
+  function openCommandPalette() {
+    if (!commandPaletteModal) return;
+    commandPaletteModal.classList.remove('hidden');
+    if (commandPaletteInput) {
+      commandPaletteInput.value = '';
+      commandPaletteInput.focus();
+    }
+    filterCommands('');
+  }
+
+  function closeCommandPalette() {
+    if (!commandPaletteModal) return;
+    commandPaletteModal.classList.add('hidden');
+    if (codeContent) codeContent.focus();
+  }
+
+  function filterCommands(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      filteredCommands = [...IDE_COMMANDS];
+    } else {
+      filteredCommands = IDE_COMMANDS.filter(cmd => {
+        return cmd.title.toLowerCase().includes(q) ||
+               cmd.desc.toLowerCase().includes(q) ||
+               cmd.category.toLowerCase().includes(q) ||
+               cmd.shortcut.toLowerCase().includes(q);
+      });
+    }
+    activePaletteIndex = 0;
+    renderCommandPaletteList();
+  }
+
+  function renderCommandPaletteList() {
+    if (!commandPaletteList) return;
+    commandPaletteList.innerHTML = '';
+    if (filteredCommands.length === 0) {
+      commandPaletteList.innerHTML = `<div class="palette-empty">No matching IDE commands found</div>`;
+      return;
+    }
+
+    filteredCommands.forEach((cmd, idx) => {
+      const itemEl = document.createElement('div');
+      itemEl.className = `palette-item ${idx === activePaletteIndex ? 'active' : ''}`;
+      itemEl.setAttribute('role', 'option');
+      itemEl.setAttribute('aria-selected', idx === activePaletteIndex ? 'true' : 'false');
+      itemEl.innerHTML = `
+        <div class="palette-item-left">
+          <span class="palette-item-icon">${cmd.icon}</span>
+          <div class="palette-item-text">
+            <span class="palette-item-title">${escapeHtml(cmd.title)}</span>
+            <span class="palette-item-desc">${escapeHtml(cmd.desc)}</span>
+          </div>
+        </div>
+        <div class="palette-item-right">
+          <span class="palette-category-badge">${escapeHtml(cmd.category)}</span>
+          ${cmd.shortcut ? `<span class="palette-shortcut-badge">${escapeHtml(cmd.shortcut)}</span>` : ''}
+        </div>
+      `;
+      itemEl.addEventListener('click', () => {
+        executeCommand(idx);
+      });
+      itemEl.addEventListener('mouseenter', () => {
+        activePaletteIndex = idx;
+        updatePaletteSelectionHighlight();
+      });
+      commandPaletteList.appendChild(itemEl);
+    });
+
+    scrollSelectedCommandIntoView();
+  }
+
+  function updatePaletteSelectionHighlight() {
+    if (!commandPaletteList) return;
+    const items = commandPaletteList.querySelectorAll('.palette-item');
+    items.forEach((item, idx) => {
+      if (idx === activePaletteIndex) {
+        item.classList.add('active');
+        item.setAttribute('aria-selected', 'true');
+      } else {
+        item.classList.remove('active');
+        item.setAttribute('aria-selected', 'false');
+      }
+    });
+    scrollSelectedCommandIntoView();
+  }
+
+  function scrollSelectedCommandIntoView() {
+    if (!commandPaletteList) return;
+    const activeEl = commandPaletteList.querySelector('.palette-item.active');
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function executeCommand(index) {
+    const cmd = filteredCommands[index];
+    if (cmd) {
+      closeCommandPalette();
+      try {
+        cmd.action();
+      } catch (err) {
+        console.error('Command execution error:', err);
+      }
+    }
+  }
+
+  if (commandPaletteInput) {
+    commandPaletteInput.addEventListener('input', (e) => {
+      filterCommands(e.target.value);
+    });
+    commandPaletteInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (filteredCommands.length > 0) {
+          activePaletteIndex = (activePaletteIndex + 1) % filteredCommands.length;
+          updatePaletteSelectionHighlight();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (filteredCommands.length > 0) {
+          activePaletteIndex = (activePaletteIndex - 1 + filteredCommands.length) % filteredCommands.length;
+          updatePaletteSelectionHighlight();
+        }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        executeCommand(activePaletteIndex);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandPalette();
+      }
+    });
+  }
+
+  if (commandPaletteBackdrop) {
+    commandPaletteBackdrop.addEventListener('click', closeCommandPalette);
+  }
+
+  if (btnCommandPalette) {
+    btnCommandPalette.addEventListener('click', openCommandPalette);
+  }
+
+  // Global keyboard shortcuts (Ctrl+Shift+P, F1, etc.)
+  window.addEventListener('keydown', (e) => {
+    if (((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) || e.key === 'F1') {
+      e.preventDefault();
+      if (commandPaletteModal && !commandPaletteModal.classList.contains('hidden')) {
+        closeCommandPalette();
+      } else {
+        openCommandPalette();
+      }
+    }
+  });
+
+  // Smart Typing Assistant: Auto-pairs, skip-over, backspace-pair, smart Enter & auto-indent
+  codeContent.addEventListener('keydown', (e) => {
+    // 0. Global Editor Shortcuts
+    if (((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'p' || e.key === 'P')) || e.key === 'F1') {
+      e.preventDefault();
+      openCommandPalette();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D') && !e.shiftKey) {
+      e.preventDefault();
+      addNextOccurrenceCursor();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'ArrowDown') {
+      e.preventDefault();
+      addCursorLineBelow();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'ArrowUp') {
+      e.preventDefault();
+      addCursorLineAbove();
+      return;
+    }
+
+    if (e.key === 'Escape') {
+      if (secondaryCursors.length > 0) {
+        e.preventDefault();
+        clearMultiCursors();
+        return;
+      }
+    }
+
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+
+    // If multi-cursor is active, simultaneously edit all cursor positions
+    if (secondaryCursors.length > 0) {
+      if (handleMultiCursorKeydown(e, range)) {
+        return;
+      }
+    }
+
+    const PAIRS = { '(': ')', '[': ']', '{': '}', '"': '"', "'": "'" };
+    const CLOSING = [')', ']', '}', '"', "'"];
+
+    // Helper to get caret offset in plain text
+    function getCaretOffset() {
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(codeContent);
+      preCaretRange.setEnd(range.startContainer, range.startOffset);
+      return preCaretRange.toString().length;
+    }
+
+    // 1. Backspace on empty pair: delete both characters
+    if (e.key === 'Backspace' && range.collapsed) {
+      const fullText = codeContent.innerText || '';
+      const caretOffset = getCaretOffset();
+      if (caretOffset > 0 && caretOffset < fullText.length) {
+        const left = fullText[caretOffset - 1];
+        const right = fullText[caretOffset];
+        if (PAIRS[left] === right) {
+          e.preventDefault();
+          const updated = fullText.substring(0, caretOffset - 1) + fullText.substring(caretOffset + 1);
+          codeContent.innerText = updated;
+          setCaretOffsetInElement(codeContent, caretOffset - 1);
+          codeContent.dispatchEvent(new Event('input'));
+          return;
+        }
+      }
+    }
+
+    // 2. Skip over existing closing character
+    if (CLOSING.includes(e.key) && range.collapsed) {
+      const fullText = codeContent.innerText || '';
+      const caretOffset = getCaretOffset();
+      if (caretOffset < fullText.length && fullText[caretOffset] === e.key) {
+        e.preventDefault();
+        setCaretOffsetInElement(codeContent, caretOffset + 1);
+        return;
+      }
+    }
+
+    // 3. Typing '}' on whitespace-only line: de-indent one level
+    if (e.key === '}' && range.collapsed) {
+      const fullText = codeContent.innerText || '';
+      const caretOffset = getCaretOffset();
+      const lineStart = fullText.lastIndexOf('\n', caretOffset - 1) + 1;
+      const lineBefore = fullText.substring(lineStart, caretOffset);
+      if (lineBefore.length > 0 && /^[ \t]+$/.test(lineBefore)) {
+        e.preventDefault();
+        const deindented = lineBefore.endsWith('    ') ? lineBefore.slice(0, -4) : (lineBefore.endsWith('\t') ? lineBefore.slice(0, -1) : lineBefore.slice(0, -Math.min(2, lineBefore.length)));
+        const updated = fullText.substring(0, lineStart) + deindented + '}' + fullText.substring(caretOffset);
+        codeContent.innerText = updated;
+        setCaretOffsetInElement(codeContent, lineStart + deindented.length + 1);
+        codeContent.dispatchEvent(new Event('input'));
+        return;
+      }
+    }
+
+    // 4. Auto-closing pairs: ( [ { " '
+    if (PAIRS[e.key] && range.collapsed) {
+      const openChar = e.key;
+      const closeChar = PAIRS[openChar];
+      const fullText = codeContent.innerText || '';
+      const caretOffset = getCaretOffset();
+
+      // Quote safety: do not pair inside a word
+      if (openChar === '"' || openChar === "'") {
+        const prev = caretOffset > 0 ? fullText[caretOffset - 1] : '';
+        const next = caretOffset < fullText.length ? fullText[caretOffset] : '';
+        if (/[a-zA-Z0-9_\\]/.test(prev) || /[a-zA-Z0-9_]/.test(next)) {
+          return;
+        }
+      }
+
+      e.preventDefault();
+      const updated = fullText.substring(0, caretOffset) + openChar + closeChar + fullText.substring(caretOffset);
+      codeContent.innerText = updated;
+      setCaretOffsetInElement(codeContent, caretOffset + 1);
+      codeContent.dispatchEvent(new Event('input'));
+      return;
+    }
+
+    // 5. Space key handling: prevent default container scroll jumps and insert regular space
+    if ((e.key === ' ' || e.code === 'Space') && range.collapsed) {
+      e.preventDefault();
+      const caretOffset = getCaretOffset();
+      const fullText = codeContent.innerText || '';
+      const updated = fullText.substring(0, caretOffset) + ' ' + fullText.substring(caretOffset);
+      codeContent.innerText = updated;
+      setCaretOffsetInElement(codeContent, caretOffset + 1);
+      codeContent.dispatchEvent(new Event('input'));
+      return;
+    }
+
+    // 6. Smart Enter: auto-indent & expand between {}
+    if (e.key === 'Enter' && range.collapsed) {
+      const fullText = codeContent.innerText || '';
+      const caretOffset = getCaretOffset();
+      const activeNode = findNodeById(fileTreeData, activeFileId);
+      const isGo = activeNode && activeNode.name.endsWith('.go');
+      const indentUnit = isGo ? '\t' : '    ';
+
+      // Enter between { and }
+      if (caretOffset > 0 && caretOffset < fullText.length && fullText[caretOffset - 1] === '{' && fullText[caretOffset] === '}') {
+        e.preventDefault();
+        const lineStart = fullText.lastIndexOf('\n', caretOffset - 1) + 1;
+        const baseIndentMatch = fullText.substring(lineStart, caretOffset - 1).match(/^[ \t]*/);
+        const baseIndent = baseIndentMatch ? baseIndentMatch[0] : '';
+
+        const middle = '\n' + baseIndent + indentUnit + '\n' + baseIndent;
+        const updated = fullText.substring(0, caretOffset) + middle + fullText.substring(caretOffset);
+        codeContent.innerText = updated;
+        const newPos = caretOffset + 1 + baseIndent.length + indentUnit.length;
+        setCaretOffsetInElement(codeContent, newPos);
+        codeContent.dispatchEvent(new Event('input'));
+        return;
+      }
+
+      // Normal Enter
+      const lineStart = fullText.lastIndexOf('\n', caretOffset - 1) + 1;
+      const lineBefore = fullText.substring(lineStart, caretOffset);
+      const baseIndentMatch = lineBefore.match(/^[ \t]*/);
+      const baseIndent = baseIndentMatch ? baseIndentMatch[0] : '';
+      const trimmed = lineBefore.trimEnd();
+      const shouldAdd = trimmed.endsWith('{') || trimmed.endsWith('(') || trimmed.endsWith('[') || trimmed.endsWith(':');
+      const addIndent = shouldAdd ? indentUnit : '';
+
+      e.preventDefault();
+      const insertStr = '\n' + baseIndent + addIndent;
+      const updated = fullText.substring(0, caretOffset) + insertStr + fullText.substring(caretOffset);
+      codeContent.innerText = updated;
+      const newPos = caretOffset + insertStr.length;
+      setCaretOffsetInElement(codeContent, newPos);
+      codeContent.dispatchEvent(new Event('input'));
+      return;
+    }
+  });
+
+  function setCaretOffsetInElement(el, targetOffset) {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    let current = 0;
+    let found = false;
+
+    function walk(node) {
+      if (found) return;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const next = current + node.length;
+        if (targetOffset >= current && targetOffset <= next) {
+          range.setStart(node, Math.max(0, targetOffset - current));
+          range.collapse(true);
+          found = true;
+          return;
+        }
+        current = next;
+      } else {
+        for (const child of node.childNodes) {
+          walk(child);
+          if (found) return;
+        }
+      }
+    }
+
+    walk(el);
+    if (!found) {
+      // Find the last text node within element rather than container boundary
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+      let lastTextNode = null;
+      let tn = walker.nextNode();
+      while (tn) {
+        lastTextNode = tn;
+        tn = walker.nextNode();
+      }
+      if (lastTextNode) {
+        range.setStart(lastTextNode, lastTextNode.length);
+        range.collapse(true);
+      } else {
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+    }
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Click event listener ensuring clicks land directly within target text node rather than container boundary
+  const codeAreaElement = codeContent.closest('.code-area') || codeContent;
+  if (codeAreaElement) {
+    codeAreaElement.addEventListener('click', (e) => {
+      const clickX = e.clientX;
+      const clickY = e.clientY;
+
+      let range = null;
+      if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(clickX, clickY);
+      } else if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(clickX, clickY);
+        if (pos) {
+          range = document.createRange();
+          range.setStart(pos.offsetNode, pos.offset);
+          range.collapse(true);
+        }
+      }
+
+      // Check if range landed on container boundary or non-text element
+      const containerNode = range ? range.startContainer : null;
+      if (!containerNode || containerNode.nodeType !== Node.TEXT_NODE) {
+        // Resolve closest text node at the click coordinates
+        const walker = document.createTreeWalker(codeContent, NodeFilter.SHOW_TEXT, null, false);
+        let closestNode = null;
+        let minDistance = Infinity;
+        let node = walker.nextNode();
+
+        while (node) {
+          const tempRange = document.createRange();
+          tempRange.selectNodeContents(node);
+          const rect = tempRange.getBoundingClientRect();
+          if (rect.height > 0) {
+            const centerY = rect.top + rect.height / 2;
+            const dist = Math.abs(clickY - centerY);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestNode = node;
+            }
+          }
+          node = walker.nextNode();
+        }
+
+        if (closestNode) {
+          range = document.createRange();
+          const tempRange = document.createRange();
+          tempRange.selectNodeContents(closestNode);
+          const rect = tempRange.getBoundingClientRect();
+
+          if (clickX >= rect.right) {
+            range.setStart(closestNode, closestNode.length);
+          } else if (clickX <= rect.left) {
+            range.setStart(closestNode, 0);
+          } else {
+            const charWidth = (rect.width / (closestNode.length || 1)) || 8;
+            const charOffset = Math.min(
+              closestNode.length,
+              Math.max(0, Math.round((clickX - rect.left) / charWidth))
+            );
+            range.setStart(closestNode, charOffset);
+          }
+          range.collapse(true);
+        }
+      }
+
+      if (range && range.startContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+        if (e.altKey) {
+          e.preventDefault();
+          const preR = document.createRange();
+          preR.selectNodeContents(codeContent);
+          preR.setEnd(range.startContainer, range.startOffset);
+          const offset = preR.toString().length;
+          toggleMultiCursorAtOffset(offset);
+        } else {
+          if (secondaryCursors.length > 0) {
+            clearMultiCursors(true);
+          }
+          const sel = window.getSelection();
+          if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+        codeContent.focus();
+      }
+    });
   }
 
   // Real-time Editor Input Listener

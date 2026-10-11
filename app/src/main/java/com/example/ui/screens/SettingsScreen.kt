@@ -86,6 +86,8 @@ fun SettingsScreen(
     onToggleBirdsEyeView: (Boolean) -> Unit = {},
     isLinqStudioCardVisible: Boolean = true,
     onToggleLinqStudioCard: (Boolean) -> Unit = {},
+    screenOrientationMode: String = "sensor",
+    onScreenOrientationChange: (String) -> Unit = {},
     reduceTransparency: Boolean,
     onToggleReduceTransparency: (Boolean) -> Unit,
     onOpenStorageWizard: () -> Unit,
@@ -426,6 +428,76 @@ fun SettingsScreen(
                             modifier = Modifier.testTag("switch_linq_card_visible")
                         )
                     }
+
+                    // Screen Orientation & Landscape Mode on Flip
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                Text(
+                                    text = "Auto-Rotate (Landscape on Flip)",
+                                    fontWeight = FontWeight.Medium,
+                                    color = currentTheme.onSurfaceColor,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "Automatically rotate to landscape IDE when phone is rotated",
+                                    color = currentTheme.lineNumberColor,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Switch(
+                                checked = screenOrientationMode == "sensor",
+                                onCheckedChange = { isAuto ->
+                                    onScreenOrientationChange(if (isAuto) "sensor" else "portrait")
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = currentTheme.primaryColor),
+                                modifier = Modifier.testTag("switch_auto_rotate_landscape")
+                            )
+                        }
+
+                        // Segmented pills for orientation mode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val modes = listOf(
+                                "sensor" to "Auto (Sensor)",
+                                "portrait" to "Portrait Only",
+                                "landscape" to "Landscape Lock"
+                            )
+                            modes.forEach { (mode, label) ->
+                                val isSelected = screenOrientationMode == mode
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) currentTheme.primaryColor.copy(alpha = 0.2f) else currentTheme.editorBackground,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSelected) currentTheme.primaryColor else currentTheme.borderColor
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onScreenOrientationChange(mode) }
+                                        .testTag("orientation_mode_$mode")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) currentTheme.primaryColor else currentTheme.onSurfaceColor,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -492,7 +564,7 @@ fun SettingsScreen(
                         textAlign = TextAlign.Center
                     )
                     Text(
-                        text = "Linq Studio v1.0.0",
+                        text = "Linq Studio v2.0.0",
                         color = currentTheme.lineNumberColor.copy(alpha = 0.6f),
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center

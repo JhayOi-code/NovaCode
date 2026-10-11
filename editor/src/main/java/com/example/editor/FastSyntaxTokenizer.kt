@@ -9,34 +9,70 @@ import java.util.regex.Pattern
 
 /**
  * Fast compiled syntax tokenizer designed for per-line tokenization with zero heap fragmentation.
+ * Supports lazy loading (regex compilation & keyword sets deferred until activated)
+ * and memory eviction for low-RAM devices.
  */
 object FastSyntaxTokenizer {
 
-    private val KEYWORDS = setOf(
-        // Kotlin & Java
-        "val", "var", "fun", "class", "interface", "object", "package", "import",
-        "return", "if", "else", "when", "for", "while", "do", "try", "catch",
-        "finally", "throw", "null", "true", "false", "this", "super", "override",
-        "public", "private", "protected", "internal", "data", "enum", "sealed",
-        "suspend", "inline", "abstract", "const", "new", "static", "void", "int",
-        "boolean", "char", "float", "double", "long", "short", "byte",
-        // Python
-        "def", "from", "as", "elif", "except", "lambda", "global", "nonlocal",
-        "pass", "assert", "del", "in", "is", "not", "and", "or", "None", "async", "await",
-        // JS/TS
-        "const", "let", "function", "export", "default", "typeof", "instanceof",
-        "type", "declare", "readonly",
-        // C/C++/Rust/Go
-        "fn", "struct", "impl", "trait", "mut", "pub", "match", "loop", "chan",
-        "defer", "go", "auto", "nullptr", "sizeof",
-        // SQL
-        "SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "JOIN", "TABLE"
-    )
+    @Volatile
+    private var isInitialized = false
 
-    private val NUMBER_PATTERN = Pattern.compile("\\b(\\d+\\.?\\d*|0x[0-9a-fA-F]+)\\b")
-    private val STRING_PATTERN = Pattern.compile("(\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|`([^`\\\\]|\\\\.)*`)")
-    private val WORD_PATTERN = Pattern.compile("\\b([A-Za-z_][A-Za-z0-9_]*)\\b")
-    private val OPERATOR_PATTERN = Pattern.compile("[+\\-*/%=<>!&|^~?:;,.]")
+    private lateinit var KEYWORDS: Set<String>
+    private var NUMBER_PATTERN: Pattern? = null
+    private var STRING_PATTERN: Pattern? = null
+    private var WORD_PATTERN: Pattern? = null
+    private var OPERATOR_PATTERN: Pattern? = null
+
+    /**
+     * Lazily initialize syntax patterns and keywords when the syntax highlighter is first needed.
+     */
+    @Synchronized
+    fun ensureInitialized() {
+        if (isInitialized) return
+
+        KEYWORDS = setOf(
+            // Kotlin & Java
+            "val", "var", "fun", "class", "interface", "object", "package", "import",
+            "return", "if", "else", "when", "for", "while", "do", "try", "catch",
+            "finally", "throw", "null", "true", "false", "this", "super", "override",
+            "public", "private", "protected", "internal", "data", "enum", "sealed",
+            "suspend", "inline", "abstract", "const", "new", "static", "void", "int",
+            "boolean", "char", "float", "double", "long", "short", "byte",
+            // Python
+            "def", "from", "as", "elif", "except", "lambda", "global", "nonlocal",
+            "pass", "assert", "del", "in", "is", "not", "and", "or", "None", "async", "await",
+            // JS/TS
+            "const", "let", "function", "export", "default", "typeof", "instanceof",
+            "type", "declare", "readonly",
+            // C/C++/Rust/Go
+            "fn", "struct", "impl", "trait", "mut", "pub", "match", "loop", "chan",
+            "defer", "go", "auto", "nullptr", "sizeof",
+            // SQL
+            "SELECT", "FROM", "WHERE", "INSERT", "UPDATE", "DELETE", "JOIN", "TABLE"
+        )
+
+        NUMBER_PATTERN = Pattern.compile("\\b(\\d+\\.?\\d*|0x[0-9a-fA-F]+)\\b")
+        STRING_PATTERN = Pattern.compile("(\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|`([^`\\\\]|\\\\.)*`)")
+        WORD_PATTERN = Pattern.compile("\\b([A-Za-z_][A-Za-z0-9_]*)\\b")
+        OPERATOR_PATTERN = Pattern.compile("[+\\-*/%=<>!&|^~?:;,.]")
+
+        isInitialized = true
+    }
+
+    /**
+     * Clear loaded patterns and references on memory pressure.
+     */
+    @Synchronized
+    fun evictMemory() {
+        if (!isInitialized) return
+        NUMBER_PATTERN = null
+        STRING_PATTERN = null
+        WORD_PATTERN = null
+        OPERATOR_PATTERN = null
+        isInitialized = false
+    }
+
+    fun isLoaded(): Boolean = isInitialized
 
     fun highlightLine(
         lineText: String,
@@ -45,11 +81,20 @@ object FastSyntaxTokenizer {
     ): AnnotatedString {
         if (lineText.isEmpty()) return AnnotatedString("")
 
+        if (!isInitialized) {
+            ensureInitialized()
+        }
+
+        val numPattern = NUMBER_PATTERN ?: return AnnotatedString(lineText)
+        val strPattern = STRING_PATTERN ?: return AnnotatedString(lineText)
+        val wordPattern = WORD_PATTERN ?: return AnnotatedString(lineText)
+        val opPattern = OPERATOR_PATTERN ?: return AnnotatedString(lineText)
+
         return buildAnnotatedString {
             append(lineText)
 
             // 1. Strings
-            val strMatcher = STRING_PATTERN.matcher(lineText)
+            val strMatcher = strPattern.matcher(lineText)
             while (strMatcher.find()) {
                 addStyle(
                     SpanStyle(color = colorScheme.string),
@@ -59,7 +104,7 @@ object FastSyntaxTokenizer {
             }
 
             // 2. Numbers
-            val numMatcher = NUMBER_PATTERN.matcher(lineText)
+            val numMatcher = numPattern.matcher(lineText)
             while (numMatcher.find()) {
                 addStyle(
                     SpanStyle(color = colorScheme.number),
@@ -69,7 +114,7 @@ object FastSyntaxTokenizer {
             }
 
             // 3. Keywords & Types
-            val wordMatcher = WORD_PATTERN.matcher(lineText)
+            val wordMatcher = wordPattern.matcher(lineText)
             while (wordMatcher.find()) {
                 val word = wordMatcher.group(1) ?: continue
                 if (KEYWORDS.contains(word)) {
@@ -88,7 +133,7 @@ object FastSyntaxTokenizer {
             }
 
             // 4. Operators
-            val opMatcher = OPERATOR_PATTERN.matcher(lineText)
+            val opMatcher = opPattern.matcher(lineText)
             while (opMatcher.find()) {
                 addStyle(
                     SpanStyle(color = colorScheme.operator),

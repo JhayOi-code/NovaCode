@@ -38,7 +38,6 @@ class FileRepositoryImpl(
 
         fun copyAssetOrDefault(assetName: String, fallback: String) {
             val destFile = File(webDir, assetName)
-            if (destFile.exists() && destFile.length() > 0L) return
             try {
                 context.assets.open("web_explorer/$assetName").use { input ->
                     destFile.outputStream().use { out ->
@@ -46,7 +45,9 @@ class FileRepositoryImpl(
                     }
                 }
             } catch (_: Exception) {
-                destFile.writeText(fallback)
+                if (!destFile.exists() || destFile.length() == 0L) {
+                    destFile.writeText(fallback)
+                }
             }
         }
 
@@ -393,6 +394,180 @@ Linq Studio is an ultra-fast, professional mobile development environment built 
                     )
                 } else {
                     Result.failure(IllegalStateException("Rename failed"))
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun moveFile(sourcePathOrUri: String, destinationDirPathOrUri: String): Result<FileItem> = withContext(Dispatchers.IO) {
+        try {
+            if (isSafUri(sourcePathOrUri) || isSafUri(destinationDirPathOrUri)) {
+                // SAF Document Move / Fallback
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && isSafUri(sourcePathOrUri)) {
+                    val srcUri = Uri.parse(sourcePathOrUri)
+                    val destUri = Uri.parse(destinationDirPathOrUri)
+                    val parentDoc = DocumentsContract.buildDocumentUriUsingTree(srcUri, DocumentsContract.getDocumentId(srcUri))
+                    val movedUri = DocumentsContract.moveDocument(context.contentResolver, srcUri, parentDoc, destUri)
+                    if (movedUri != null) {
+                        return@withContext Result.success(
+                            FileItem(
+                                name = srcUri.lastPathSegment ?: "item",
+                                path = movedUri.toString(),
+                                isDirectory = false
+                            )
+                        )
+                    }
+                }
+                return@withContext Result.failure(UnsupportedOperationException("SAF Move is not supported on this container"))
+            } else {
+                val sourceFile = File(sourcePathOrUri)
+                if (!sourceFile.exists()) {
+                    return@withContext Result.failure(java.io.FileNotFoundException("Source file does not exist: $sourcePathOrUri"))
+                }
+
+                val destDir = File(destinationDirPathOrUri)
+                if (!destDir.exists()) {
+                    destDir.mkdirs()
+                }
+
+                val targetFile = if (destDir.isDirectory) File(destDir, sourceFile.name) else destDir
+                if (sourceFile.absolutePath == targetFile.absolutePath) {
+                    return@withContext Result.success(
+                        FileItem(
+                            name = targetFile.name,
+                            path = targetFile.absolutePath,
+                            isDirectory = targetFile.isDirectory,
+                            size = if (targetFile.isDirectory) 0L else targetFile.length(),
+                            lastModified = targetFile.lastModified()
+                        )
+                    )
+                }
+
+                val renamed = sourceFile.renameTo(targetFile)
+                if (renamed) {
+                    Result.success(
+                        FileItem(
+                            name = targetFile.name,
+                            path = targetFile.absolutePath,
+                            isDirectory = targetFile.isDirectory,
+                            size = if (targetFile.isDirectory) 0L else targetFile.length(),
+                            lastModified = targetFile.lastModified()
+                        )
+                    )
+                } else {
+                    // Fallback across filesystems / mounts: copy recursively and delete
+                    val copySuccess = if (sourceFile.isDirectory) {
+                        sourceFile.copyRecursively(targetFile, overwrite = true) && sourceFile.deleteRecursively()
+                    } else {
+                        try {
+                            sourceFile.copyTo(targetFile, overwrite = true)
+                            sourceFile.delete()
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+
+                    if (copySuccess && targetFile.exists()) {
+                        Result.success(
+                            FileItem(
+                                name = targetFile.name,
+                                path = targetFile.absolutePath,
+                                isDirectory = targetFile.isDirectory,
+                                size = if (targetFile.isDirectory) 0L else targetFile.length(),
+                                lastModified = targetFile.lastModified()
+                            )
+                        )
+                    } else {
+                        Result.failure(IllegalStateException("Failed to move file to ${targetFile.absolutePath}"))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun duplicateFile(targetPathOrUri: String): Result<FileItem> = withContext(Dispatchers.IO) {
+        try {
+            if (isSafUri(targetPathOrUri)) {
+                val sourceUri = Uri.parse(targetPathOrUri)
+                val originalName = sourceUri.lastPathSegment ?: "file"
+                val baseName = originalName.substringBeforeLast('.', originalName)
+                val ext = originalName.substringAfterLast('.', "")
+                val extWithDot = if (ext.isNotEmpty()) ".$ext" else ""
+                val newName = "$baseName copy$extWithDot"
+
+                val mime = getMimeTypeForFilename(originalName)
+                val newUri = DocumentsContract.createDocument(
+                    context.contentResolver,
+                    sourceUri,
+                    mime,
+                    newName
+                )
+
+                if (newUri != null) {
+                    try {
+                        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                            context.contentResolver.openOutputStream(newUri)?.use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } catch (_: Exception) {}
+
+                    Result.success(
+                        FileItem(
+                            name = newName,
+                            path = newUri.toString(),
+                            isDirectory = false,
+                            uriString = newUri.toString()
+                        )
+                    )
+                } else {
+                    Result.failure(IllegalStateException("Failed to duplicate SAF file"))
+                }
+            } else {
+                val source = File(targetPathOrUri)
+                if (!source.exists()) {
+                    return@withContext Result.failure(IllegalArgumentException("Source does not exist: $targetPathOrUri"))
+                }
+                val parent = source.parentFile ?: source
+                val originalName = source.name
+                val isDir = source.isDirectory
+
+                val baseName = if (isDir) originalName else originalName.substringBeforeLast('.', originalName)
+                val ext = if (isDir) "" else originalName.substringAfterLast('.', "")
+                val extWithDot = if (ext.isNotEmpty()) ".$ext" else ""
+
+                var copyNum = 1
+                var newName = "$baseName copy$extWithDot"
+                var copyFile = File(parent, newName)
+                while (copyFile.exists()) {
+                    copyNum++
+                    newName = "$baseName copy $copyNum$extWithDot"
+                    copyFile = File(parent, newName)
+                }
+
+                val success = if (isDir) {
+                    source.copyRecursively(copyFile, overwrite = false)
+                } else {
+                    source.copyTo(copyFile, overwrite = false)
+                    copyFile.exists()
+                }
+
+                if (success && copyFile.exists()) {
+                    Result.success(
+                        FileItem(
+                            name = copyFile.name,
+                            path = copyFile.absolutePath,
+                            isDirectory = copyFile.isDirectory,
+                            size = if (copyFile.isDirectory) 0L else copyFile.length(),
+                            lastModified = copyFile.lastModified()
+                        )
+                    )
+                } else {
+                    Result.failure(IllegalStateException("Failed to duplicate file to ${copyFile.absolutePath}"))
                 }
             }
         } catch (e: Exception) {

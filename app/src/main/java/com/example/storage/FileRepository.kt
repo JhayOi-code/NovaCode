@@ -52,6 +52,16 @@ interface FileRepository {
     suspend fun renameFile(targetPathOrUri: String, newName: String): Result<FileItem>
 
     /**
+     * Moves a file or directory to a new target directory or destination path.
+     */
+    suspend fun moveFile(sourcePathOrUri: String, destinationDirPathOrUri: String): Result<FileItem>
+
+    /**
+     * Duplicates a file or directory with an auto-incremented copy name.
+     */
+    suspend fun duplicateFile(targetPathOrUri: String): Result<FileItem>
+
+    /**
      * Recursively searches for files matching a query string (in name or file content).
      */
     fun searchFiles(rootPathOrUri: String, query: String, searchContent: Boolean): Flow<List<FileItem>>

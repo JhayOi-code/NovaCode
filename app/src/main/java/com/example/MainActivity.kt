@@ -60,6 +60,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Initialize crash reporting hook and memory manager
+        com.example.crash.CrashReporter.init(this)
+        com.example.memory.MemoryManager.init(this)
+
         // Clean up any empty/corrupted dummy cache directories left from previous builds
         cleanupCorruptedWebViewCache()
 
@@ -72,6 +76,33 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val theme = uiState.currentTheme
             val permissionManager = rememberPermissionManager()
+
+            // Dynamic screen orientation: flip to landscape when phone is rotated
+            LaunchedEffect(uiState.screenOrientationMode) {
+                val targetOrientation = when (uiState.screenOrientationMode) {
+                    "portrait" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    "landscape" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                }
+                if (requestedOrientation != targetOrientation) {
+                    requestedOrientation = targetOrientation
+                }
+            }
+
+            com.example.ui.components.GlobalErrorBoundary(
+                theme = theme,
+                onRestartApp = {
+                    val restartIntent = packageManager.getLaunchIntentForPackage(packageName)
+                    if (restartIntent != null) {
+                        restartIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        startActivity(restartIntent)
+                    }
+                    finish()
+                },
+                onResetEditor = {
+                    viewModel.restartEditorService()
+                }
+            ) {
 
             // Activity result launcher for SAF folder tree grant
             val safFolderLauncher = rememberLauncherForActivityResult(
@@ -221,6 +252,10 @@ class MainActivity : ComponentActivity() {
                                 onNewFolderInExplorer = { viewModel.createNewFolderInExplorer(it) },
                                 onDeleteInExplorer = { viewModel.deleteFileInExplorer(it) },
                                 onRenameInExplorer = { old, newName -> viewModel.renameFileInExplorer(old, newName) },
+                                onDuplicateInExplorer = { viewModel.duplicateFileInExplorer(it) },
+                                onMoveInExplorer = { old, newDir -> viewModel.moveFileInExplorer(old, newDir) },
+                                onShareInExplorer = { item -> viewModel.shareFile(this@MainActivity, item) },
+                                onCloneRepo = { url, folder, branch, token -> viewModel.gitClone(url, folder, branch, token) },
                                 onExportZip = { viewModel.exportZip(it) },
                                 onRefreshFiles = { viewModel.loadDirectory(uiState.currentDirectory) },
                                 onRunDemo = { viewModel.runActiveFile(it) },
@@ -234,7 +269,10 @@ class MainActivity : ComponentActivity() {
                                 onRerunTerminal = { viewModel.rerunActiveFile() },
                                 onOpenGitPanel = { viewModel.toggleGitPanel(true) },
                                 isGitLinked = uiState.githubAccount.isLinked,
+                                githubAccount = uiState.githubAccount,
                                 isBirdsEyeViewEnabled = uiState.isBirdsEyeViewEnabled,
+                                onSelectTheme = { viewModel.selectTheme(it) },
+                                onScreenOrientationChange = { viewModel.setScreenOrientationMode(it) },
                                 onNavigatePath = { path ->
                                     val target = File(path)
                                     if (target.isDirectory) {
@@ -262,6 +300,9 @@ class MainActivity : ComponentActivity() {
                                 onNewFolder = { viewModel.createNewFolderInExplorer(it) },
                                 onDelete = { viewModel.deleteFileInExplorer(it) },
                                 onRename = { old, newName -> viewModel.renameFileInExplorer(old, newName) },
+                                onMove = { old, newDir -> viewModel.moveFileInExplorer(old, newDir) },
+                                onShare = { item -> viewModel.shareFile(this@MainActivity, item) },
+                                onClone = { url, folder, branch, token -> viewModel.gitClone(url, folder, branch, token) },
                                 onExportZip = { viewModel.exportZip(it) },
                                 onRefresh = { viewModel.loadDirectory(uiState.currentPathOrUri) }
                             )
@@ -295,6 +336,8 @@ class MainActivity : ComponentActivity() {
                                 onToggleBirdsEyeView = { viewModel.toggleBirdsEyeView(it) },
                                 isLinqStudioCardVisible = uiState.isLinqStudioCardVisible,
                                 onToggleLinqStudioCard = { viewModel.toggleLinqStudioCard(it) },
+                                screenOrientationMode = uiState.screenOrientationMode,
+                                onScreenOrientationChange = { viewModel.setScreenOrientationMode(it) },
                                 reduceTransparency = uiState.reduceTransparency,
                                 onToggleReduceTransparency = { viewModel.toggleReduceTransparency(it) },
                                 onOpenStorageWizard = { viewModel.togglePermissionWizard(true) },
@@ -360,6 +403,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
             }
         }
     }

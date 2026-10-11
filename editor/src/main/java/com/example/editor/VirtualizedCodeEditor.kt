@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,10 +64,33 @@ fun VirtualizedCodeEditor(
     onUndo: () -> Unit = {},
     onRedo: () -> Unit = {},
     isBirdsEyeViewEnabled: Boolean = true,
+    initialCursorPosition: Int = -1,
+    fileName: String = "",
+    fileId: String = fileName,
+    tabSize: Int = 4,
     modifier: Modifier = Modifier
 ) {
-    var textFieldValue by remember(text) {
-        mutableStateOf(TextFieldValue(text = text, selection = TextRange(text.length)))
+    // Key state by fileId to preserve cursor and avoid resetting to line 1 when typing space or enter
+    var textFieldValue by remember(fileId) {
+        val initialSel = if (initialCursorPosition in 0..text.length) {
+            TextRange(initialCursorPosition)
+        } else {
+            TextRange(text.length)
+        }
+        mutableStateOf(TextFieldValue(text = text, selection = initialSel))
+    }
+
+    // Keep internal state in sync with external updates (undo/redo, save, reload)
+    // Preserves the user's cursor without jumping to index 0 / line 1
+    LaunchedEffect(text) {
+        if (text != textFieldValue.text) {
+            val safeStart = textFieldValue.selection.start.coerceIn(0, text.length)
+            val safeEnd = textFieldValue.selection.end.coerceIn(0, text.length)
+            textFieldValue = textFieldValue.copy(
+                text = text,
+                selection = TextRange(safeStart, safeEnd)
+            )
+        }
     }
 
     var isFindOpen by remember { mutableStateOf(false) }
@@ -78,9 +102,18 @@ fun VirtualizedCodeEditor(
 
     val lines = remember(textFieldValue.text) { textFieldValue.text.split("\n") }
     val lineCount = lines.size.coerceAtLeast(1)
+    val isGoFile = fileName.endsWith(".go", ignoreCase = true)
 
-    // Ultra-fast line-by-line syntax highlight transformation
-    val syntaxTransformation = remember(colorScheme, searchQuery) {
+    val matchingBracketIndices = remember(textFieldValue.text, textFieldValue.selection) {
+        if (textFieldValue.selection.collapsed) {
+            SmartEditProcessor.findMatchingBrackets(textFieldValue.text, textFieldValue.selection.start)
+        } else {
+            emptySet()
+        }
+    }
+
+    // Ultra-fast line-by-line syntax highlight transformation with matching bracket indicator
+    val syntaxTransformation = remember(colorScheme, searchQuery, matchingBracketIndices) {
         VisualTransformation { rawText ->
             val builder = androidx.compose.ui.text.buildAnnotatedString {
                 val lineList = rawText.text.split("\n")
@@ -93,6 +126,21 @@ fun VirtualizedCodeEditor(
                     append(lineHighlighted)
                     if (index < lineList.lastIndex) {
                         append("\n")
+                    }
+                }
+
+                // Highlight matching bracket pairs under/adjacent to cursor
+                for (bracketIdx in matchingBracketIndices) {
+                    if (bracketIdx in 0 until length) {
+                        addStyle(
+                            style = androidx.compose.ui.text.SpanStyle(
+                                background = colorScheme.searchHighlight.copy(alpha = 0.5f),
+                                color = colorScheme.keyword,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            start = bracketIdx,
+                            end = bracketIdx + 1
+                        )
                     }
                 }
             }
@@ -202,9 +250,17 @@ fun VirtualizedCodeEditor(
                     ) {
                         BasicTextField(
                             value = textFieldValue,
-                            onValueChange = { newValue ->
-                                textFieldValue = newValue
-                                onTextChange(newValue.text)
+                            onValueChange = { incomingValue ->
+                                val processed = SmartEditProcessor.processChange(
+                                    oldValue = textFieldValue,
+                                    newValue = incomingValue,
+                                    isGoFile = isGoFile,
+                                    tabSize = tabSize
+                                )
+                                textFieldValue = processed
+                                if (processed.text != text) {
+                                    onTextChange(processed.text)
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -305,12 +361,16 @@ fun VirtualizedCodeEditor(
                     val (insert, label) = if (item is Pair<*, *>) (item.first as String) to (item.second as String) else (item as String) to item
                     TextButton(
                         onClick = {
-                            val sel = textFieldValue.selection
-                            val current = textFieldValue.text
-                            val updated = current.substring(0, sel.min) + insert + current.substring(sel.max)
-                            val newPos = sel.min + insert.length
-                            textFieldValue = TextFieldValue(updated, TextRange(newPos))
-                            onTextChange(updated)
+                            val processed = SmartEditProcessor.insertSymbol(
+                                current = textFieldValue,
+                                symbol = insert,
+                                isGoFile = isGoFile,
+                                tabSize = tabSize
+                            )
+                            textFieldValue = processed
+                            if (processed.text != text) {
+                                onTextChange(processed.text)
+                            }
                         },
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier.height(32.dp)

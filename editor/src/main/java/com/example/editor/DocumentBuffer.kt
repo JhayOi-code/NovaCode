@@ -85,6 +85,10 @@ class DocumentBuffer(initialText: String = "") {
         return linesList.joinToString("\n")
     }
 
+    fun clearCache() {
+        lineSpanCache.clear()
+    }
+
     val characterCount: Int
         get() = linesList.sumOf { it.length } + (lineCount - 1)
 }

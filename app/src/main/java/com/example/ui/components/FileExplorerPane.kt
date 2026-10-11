@@ -21,21 +21,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +78,9 @@ fun FileExplorerPane(
     onNewFolder: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRename: (String, String) -> Unit,
+    onMove: (String, String) -> Unit = { _, _ -> },
+    onShare: (FileItem) -> Unit = {},
+    onClone: (String, String, String, String) -> Unit = { _, _, _, _ -> },
     onExportZip: (File) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
@@ -80,9 +88,19 @@ fun FileExplorerPane(
     var searchQuery by remember { mutableStateOf("") }
     var showNewFileDialog by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
+    var showCloneDialog by remember { mutableStateOf(false) }
     var itemToRename by remember { mutableStateOf<FileItem?>(null) }
     var itemToDelete by remember { mutableStateOf<FileItem?>(null) }
+    var itemToMove by remember { mutableStateOf<FileItem?>(null) }
     var inputName by remember { mutableStateOf("") }
+    var destinationPathInput by remember { mutableStateOf("") }
+
+    // State for Clone Dialog
+    var cloneRepoUrl by remember { mutableStateOf("") }
+    var cloneFolderName by remember { mutableStateOf("") }
+    var cloneBranch by remember { mutableStateOf("main") }
+    var cloneToken by remember { mutableStateOf("") }
+    var selectedProvider by remember { mutableStateOf("GitHub") }
 
     val filteredFiles = remember(files, searchQuery) {
         if (searchQuery.isBlank()) files
@@ -189,6 +207,19 @@ fun FileExplorerPane(
                     }
 
                     IconButton(
+                        onClick = {
+                            cloneRepoUrl = ""
+                            cloneFolderName = ""
+                            cloneBranch = "main"
+                            cloneToken = ""
+                            showCloneDialog = true
+                        },
+                        modifier = Modifier.testTag("btn_clone_repo_explorer")
+                    ) {
+                        Icon(Icons.Default.CloudDownload, contentDescription = "Clone Repository", tint = theme.primaryColor)
+                    }
+
+                    IconButton(
                         onClick = { onExportZip(currentDirectory) },
                         modifier = Modifier.testTag("btn_export_zip")
                     ) {
@@ -254,13 +285,21 @@ fun FileExplorerPane(
                                     onOpenFile(item)
                                 }
                             },
+                            onShare = { onShare(item) },
+                            onMove = {
+                                itemToMove = item
+                                destinationPathInput = currentDirectory.parentFile?.absolutePath ?: currentDirectory.absolutePath
+                            },
                             onRename = {
                                 itemToRename = item
                                 inputName = item.name
                             },
                             onDelete = {
                                 itemToDelete = item
-                            }
+                            },
+                            onExportZip = if (item.isDirectory) {
+                                { onExportZip(File(item.path)) }
+                            } else null
                         )
                     }
                 }
@@ -278,7 +317,8 @@ fun FileExplorerPane(
                     value = inputName,
                     onValueChange = { inputName = it },
                     label = { Text("File Name (e.g. main.py, Index.kt)") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
@@ -310,7 +350,8 @@ fun FileExplorerPane(
                     value = inputName,
                     onValueChange = { inputName = it },
                     label = { Text("Folder Name") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
@@ -332,6 +373,222 @@ fun FileExplorerPane(
         )
     }
 
+    // Dialog: Move File / Directory
+    itemToMove?.let { target ->
+        AlertDialog(
+            onDismissRequest = { itemToMove = null },
+            title = { Text("Move \"${target.name}\"", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Current location: ${target.path}",
+                        color = theme.lineNumberColor,
+                        fontSize = 12.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+
+                    Text(
+                        text = "Quick Destination:",
+                        color = theme.onSurfaceColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    // Quick Destination Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        currentDirectory.parentFile?.let { parent ->
+                            FilterChip(
+                                selected = destinationPathInput == parent.absolutePath,
+                                onClick = { destinationPathInput = parent.absolutePath },
+                                label = { Text("Parent (..)") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = theme.primaryColor,
+                                    selectedLabelColor = theme.onPrimaryColor
+                                )
+                            )
+                        }
+
+                        // Local folders in current directory
+                        files.filter { it.isDirectory && it.path != target.path }.forEach { folder ->
+                            FilterChip(
+                                selected = destinationPathInput == folder.path,
+                                onClick = { destinationPathInput = folder.path },
+                                label = { Text(folder.name) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = theme.primaryColor,
+                                    selectedLabelColor = theme.onPrimaryColor
+                                )
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = destinationPathInput,
+                        onValueChange = { destinationPathInput = it },
+                        label = { Text("Destination Directory Path") },
+                        placeholder = { Text("/path/to/destination/folder") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_move_destination")
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (destinationPathInput.isNotBlank()) {
+                            onMove(target.path, destinationPathInput.trim())
+                            itemToMove = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = theme.onPrimaryColor),
+                    modifier = Modifier.testTag("btn_confirm_move")
+                ) {
+                    Text("Move Here")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { itemToMove = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Dialog: Clone Repository (GitHub, GitLab, Bitbucket, Codeberg, Custom)
+    if (showCloneDialog) {
+        AlertDialog(
+            onDismissRequest = { showCloneDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = theme.primaryColor)
+                    Text("Clone Git Repository", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Clone any public or private repository from GitHub, GitLab, Bitbucket, Codeberg, or custom Git URLs into your workspace.",
+                        fontSize = 12.sp,
+                        color = theme.lineNumberColor
+                    )
+
+                    // Provider selector row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val providers = listOf(
+                            "GitHub" to "https://github.com/octocat/Hello-World.git",
+                            "GitLab" to "https://gitlab.com/gitlab-org/gitlab-runner.git",
+                            "Bitbucket" to "https://bitbucket.org/atlassian/maven-jgit-buildnumber.git",
+                            "Codeberg" to "https://codeberg.org/forgejo/forgejo.git",
+                            "Custom" to ""
+                        )
+                        providers.forEach { (name, sampleUrl) ->
+                            FilterChip(
+                                selected = selectedProvider == name,
+                                onClick = {
+                                    selectedProvider = name
+                                    if (sampleUrl.isNotEmpty()) {
+                                        cloneRepoUrl = sampleUrl
+                                        cloneFolderName = sampleUrl.substringAfterLast('/').removeSuffix(".git")
+                                    }
+                                },
+                                label = { Text(name, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = theme.primaryColor,
+                                    selectedLabelColor = theme.onPrimaryColor
+                                )
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = cloneRepoUrl,
+                        onValueChange = {
+                            cloneRepoUrl = it
+                            if (cloneFolderName.isBlank() && it.contains("/")) {
+                                cloneFolderName = it.trim().removeSuffix("/").substringAfterLast('/').removeSuffix(".git")
+                            }
+                        },
+                        label = { Text("Repository URL *") },
+                        placeholder = { Text("https://github.com/user/repository.git") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_clone_repo_url")
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = cloneFolderName,
+                            onValueChange = { cloneFolderName = it },
+                            label = { Text("Folder Name") },
+                            placeholder = { Text("Auto") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("input_clone_folder_name")
+                        )
+
+                        OutlinedTextField(
+                            value = cloneBranch,
+                            onValueChange = { cloneBranch = it },
+                            label = { Text("Branch") },
+                            placeholder = { Text("main") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("input_clone_branch")
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = cloneToken,
+                        onValueChange = { cloneToken = it },
+                        label = { Text("Personal Access Token (optional)") },
+                        placeholder = { Text("Required for private repositories") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("input_clone_token")
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (cloneRepoUrl.isNotBlank()) {
+                            onClone(cloneRepoUrl.trim(), cloneFolderName.trim(), cloneBranch.trim(), cloneToken.trim())
+                            showCloneDialog = false
+                        }
+                    },
+                    enabled = cloneRepoUrl.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = theme.onPrimaryColor),
+                    modifier = Modifier.testTag("btn_confirm_clone_explorer")
+                ) {
+                    Text("Clone Repository")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloneDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     // Dialog: Rename
     itemToRename?.let { target ->
         AlertDialog(
@@ -342,7 +599,8 @@ fun FileExplorerPane(
                     value = inputName,
                     onValueChange = { inputName = it },
                     label = { Text("New Name") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
@@ -398,9 +656,14 @@ private fun FileRowItem(
     item: FileItem,
     theme: EditorTheme,
     onClick: () -> Unit,
+    onShare: () -> Unit,
+    onMove: () -> Unit,
     onRename: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onExportZip: (() -> Unit)? = null
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -439,19 +702,87 @@ private fun FileRowItem(
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Box {
             IconButton(
-                onClick = onRename,
-                modifier = Modifier.size(28.dp)
+                onClick = { menuExpanded = true },
+                modifier = Modifier
+                    .size(32.dp)
+                    .testTag("file_menu_button_${item.name}")
             ) {
-                Icon(Icons.Default.DriveFileMove, contentDescription = "Rename", tint = theme.lineNumberColor, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "File Options",
+                    tint = theme.lineNumberColor,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(28.dp)
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                modifier = Modifier.background(theme.surfaceColor)
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444).copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                DropdownMenuItem(
+                    text = { Text("Open", color = theme.onSurfaceColor) },
+                    leadingIcon = { Icon(Icons.Default.Visibility, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(18.dp)) },
+                    onClick = {
+                        menuExpanded = false
+                        onClick()
+                    },
+                    modifier = Modifier.testTag("menu_item_open_${item.name}")
+                )
+
+                DropdownMenuItem(
+                    text = { Text("Share", color = theme.onSurfaceColor) },
+                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(18.dp)) },
+                    onClick = {
+                        menuExpanded = false
+                        onShare()
+                    },
+                    modifier = Modifier.testTag("menu_item_share_${item.name}")
+                )
+
+                DropdownMenuItem(
+                    text = { Text("Move", color = theme.onSurfaceColor) },
+                    leadingIcon = { Icon(Icons.Default.DriveFileMove, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(18.dp)) },
+                    onClick = {
+                        menuExpanded = false
+                        onMove()
+                    },
+                    modifier = Modifier.testTag("menu_item_move_${item.name}")
+                )
+
+                DropdownMenuItem(
+                    text = { Text("Rename", color = theme.onSurfaceColor) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = theme.lineNumberColor, modifier = Modifier.size(18.dp)) },
+                    onClick = {
+                        menuExpanded = false
+                        onRename()
+                    },
+                    modifier = Modifier.testTag("menu_item_rename_${item.name}")
+                )
+
+                if (onExportZip != null) {
+                    DropdownMenuItem(
+                        text = { Text("Export as ZIP", color = theme.onSurfaceColor) },
+                        leadingIcon = { Icon(Icons.Default.Archive, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(18.dp)) },
+                        onClick = {
+                            menuExpanded = false
+                            onExportZip()
+                        },
+                        modifier = Modifier.testTag("menu_item_zip_${item.name}")
+                    )
+                }
+
+                DropdownMenuItem(
+                    text = { Text("Delete", color = Color(0xFFEF4444)) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp)) },
+                    onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    },
+                    modifier = Modifier.testTag("menu_item_delete_${item.name}")
+                )
             }
         }
     }

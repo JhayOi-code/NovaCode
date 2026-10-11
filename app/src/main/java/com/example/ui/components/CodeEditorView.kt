@@ -123,15 +123,18 @@ fun CodeEditorView(
                             fontFamily = FontFamily.Monospace
                         )
 
-                        IconButton(
-                            onClick = { onCloseTab(index) },
-                            modifier = Modifier.size(16.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .clickable { onCloseTab(index) },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close tab",
                                 tint = theme.lineNumberColor,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -171,20 +174,22 @@ fun CodeEditorView(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val segments = activeFile.path.split("/").filter { it.isNotEmpty() }
+                    val segments = com.example.model.BreadcrumbHelper.getSegments(
+                        filePath = activeFile.path,
+                        fileName = activeFile.name
+                    )
                     segments.forEachIndexed { idx, segment ->
                         val isLast = idx == segments.lastIndex
-                        val subPath = "/" + segments.take(idx + 1).joinToString("/")
 
                         Text(
-                            text = segment,
+                            text = segment.label,
                             color = if (isLast) theme.primaryColor else theme.lineNumberColor,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Normal,
                             modifier = Modifier
-                                .clickable(enabled = onNavigatePath != null) {
-                                    onNavigatePath?.invoke(subPath)
+                                .clickable(enabled = onNavigatePath != null && segment.isDirectory) {
+                                    onNavigatePath?.invoke(segment.path)
                                 }
                                 .padding(horizontal = 2.dp, vertical = 2.dp)
                         )
@@ -220,6 +225,9 @@ fun CodeEditorView(
                     onContentChange(redone.content)
                 },
                 isBirdsEyeViewEnabled = isBirdsEyeViewEnabled,
+                initialCursorPosition = activeFile.cursorPosition,
+                fileName = activeFile.name,
+                fileId = activeFile.id,
                 modifier = Modifier.weight(1f)
             )
         } else {

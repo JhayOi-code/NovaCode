@@ -116,7 +116,7 @@ fun AboutScreen(
                     )
 
                     Text(
-                        text = "Version 1.0.0 (API 36, Target 36, Min 24)",
+                        text = "Version 2.0.0 (Build 2 • API 36, Min 24)",
                         color = theme.lineNumberColor,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
