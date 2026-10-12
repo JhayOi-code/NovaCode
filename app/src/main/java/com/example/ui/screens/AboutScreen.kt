@@ -81,22 +81,26 @@ fun AboutScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Logo centered in the middle with a dedicated frame
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Color.White)
-                            .border(1.dp, theme.borderColor, RoundedCornerShape(18.dp)),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFE2E8F0)),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(88.dp)
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_linq_logo),
-                            contentDescription = "Linq Studio Logo",
-                            contentScale = ContentScale.Fit,
+                        Box(
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                        )
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_linq_logo),
+                                contentDescription = "Linq Studio Logo",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     Text(

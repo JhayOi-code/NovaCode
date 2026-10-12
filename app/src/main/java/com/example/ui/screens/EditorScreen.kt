@@ -67,6 +67,12 @@ import com.example.ui.components.TerminalSheet
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.BorderStroke
 import java.io.File
 
 @Composable
@@ -176,6 +182,8 @@ fun EditorScreen(
                                     workspaceDir = currentDirectory
                                 )
                             }
+                            var expandedSegmentPath by remember { mutableStateOf<String?>(null) }
+
                             breadcrumbSegments.forEachIndexed { idx, segment ->
                                 val isLast = idx == breadcrumbSegments.lastIndex
                                 if (idx > 0) {
@@ -187,30 +195,123 @@ fun EditorScreen(
                                         modifier = Modifier.padding(horizontal = 2.dp)
                                     )
                                 }
-                                Surface(
-                                    color = if (isLast) theme.primaryColor.copy(alpha = 0.12f) else Color.Transparent,
-                                    shape = RoundedCornerShape(4.dp),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .clickable(enabled = segment.isDirectory) {
-                                            onNavigateDir(File(segment.path))
-                                        }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                Box {
+                                    Surface(
+                                        color = if (isLast) theme.primaryColor.copy(alpha = 0.12f) else theme.surfaceColor.copy(alpha = 0.6f),
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = BorderStroke(1.dp, if (isLast) theme.primaryColor.copy(alpha = 0.35f) else theme.borderColor.copy(alpha = 0.4f)),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .clickable(enabled = segment.isDirectory) {
+                                                onNavigateDir(File(segment.path))
+                                                showExplorerDrawer = true
+                                            }
+                                            .testTag("breadcrumb_segment_${idx}")
                                     ) {
-                                        if (isLast) {
-                                            LanguageFileIcon(filename = active.name, isDirectory = false, size = 14.dp)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                        ) {
+                                            if (isLast) {
+                                                LanguageFileIcon(filename = active.name, isDirectory = false, size = 14.dp)
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Folder,
+                                                    contentDescription = "Parent Folder",
+                                                    tint = theme.primaryColor,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = segment.label,
+                                                color = if (isLast) theme.primaryColor else theme.onSurfaceColor.copy(alpha = 0.85f),
+                                                fontSize = 12.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                            if (segment.isDirectory) {
+                                                IconButton(
+                                                    onClick = {
+                                                        expandedSegmentPath = if (expandedSegmentPath == segment.path) null else segment.path
+                                                    },
+                                                    modifier = Modifier.size(16.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.ArrowDropDown,
+                                                        contentDescription = "Folder items",
+                                                        tint = theme.lineNumberColor,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                            }
                                         }
-                                        Text(
-                                            text = segment.label,
-                                            color = if (isLast) theme.primaryColor else theme.onSurfaceColor.copy(alpha = 0.8f),
-                                            fontSize = 12.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontWeight = if (isLast) FontWeight.Bold else FontWeight.Medium
-                                        )
+                                    }
+
+                                    if (segment.isDirectory && expandedSegmentPath == segment.path) {
+                                        val folder = File(segment.path)
+                                        val children: List<File> = remember(segment.path) {
+                                            if (folder.exists() && folder.isDirectory) {
+                                                val files = folder.listFiles()
+                                                if (files != null) {
+                                                    files.sortedWith(compareBy<File>({ !it.isDirectory }, { it.name.lowercase() }))
+                                                } else emptyList()
+                                            } else emptyList()
+                                        }
+
+                                        DropdownMenu(
+                                            expanded = true,
+                                            onDismissRequest = { expandedSegmentPath = null },
+                                            modifier = Modifier.background(theme.surfaceColor)
+                                        ) {
+                                            DropdownMenuItem(
+                                                text = { Text("Open '${segment.label}' in Tree", color = theme.primaryColor, fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                                                leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(16.dp)) },
+                                                onClick = {
+                                                    expandedSegmentPath = null
+                                                    onNavigateDir(folder)
+                                                    showExplorerDrawer = true
+                                                }
+                                            )
+                                            HorizontalDivider(color = theme.borderColor)
+                                            if (children.isEmpty()) {
+                                                DropdownMenuItem(
+                                                    text = { Text("Folder is empty", color = theme.lineNumberColor, fontSize = 12.sp) },
+                                                    onClick = {},
+                                                    enabled = false
+                                                )
+                                            } else {
+                                                for (child in children.take(15)) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(child.name, color = theme.onSurfaceColor, fontSize = 12.sp) },
+                                                        leadingIcon = {
+                                                            if (child.isDirectory) {
+                                                                Icon(Icons.Default.Folder, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(16.dp))
+                                                            } else {
+                                                                LanguageFileIcon(filename = child.name, isDirectory = false, size = 16.dp)
+                                                            }
+                                                        },
+                                                        onClick = {
+                                                            expandedSegmentPath = null
+                                                            if (child.isDirectory) {
+                                                                onNavigateDir(child)
+                                                                showExplorerDrawer = true
+                                                            } else {
+                                                                onOpenFile(
+                                                                    FileItem(
+                                                                        name = child.name,
+                                                                        path = child.absolutePath,
+                                                                        isDirectory = false,
+                                                                        size = child.length(),
+                                                                        lastModified = child.lastModified()
+                                                                    )
+                                                                )
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -466,15 +567,15 @@ fun EditorScreen(
                         description = "GitHub modern slate dark theme",
                         category = "Theme",
                         icon = Icons.Default.Palette,
-                        action = { onSelectTheme?.invoke(EditorTheme.GithubDark) }
+                        action = { onSelectTheme?.invoke(EditorTheme.GitHubDark) }
                     ),
                     IdeCommand(
-                        id = "theme_cyberpunk",
-                        title = "Theme: Cyberpunk Neon",
-                        description = "High-energy neon cyberpunk palette",
+                        id = "theme_nord",
+                        title = "Theme: Nord Frost",
+                        description = "Arctic, north-bluish clean palette",
                         category = "Theme",
                         icon = Icons.Default.Palette,
-                        action = { onSelectTheme?.invoke(EditorTheme.Cyberpunk) }
+                        action = { onSelectTheme?.invoke(EditorTheme.Nord) }
                     ),
                     IdeCommand(
                         id = "theme_light",

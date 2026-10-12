@@ -26,6 +26,8 @@ import com.example.model.PermissionStatus
 import com.example.model.SupportedLanguage
 import com.example.model.TerminalLine
 import com.example.model.TerminalLineType
+import com.example.model.UserAccount
+import com.example.model.AppAuthState
 import com.example.permissions.StoragePermissionState
 import com.example.server.LocalDevServer
 import com.example.server.NanoHttpDevServer
@@ -78,6 +80,8 @@ data class EditorUiState(
     val gitRemoteUrl: String = "",
     val isGitLoading: Boolean = false,
     val screenOrientationMode: String = "sensor", // "sensor" (auto rotates to landscape when device is flipped), "portrait", "landscape"
+    val userAccount: UserAccount? = null,
+    val authState: AppAuthState = AppAuthState.WELCOME,
     val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Terminal, 4: Settings, 5: About
 )
 
@@ -144,9 +148,20 @@ class EditorViewModel(
         // Register with MemoryManager
         com.example.memory.MemoryManager.registerListener(memoryTrimListener)
 
+        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
+        val savedUser = if (isLoggedIn) {
+            UserAccount(
+                id = prefs.getString("user_id", "usr_1") ?: "usr_1",
+                name = prefs.getString("user_name", "Developer") ?: "Developer",
+                email = prefs.getString("user_email", "dev@linqstudio.com") ?: "dev@linqstudio.com",
+                isGoogleUser = prefs.getBoolean("is_google_user", false)
+            )
+        } else null
+
         val account = loadGitHubAccount()
         _uiState.update {
             it.copy(
+                userAccount = savedUser,
                 githubAccount = account
             )
         }
@@ -289,6 +304,50 @@ class EditorViewModel(
     fun toggleAutoRotate() {
         val newMode = if (_uiState.value.screenOrientationMode == "portrait") "sensor" else "portrait"
         setScreenOrientationMode(newMode)
+    }
+
+    fun setAuthState(state: AppAuthState) {
+        _uiState.update { it.copy(authState = state) }
+    }
+
+    fun signInUser(user: UserAccount) {
+        prefs.edit()
+            .putBoolean("is_logged_in", true)
+            .putString("user_id", user.id)
+            .putString("user_name", user.name)
+            .putString("user_email", user.email)
+            .putBoolean("is_google_user", user.isGoogleUser)
+            .apply()
+        _uiState.update {
+            it.copy(
+                userAccount = user,
+                authState = AppAuthState.AUTHENTICATED
+            )
+        }
+        Toast.makeText(getApplication(), "Signed in as ${user.name}", Toast.LENGTH_SHORT).show()
+    }
+
+    fun signOutUser() {
+        prefs.edit()
+            .putBoolean("is_logged_in", false)
+            .remove("user_id")
+            .remove("user_name")
+            .remove("user_email")
+            .remove("is_google_user")
+            .apply()
+        _uiState.update {
+            it.copy(
+                userAccount = null,
+                authState = AppAuthState.AUTH
+            )
+        }
+        Toast.makeText(getApplication(), "Signed out", Toast.LENGTH_SHORT).show()
+    }
+
+    fun skipToGuest() {
+        _uiState.update {
+            it.copy(authState = AppAuthState.AUTHENTICATED)
+        }
     }
 
     fun loadDirectory(file: File) {

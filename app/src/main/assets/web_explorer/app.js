@@ -1563,7 +1563,18 @@
 
       editorBreadcrumbs.innerHTML = breadcrumbHtml;
 
+      editorBreadcrumbs.querySelectorAll('.breadcrumb-root').forEach(el => {
+        el.style.cursor = 'pointer';
+        el.setAttribute('title', 'Navigate to Workspace Root');
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDrawer();
+          showToast('📂 Navigated to workspace root in project tree');
+        });
+      });
+
       editorBreadcrumbs.querySelectorAll('.breadcrumb-folder').forEach(el => {
+        el.setAttribute('title', 'Navigate to parent folder');
         el.addEventListener('click', (e) => {
           e.stopPropagation();
           const targetId = el.getAttribute('data-node-id');
@@ -1571,7 +1582,17 @@
           if (targetFolder) {
             targetFolder.isOpen = true;
             renderFileTree();
-            showToast(`📂 Opened folder ${targetFolder.name}`);
+            openDrawer();
+            // Scroll target folder element into view if present
+            setTimeout(() => {
+              const treeEl = document.querySelector(`[data-id="${targetId}"]`);
+              if (treeEl) {
+                treeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                treeEl.classList.add('pulse-highlight');
+                setTimeout(() => treeEl.classList.remove('pulse-highlight'), 1200);
+              }
+            }, 100);
+            showToast(`📂 Navigated to folder '${targetFolder.name}' in project tree`);
           }
         });
       });

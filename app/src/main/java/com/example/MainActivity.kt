@@ -50,6 +50,9 @@ import com.example.ui.screens.FilesScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.TerminalScreen
+import com.example.ui.screens.WelcomeScreen
+import com.example.ui.screens.AuthScreen
+import com.example.model.AppAuthState
 import com.example.viewmodel.EditorViewModel
 
 class MainActivity : ComponentActivity() {
@@ -147,12 +150,29 @@ class MainActivity : ComponentActivity() {
             }
 
             MaterialTheme(colorScheme = m3Colors) {
-                // Handle system back button
-                BackHandler(enabled = uiState.activeNavTab != 0) {
-                    viewModel.setNavTab(0)
-                }
+                when (uiState.authState) {
+                    AppAuthState.WELCOME -> {
+                        WelcomeScreen(
+                            theme = theme,
+                            onContinueToAuth = { viewModel.setAuthState(AppAuthState.AUTH) }
+                        )
+                    }
 
-                Scaffold(
+                    AppAuthState.AUTH -> {
+                        AuthScreen(
+                            theme = theme,
+                            onLoginSuccess = { user -> viewModel.signInUser(user) },
+                            onSkipGuest = { viewModel.skipToGuest() }
+                        )
+                    }
+
+                    AppAuthState.AUTHENTICATED -> {
+                        // Handle system back button
+                        BackHandler(enabled = uiState.activeNavTab != 0) {
+                            viewModel.setNavTab(0)
+                        }
+
+                        Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
                         NavigationBar(
@@ -229,7 +249,8 @@ class MainActivity : ComponentActivity() {
                                 onStopDevServer = { viewModel.stopDevServer() },
                                 githubAccount = uiState.githubAccount,
                                 onOpenGitPanel = { viewModel.toggleGitPanel(true) },
-                                isLinqStudioCardVisible = uiState.isLinqStudioCardVisible
+                                isLinqStudioCardVisible = uiState.isLinqStudioCardVisible,
+                                userAccount = uiState.userAccount
                             )
 
                             1 -> EditorScreen(
@@ -341,7 +362,10 @@ class MainActivity : ComponentActivity() {
                                 reduceTransparency = uiState.reduceTransparency,
                                 onToggleReduceTransparency = { viewModel.toggleReduceTransparency(it) },
                                 onOpenStorageWizard = { viewModel.togglePermissionWizard(true) },
-                                onImportJsonTheme = { viewModel.importJsonTheme(it) }
+                                onImportJsonTheme = { viewModel.importJsonTheme(it) },
+                                userAccount = uiState.userAccount,
+                                onSignOut = { viewModel.signOutUser() },
+                                onSignInClick = { viewModel.setAuthState(AppAuthState.AUTH) }
                             )
 
                             5 -> AboutScreen(theme = theme)
@@ -403,9 +427,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+                }
             }
             }
         }
+    }
     }
 
     override fun onResume() {

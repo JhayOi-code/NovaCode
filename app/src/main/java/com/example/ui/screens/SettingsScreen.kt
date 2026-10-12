@@ -27,6 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material3.HorizontalDivider
+import com.example.model.UserAccount
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DataObject
@@ -92,6 +95,9 @@ fun SettingsScreen(
     onToggleReduceTransparency: (Boolean) -> Unit,
     onOpenStorageWizard: () -> Unit,
     onImportJsonTheme: (String) -> Boolean = { false },
+    userAccount: UserAccount? = null,
+    onSignOut: () -> Unit = {},
+    onSignInClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -113,16 +119,122 @@ fun SettingsScreen(
         // Header
         item {
             Text(
-                text = "Preferences & Themes",
+                text = "Preferences & Account",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = currentTheme.onSurfaceColor
             )
             Text(
-                text = "Customize the editor theme, typography, and JSON syntax token engine",
+                text = "Manage your cloud developer profile, themes, typography, and editor tools",
                 color = currentTheme.lineNumberColor,
                 fontSize = 12.sp
             )
+        }
+
+        // User Account & Authentication Status Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth().testTag("card_user_account_settings"),
+                colors = CardDefaults.cardColors(containerColor = currentTheme.surfaceColor),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = if (userAccount?.isGoogleUser == true) Color(0xFF4285F4).copy(alpha = 0.15f) else currentTheme.primaryColor.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (userAccount?.isGoogleUser == true) Color(0xFF4285F4) else currentTheme.primaryColor),
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = userAccount?.name?.take(1)?.uppercase() ?: "G",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = if (userAccount?.isGoogleUser == true) Color(0xFF4285F4) else currentTheme.primaryColor
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Text(
+                                    text = userAccount?.name ?: "Guest Developer",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = currentTheme.onSurfaceColor
+                                )
+                                Text(
+                                    text = userAccount?.email ?: "Offline Mode • Local Workspace",
+                                    fontSize = 12.sp,
+                                    color = currentTheme.lineNumberColor
+                                )
+                            }
+                        }
+
+                        if (userAccount != null) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (userAccount.isGoogleUser) Color(0xFF4285F4).copy(alpha = 0.12f) else currentTheme.primaryColor.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = if (userAccount.isGoogleUser) "GOOGLE" else "LINQ",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = if (userAccount.isGoogleUser) Color(0xFF4285F4) else currentTheme.primaryColor,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = currentTheme.borderColor.copy(alpha = 0.5f))
+
+                    if (userAccount != null) {
+                        Button(
+                            onClick = onSignOut,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFEF4444).copy(alpha = 0.12f),
+                                contentColor = Color(0xFFEF4444)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().height(40.dp).testTag("btn_sign_out")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = "Sign Out",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sign Out / Switch Account", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    } else {
+                        Button(
+                            onClick = onSignInClick,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = currentTheme.primaryColor,
+                                contentColor = currentTheme.onPrimaryColor
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().height(40.dp).testTag("btn_settings_signin")
+                        ) {
+                            Text("Sign In with Google or Account", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
 
         // Theme Engine Presets Section

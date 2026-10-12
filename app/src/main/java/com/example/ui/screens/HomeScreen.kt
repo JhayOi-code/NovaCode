@@ -58,6 +58,7 @@ import com.example.git.model.GitHubAccount
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
 import com.example.model.PermissionStatus
+import com.example.model.UserAccount
 import com.example.server.ServerStatus
 
 @Composable
@@ -78,6 +79,7 @@ fun HomeScreen(
     githubAccount: GitHubAccount = GitHubAccount(),
     onOpenGitPanel: () -> Unit = {},
     isLinqStudioCardVisible: Boolean = true,
+    userAccount: UserAccount? = null,
     modifier: Modifier = Modifier
 ) {
     val companyName = stringResource(R.string.company_name)
@@ -109,23 +111,35 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             // Linq Studio App Logo
-                            Image(
-                                painter = painterResource(R.drawable.ic_linq_logo),
-                                contentDescription = "Linq Studio",
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color.White,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                modifier = Modifier.size(46.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        painter = painterResource(R.drawable.ic_linq_logo),
+                                        contentDescription = "Linq Studio",
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
 
                             Column {
                                 Text(
-                                    text = stringResource(R.string.app_name),
+                                    text = if (userAccount != null) "Welcome, ${userAccount.name}" else stringResource(R.string.app_name),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = theme.onSurfaceColor
                                 )
                                 Text(
-                                    text = "Simple, Fast Mobile IDE",
+                                    text = if (userAccount?.isGoogleUser == true) "Signed in with Google • Cloud Sync Active" else "Simple, Fast Mobile IDE",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = theme.primaryColor,
                                     fontWeight = FontWeight.Medium
