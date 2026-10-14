@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="72dp"
-        android:height="72dp"
-        android:drawable="@drawable/ic_linq_logo"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Code Brackets & Fast Chevron Icon representing Linq Studio -->
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M38,36 L24,54 L38,72 L44,67 L34,54 L44,41 Z" />
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M70,36 L84,54 L70,72 L64,67 L74,54 L64,41 Z" />
+    <path
+        android:fillColor="#A855F7"
+        android:pathData="M60,32 L46,76 L52,76 L66,32 Z" />
+</vector>

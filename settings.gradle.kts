@@ -25,6 +25,3 @@ dependencyResolutionManagement {
 rootProject.name = "Linq Studio"
 
 include(":app")
-include(":permissions")
-include(":editor")
-include(":git")

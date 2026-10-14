@@ -2,1299 +2,370 @@ package com.example.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.webkit.MimeTypeMap
-import android.widget.Toast
-import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.git.GitService
-import com.example.git.GitServiceImpl
-import com.example.git.model.GitAuthor
-import com.example.git.model.GitCommit
-import com.example.git.model.GitCredentials
-import com.example.git.model.GitHubAccount
-import com.example.git.model.GitResult
-import com.example.git.model.GitStatus
-import com.example.model.CodeFile
-import com.example.model.EditorTheme
-import com.example.model.FileItem
-import com.example.model.PermissionStatus
-import com.example.model.SupportedLanguage
-import com.example.model.TerminalLine
-import com.example.model.TerminalLineType
-import com.example.model.UserAccount
-import com.example.model.AppAuthState
-import com.example.permissions.StoragePermissionState
-import com.example.server.LocalDevServer
+import com.example.model.*
+import com.example.plugin.PluginItem
+import com.example.plugin.PluginManager
 import com.example.server.NanoHttpDevServer
-import com.example.server.ServerRequestLog
-import com.example.server.ServerStartResult
 import com.example.server.ServerStatus
 import com.example.storage.FileRepository
 import com.example.storage.FileRepositoryImpl
-import com.example.terminal.LinuxProcessRunner
-import com.example.terminal.ShellSession
-import com.example.terminal.TerminalEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
 data class EditorUiState(
+    val activeNavTab: Int = 0,
     val openFiles: List<CodeFile> = emptyList(),
     val activeFileIndex: Int = 0,
     val currentDirectory: File,
-    val currentPathOrUri: String,
     val directoryFiles: List<FileItem> = emptyList(),
-    val storageRoots: List<FileItem> = emptyList(),
-    val currentTheme: EditorTheme = EditorTheme.LinqDark,
-    val fontSizeSp: Int = 13,
-    val isWordWrapEnabled: Boolean = false,
-    val isBirdsEyeViewEnabled: Boolean = true,
-    val isLinqStudioCardVisible: Boolean = true,
-    val reduceTransparency: Boolean = false,
-    val permissionStatus: PermissionStatus = PermissionStatus(),
-    val showPermissionWizard: Boolean = false,
-    val previewHtml: String? = null,
+    val serverStatus: ServerStatus = ServerStatus(),
     val previewUrl: String? = null,
-    val serverStatus: ServerStatus = ServerStatus.Stopped,
-    val serverLogs: List<ServerRequestLog> = emptyList(),
-    val isTerminalOpen: Boolean = false,
-    val terminalLines: List<TerminalLine> = emptyList(),
-    val isTerminalRunning: Boolean = false,
-    val terminalSessions: List<ShellSession> = emptyList(),
-    val activeSessionId: String = "session_1",
-    val installedPackages: List<String> = emptyList(),
-    val isGitPanelOpen: Boolean = false,
-    val githubAccount: GitHubAccount = GitHubAccount(),
-    val gitStatus: GitStatus? = null,
-    val gitLogs: List<GitCommit> = emptyList(),
-    val gitCurrentBranch: String = "main",
-    val gitRemoteUrl: String = "",
-    val isGitLoading: Boolean = false,
-    val screenOrientationMode: String = "sensor", // "sensor" (auto rotates to landscape when device is flipped), "portrait", "landscape"
-    val userAccount: UserAccount? = null,
-    val authState: AppAuthState = AppAuthState.WELCOME,
-    val activeNavTab: Int = 0 // 0: Home, 1: Editor, 2: Files, 3: Terminal, 4: Settings, 5: About
+    val previewHtml: String? = null,
+    val userAccount: UserAccount = UserAccount(),
+    val plugins: List<PluginItem> = emptyList(),
+    val showPluginSheet: Boolean = false,
+    val terminalLines: List<TerminalLine> = listOf(
+        TerminalLine("Welcome to Linq Studio Terminal! Type 'help' for available commands.")
+    ),
+    val currentTheme: EditorTheme = EditorTheme.LinqDark
 )
 
-class EditorViewModel(
-    application: Application,
-    val fileRepository: FileRepository
-) : AndroidViewModel(application) {
+class EditorViewModel(application: Application) : AndroidViewModel(application) {
 
-    constructor(application: Application) : this(
-        application,
-        FileRepositoryImpl(application)
-    )
-
-    private val prefs = application.getSharedPreferences("linq_settings_prefs", Context.MODE_PRIVATE)
-    val linuxRunner: LinuxProcessRunner by lazy { LinuxProcessRunner(application) }
+    val fileRepository: FileRepository = FileRepositoryImpl(application)
+    val pluginManager: PluginManager = PluginManager(application)
+    private val devServer = NanoHttpDevServer()
+    private val prefs = application.getSharedPreferences("linq_user_prefs", Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(
         EditorUiState(
             currentDirectory = fileRepository.internalWorkspaceDir,
-            currentPathOrUri = fileRepository.internalWorkspaceDir.absolutePath,
-            isBirdsEyeViewEnabled = prefs.getBoolean("pref_birds_eye_view", true),
-            isLinqStudioCardVisible = prefs.getBoolean("pref_linq_card_visible", true),
-            isWordWrapEnabled = prefs.getBoolean("pref_word_wrap", false),
-            fontSizeSp = prefs.getInt("pref_font_size", 13),
-            screenOrientationMode = prefs.getString("pref_screen_orientation", "sensor") ?: "sensor",
-            terminalSessions = listOf(
-                ShellSession(
-                    id = "session_1",
-                    name = "Session 1",
-                    workingDir = fileRepository.internalWorkspaceDir
-                )
-            )
+            directoryFiles = fileRepository.listFiles(fileRepository.internalWorkspaceDir)
         )
     )
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
-    val localDevServer: LocalDevServer = NanoHttpDevServer()
-    val gitService: GitService = GitServiceImpl()
-
-    private var terminalEngineInstance: TerminalEngine? = null
-    private fun getTerminalEngine(): TerminalEngine {
-        var engine = terminalEngineInstance
-        if (engine == null) {
-            engine = TerminalEngine(fileRepository.internalWorkspaceDir, gitService)
-            terminalEngineInstance = engine
-        }
-        return engine
-    }
-
-    private var isTerminalInitialized = false
-
-    private val memoryTrimListener = object : com.example.memory.MemoryManager.MemoryTrimListener {
-        override fun onTrimMemory(level: Int) {
-            trimInternalCaches()
-        }
-
-        override fun onLowMemoryPressure() {
-            trimInternalCaches()
-            System.gc()
-        }
-    }
-
     init {
-        // Register with MemoryManager
-        com.example.memory.MemoryManager.registerListener(memoryTrimListener)
+        loadUserProfile()
+        loadInitialStarterFiles()
 
-        val isLoggedIn = prefs.getBoolean("is_logged_in", false)
-        val savedUser = if (isLoggedIn) {
-            UserAccount(
-                id = prefs.getString("user_id", "usr_1") ?: "usr_1",
-                name = prefs.getString("user_name", "Developer") ?: "Developer",
-                email = prefs.getString("user_email", "dev@linqstudio.com") ?: "dev@linqstudio.com",
-                isGoogleUser = prefs.getBoolean("is_google_user", false)
+        viewModelScope.launch {
+            pluginManager.plugins.collect { list ->
+                _uiState.value = _uiState.value.copy(plugins = list)
+            }
+        }
+    }
+
+    private fun loadUserProfile() {
+        val name = prefs.getString("user_name", "Developer") ?: "Developer"
+        val title = prefs.getString("user_title", "Mobile Developer") ?: "Mobile Developer"
+        val avatarId = prefs.getString("user_avatar_id", "avatar_terminal") ?: "avatar_terminal"
+        val photoUri = prefs.getString("user_photo_uri", null)
+
+        _uiState.value = _uiState.value.copy(
+            userAccount = UserAccount(
+                name = name,
+                customTitle = title,
+                avatarId = avatarId,
+                avatarCustomUri = photoUri
             )
-        } else null
+        )
+    }
 
-        val account = loadGitHubAccount()
-        _uiState.update {
-            it.copy(
-                userAccount = savedUser,
-                githubAccount = account
+    fun updateUserProfile(username: String, customTitle: String, avatarId: String, photoUri: String?) {
+        prefs.edit()
+            .putString("user_name", username)
+            .putString("user_title", customTitle)
+            .putString("user_avatar_id", avatarId)
+            .putString("user_photo_uri", photoUri)
+            .apply()
+
+        _uiState.value = _uiState.value.copy(
+            userAccount = UserAccount(
+                name = username,
+                customTitle = customTitle,
+                avatarId = avatarId,
+                avatarCustomUri = photoUri
             )
-        }
-        refreshPermissions()
-        observeStorageRoots()
-        loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
-        openInitialFiles()
+        )
+    }
 
-        // Sync Dev Server status and logs into UI state
-        viewModelScope.launch {
-            localDevServer.status.collect { status ->
-                _uiState.update { it.copy(serverStatus = status) }
-            }
-        }
-        viewModelScope.launch {
-            localDevServer.requestLogs.collect { logs ->
-                _uiState.update { it.copy(serverLogs = logs) }
-            }
+    private fun loadInitialStarterFiles() {
+        val webDir = File(fileRepository.internalWorkspaceDir, "WebStarter")
+        val indexHtml = File(webDir, "index.html")
+        if (indexHtml.exists()) {
+            openFile(indexHtml)
         }
     }
 
-    /**
-     * Lazily initializes terminal modules (LinuxProcessRunner environment & installed packages)
-     * only when the user switches to the Terminal panel or executes a terminal command.
-     */
-    fun ensureTerminalInitialized() {
-        if (isTerminalInitialized) return
-        isTerminalInitialized = true
-        viewModelScope.launch {
-            val pkgs = linuxRunner.getInstalledPackages()
-            _uiState.update {
-                it.copy(installedPackages = pkgs)
-            }
-        }
-    }
-
-    /**
-     * Clears syntax tokenizer caches and file tree caches on low-memory condition.
-     */
-    fun trimInternalCaches() {
-        com.example.syntax.SyntaxHighlighter.evictMemory()
-        com.example.editor.FastSyntaxTokenizer.evictMemory()
-        com.example.model.TreeCacheManager.clearCache()
-    }
-
-    /**
-     * Restarts core editor services cleanly following error recovery.
-     */
-    fun restartEditorService() {
-        try {
-            trimInternalCaches()
-            terminalEngineInstance = null
-            isTerminalInitialized = false
-            loadDirectory(fileRepository.internalWorkspaceDir.absolutePath)
-            openInitialFiles()
-            Toast.makeText(getApplication(), "Editor core services restarted successfully", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            com.example.crash.CrashReporter.captureException(e, tag = "RestartEditorService")
-        }
-    }
-
-    private fun observeStorageRoots() {
-        viewModelScope.launch {
-            fileRepository.getStorageRoots().collect { roots ->
-                _uiState.update { it.copy(storageRoots = roots) }
-            }
-        }
-    }
-
-    fun refreshPermissions() {
-        val isAllFiles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Environment.isExternalStorageManager()
-        } else {
-            true
-        }
-        val grantedUris = getApplication<Application>().contentResolver.persistedUriPermissions.map { it.uri }
-        _uiState.update {
-            it.copy(
-                permissionStatus = PermissionStatus(
-                    tier1Granted = true,
-                    tier2Granted = grantedUris.isNotEmpty(),
-                    tier2Uri = grantedUris.firstOrNull()?.toString(),
-                    tier3Granted = isAllFiles,
-                    tier4Active = false,
-                    activeStoragePath = it.currentPathOrUri
-                )
-            )
-        }
-    }
-
-    fun togglePermissionWizard(show: Boolean) {
-        _uiState.update { it.copy(showPermissionWizard = show) }
+    fun setNavTab(index: Int) {
+        _uiState.value = _uiState.value.copy(activeNavTab = index)
     }
 
     fun selectTheme(theme: EditorTheme) {
-        _uiState.update { it.copy(currentTheme = theme) }
+        _uiState.value = _uiState.value.copy(currentTheme = theme)
     }
 
-    fun importJsonTheme(jsonStr: String): Boolean {
-        return try {
-            val theme = EditorTheme.fromJson(jsonStr)
-            _uiState.update { it.copy(currentTheme = theme) }
-            Toast.makeText(getApplication(), "Applied theme: ${theme.name}", Toast.LENGTH_SHORT).show()
-            true
-        } catch (e: Exception) {
-            Toast.makeText(getApplication(), "Failed to parse JSON theme: ${e.message}", Toast.LENGTH_SHORT).show()
-            false
-        }
+    fun togglePluginSheet(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showPluginSheet = show)
     }
 
-    fun setFontSize(sizeSp: Int) {
-        prefs.edit().putInt("pref_font_size", sizeSp).apply()
-        _uiState.update { it.copy(fontSizeSp = sizeSp) }
-    }
+    // --- File & Editor Management ---
 
-    fun toggleWordWrap(enabled: Boolean) {
-        prefs.edit().putBoolean("pref_word_wrap", enabled).apply()
-        _uiState.update { it.copy(isWordWrapEnabled = enabled) }
-    }
-
-    fun toggleBirdsEyeView(enabled: Boolean) {
-        prefs.edit().putBoolean("pref_birds_eye_view", enabled).apply()
-        _uiState.update { it.copy(isBirdsEyeViewEnabled = enabled) }
-    }
-
-    fun toggleLinqStudioCard(visible: Boolean) {
-        prefs.edit().putBoolean("pref_linq_card_visible", visible).apply()
-        _uiState.update { it.copy(isLinqStudioCardVisible = visible) }
-    }
-
-    fun toggleReduceTransparency(enabled: Boolean) {
-        _uiState.update { it.copy(reduceTransparency = enabled) }
-    }
-
-    fun setScreenOrientationMode(mode: String) {
-        prefs.edit().putString("pref_screen_orientation", mode).apply()
-        _uiState.update { it.copy(screenOrientationMode = mode) }
-    }
-
-    fun toggleAutoRotate() {
-        val newMode = if (_uiState.value.screenOrientationMode == "portrait") "sensor" else "portrait"
-        setScreenOrientationMode(newMode)
-    }
-
-    fun setAuthState(state: AppAuthState) {
-        _uiState.update { it.copy(authState = state) }
-    }
-
-    fun signInUser(user: UserAccount) {
-        prefs.edit()
-            .putBoolean("is_logged_in", true)
-            .putString("user_id", user.id)
-            .putString("user_name", user.name)
-            .putString("user_email", user.email)
-            .putBoolean("is_google_user", user.isGoogleUser)
-            .apply()
-        _uiState.update {
-            it.copy(
-                userAccount = user,
-                authState = AppAuthState.AUTHENTICATED
-            )
-        }
-        Toast.makeText(getApplication(), "Signed in as ${user.name}", Toast.LENGTH_SHORT).show()
-    }
-
-    fun signOutUser() {
-        prefs.edit()
-            .putBoolean("is_logged_in", false)
-            .remove("user_id")
-            .remove("user_name")
-            .remove("user_email")
-            .remove("is_google_user")
-            .apply()
-        _uiState.update {
-            it.copy(
-                userAccount = null,
-                authState = AppAuthState.AUTH
-            )
-        }
-        Toast.makeText(getApplication(), "Signed out", Toast.LENGTH_SHORT).show()
-    }
-
-    fun skipToGuest() {
-        _uiState.update {
-            it.copy(authState = AppAuthState.AUTHENTICATED)
-        }
-    }
-
-    fun loadDirectory(file: File) {
-        loadDirectory(file.absolutePath)
-    }
-
-    fun loadDirectory(pathOrUri: String) {
-        viewModelScope.launch {
-            fileRepository.listFiles(pathOrUri)
-                .catch { e ->
-                    e.printStackTrace()
-                    Toast.makeText(getApplication(), "Failed to read files: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-                .collect { files ->
-                    val dirFile = if (pathOrUri.startsWith("content://")) {
-                        fileRepository.internalWorkspaceDir
-                    } else {
-                        File(pathOrUri)
-                    }
-                    _uiState.update {
-                        it.copy(
-                            currentDirectory = dirFile,
-                            currentPathOrUri = pathOrUri,
-                            directoryFiles = files
-                        )
-                    }
-                }
-        }
-    }
-
-    fun navigateUp() {
-        val current = _uiState.value.currentDirectory
-        val parent = current.parentFile
-        if (parent != null && parent.canRead()) {
-            loadDirectory(parent.absolutePath)
-        } else {
-            Toast.makeText(getApplication(), "Already at storage root", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun openFile(item: FileItem, initialCursor: Int = -1, initialContent: String? = null) {
-        if (item.isDirectory) {
-            loadDirectory(item.path)
+    fun openFile(file: File) {
+        val existingIndex = _uiState.value.openFiles.indexOfFirst { it.file.absolutePath == file.absolutePath }
+        if (existingIndex != -1) {
+            _uiState.value = _uiState.value.copy(activeFileIndex = existingIndex)
             return
         }
 
-        viewModelScope.launch {
-            val existingIndex = _uiState.value.openFiles.indexOfFirst { it.path == item.path }
-            if (existingIndex != -1) {
-                _uiState.update {
-                    it.copy(activeFileIndex = existingIndex, activeNavTab = 1)
-                }
-                return@launch
-            }
-
-            if (initialContent != null) {
-                val lang = SupportedLanguage.fromFilename(item.name)
-                val newCodeFile = CodeFile(
-                    name = item.name,
-                    path = item.path,
-                    content = initialContent,
-                    language = lang,
-                    cursorPosition = if (initialCursor >= 0) initialCursor else initialContent.length
-                )
-                _uiState.update { state ->
-                    val updated = state.openFiles + newCodeFile
-                    state.copy(
-                        openFiles = updated,
-                        activeFileIndex = updated.size - 1,
-                        activeNavTab = 1
-                    )
-                }
-                return@launch
-            }
-
-            fileRepository.readFile(item.path)
-                .catch { error ->
-                    Toast.makeText(getApplication(), "Could not read ${item.name}: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
-                .collect { readContent ->
-                    val lang = SupportedLanguage.fromFilename(item.name)
-                    var contentToUse = readContent
-                    var cursorToUse = if (initialCursor >= 0) initialCursor else 0
-
-                    // Templates only apply to newly created, empty files. Never overwrite existing content.
-                    if (contentToUse.isEmpty()) {
-                        val template = com.example.editor.FileTemplates.getTemplateForFile(item.name)
-                        if (template != null) {
-                            contentToUse = template.content
-                            cursorToUse = template.cursorPosition
-                            fileRepository.writeFile(item.path, template.content)
-                        }
-                    }
-
-                    val newCodeFile = CodeFile(
-                        name = item.name,
-                        path = item.path,
-                        content = contentToUse,
-                        language = lang,
-                        cursorPosition = cursorToUse
-                    )
-                    _uiState.update { state ->
-                        val updated = state.openFiles + newCodeFile
-                        state.copy(
-                            openFiles = updated,
-                            activeFileIndex = updated.size - 1,
-                            activeNavTab = 1
-                        )
-                    }
-                }
-        }
-    }
-
-    fun openFromUri(uri: Uri) {
-        loadDirectory(uri.toString())
-    }
-
-    fun openInitialFiles() {
-        viewModelScope.launch {
-            val starterFile = File(fileRepository.internalWorkspaceDir, "PythonStarter/main.py")
-            if (starterFile.exists()) {
-                openFile(FileItem(name = starterFile.name, path = starterFile.absolutePath, isDirectory = false))
-            }
-        }
-    }
-
-    fun switchActiveFile(index: Int) {
-        if (index in _uiState.value.openFiles.indices) {
-            _uiState.update { it.copy(activeFileIndex = index) }
-        }
+        val content = fileRepository.readFile(file)
+        val newCodeFile = CodeFile(file = file, content = content)
+        val updatedList = _uiState.value.openFiles + newCodeFile
+        _uiState.value = _uiState.value.copy(
+            openFiles = updatedList,
+            activeFileIndex = updatedList.lastIndex
+        )
     }
 
     fun selectTab(index: Int) {
-        switchActiveFile(index)
-    }
-
-    fun closeFile(index: Int) {
-        _uiState.update { state ->
-            val updated = state.openFiles.toMutableList()
-            if (index in updated.indices) {
-                updated.removeAt(index)
-                val newActive = if (updated.isEmpty()) 0 else (index.coerceAtMost(updated.size - 1))
-                state.copy(openFiles = updated, activeFileIndex = newActive)
-            } else {
-                state
-            }
+        if (index in _uiState.value.openFiles.indices) {
+            _uiState.value = _uiState.value.copy(activeFileIndex = index)
         }
     }
 
     fun closeTab(index: Int) {
-        closeFile(index)
-    }
-
-    fun newTab() {
-        val untitledName = "untitled_${System.currentTimeMillis() % 1000}.txt"
-        val tempFile = File(fileRepository.internalWorkspaceDir, untitledName)
-        val newCode = CodeFile(name = untitledName, path = tempFile.absolutePath, content = "")
-        _uiState.update {
-            val list = it.openFiles + newCode
-            it.copy(openFiles = list, activeFileIndex = list.size - 1, activeNavTab = 1)
+        val list = _uiState.value.openFiles.toMutableList()
+        if (index in list.indices) {
+            list.removeAt(index)
+            val newIdx = (index - 1).coerceAtLeast(0)
+            _uiState.value = _uiState.value.copy(
+                openFiles = list,
+                activeFileIndex = if (list.isEmpty()) 0 else newIdx
+            )
         }
     }
 
+    fun newTab() {
+        val newFile = File(fileRepository.internalWorkspaceDir, "Untitled_${System.currentTimeMillis()}.html")
+        fileRepository.writeFile(newFile, "<!DOCTYPE html>\n<html>\n<body>\n  <h1>New Linq File</h1>\n</body>\n</html>")
+        openFile(newFile)
+        loadDirectory(_uiState.value.currentDirectory)
+    }
+
     fun updateActiveFileContent(newContent: String) {
-        val activeIndex = _uiState.value.activeFileIndex
-        val currentList = _uiState.value.openFiles
-        if (activeIndex in currentList.indices) {
-            val target = currentList[activeIndex]
-            val updated = target.copy(content = newContent, isDirty = true)
-            val newList = currentList.toMutableList()
-            newList[activeIndex] = updated
-            _uiState.update { it.copy(openFiles = newList) }
+        val activeIdx = _uiState.value.activeFileIndex
+        val list = _uiState.value.openFiles.toMutableList()
+        if (activeIdx in list.indices) {
+            list[activeIdx] = list[activeIdx].copy(content = newContent, isModified = true)
+            _uiState.value = _uiState.value.copy(openFiles = list)
         }
     }
 
     fun saveActiveFile() {
-        val activeIndex = _uiState.value.activeFileIndex
-        val currentList = _uiState.value.openFiles
-        if (activeIndex in currentList.indices) {
-            val target = currentList[activeIndex]
-            viewModelScope.launch {
-                fileRepository.writeFile(target.path, target.content)
-                    .onSuccess {
-                        val updated = target.copy(isDirty = false)
-                        val newList = currentList.toMutableList()
-                        newList[activeIndex] = updated
-                        _uiState.update { it.copy(openFiles = newList) }
-                        Toast.makeText(getApplication(), "Saved ${target.name}", Toast.LENGTH_SHORT).show()
-                    }
-                    .onFailure { error ->
-                        Toast.makeText(getApplication(), "Failed to save ${target.name}: ${error.message}", Toast.LENGTH_SHORT).show()
-                    }
-            }
+        val activeIdx = _uiState.value.activeFileIndex
+        val list = _uiState.value.openFiles.toMutableList()
+        if (activeIdx in list.indices) {
+            val file = list[activeIdx]
+            fileRepository.writeFile(file.file, file.content)
+            list[activeIdx] = file.copy(isModified = false)
+            _uiState.value = _uiState.value.copy(openFiles = list)
         }
     }
 
-    fun createNewFileInExplorer(fileName: String) {
-        viewModelScope.launch {
-            val template = com.example.editor.FileTemplates.getTemplateForFile(fileName)
-            fileRepository.createFile(_uiState.value.currentPathOrUri, fileName, false)
-                .onSuccess { item ->
-                    if (template != null) {
-                        fileRepository.writeFile(item.path, template.content)
-                    }
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    openFile(
-                        item = item,
-                        initialCursor = template?.cursorPosition ?: 0,
-                        initialContent = template?.content
-                    )
-                    Toast.makeText(getApplication(), "Created $fileName", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure {
-                    Toast.makeText(getApplication(), "Failed to create file: ${it.message}", Toast.LENGTH_SHORT).show()
-                }
+    // --- Directory Management ---
+
+    fun loadDirectory(dir: File) {
+        _uiState.value = _uiState.value.copy(
+            currentDirectory = dir,
+            directoryFiles = fileRepository.listFiles(dir)
+        )
+    }
+
+    fun navigateUp() {
+        val parent = _uiState.value.currentDirectory.parentFile
+        if (parent != null && parent.exists()) {
+            loadDirectory(parent)
         }
     }
 
-    fun createNewFolderInExplorer(folderName: String) {
-        viewModelScope.launch {
-            fileRepository.createFile(_uiState.value.currentPathOrUri, folderName, true)
-                .onSuccess {
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    Toast.makeText(getApplication(), "Created folder $folderName", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure {
-                    Toast.makeText(getApplication(), "Failed to create directory: ${it.message}", Toast.LENGTH_SHORT).show()
-                }
+    fun createNewFileInExplorer(name: String) {
+        val created = fileRepository.createFile(_uiState.value.currentDirectory, name)
+        if (created != null) {
+            loadDirectory(_uiState.value.currentDirectory)
+            openFile(created)
         }
     }
 
-    fun deleteFileInExplorer(target: Any) {
-        val path = when (target) {
-            is FileItem -> target.path
-            is File -> target.absolutePath
-            else -> target.toString()
-        }
-        viewModelScope.launch {
-            fileRepository.deleteFile(path)
-                .onSuccess {
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    val openIndex = _uiState.value.openFiles.indexOfFirst { it.path == path }
-                    if (openIndex != -1) {
-                        closeFile(openIndex)
-                    }
-                    Toast.makeText(getApplication(), "Deleted file", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure {
-                    Toast.makeText(getApplication(), "Delete failed: ${it.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
+    fun createNewFolderInExplorer(name: String) {
+        fileRepository.createFolder(_uiState.value.currentDirectory, name)
+        loadDirectory(_uiState.value.currentDirectory)
     }
 
-    fun renameFileInExplorer(oldTarget: Any, newName: String) {
-        val oldPath = when (oldTarget) {
-            is FileItem -> oldTarget.path
-            is File -> oldTarget.absolutePath
-            else -> oldTarget.toString()
-        }
-        viewModelScope.launch {
-            fileRepository.renameFile(oldPath, newName)
-                .onSuccess {
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    Toast.makeText(getApplication(), "Renamed to $newName", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure {
-                    Toast.makeText(getApplication(), "Rename failed: ${it.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
+    fun deleteFileInExplorer(file: File) {
+        fileRepository.delete(file)
+        loadDirectory(_uiState.value.currentDirectory)
     }
 
-    fun moveFileInExplorer(sourceTarget: Any, destinationDir: String) {
-        val srcPath = when (sourceTarget) {
-            is FileItem -> sourceTarget.path
-            is File -> sourceTarget.absolutePath
-            else -> sourceTarget.toString()
-        }
-        viewModelScope.launch {
-            fileRepository.moveFile(srcPath, destinationDir)
-                .onSuccess { moved ->
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    Toast.makeText(getApplication(), "Moved ${moved.name} to destination", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure { err ->
-                    Toast.makeText(getApplication(), "Move failed: ${err.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
+    // --- Dev Server & Web Preview ---
 
-    fun duplicateFileInExplorer(target: Any) {
-        val path = when (target) {
-            is FileItem -> target.path
-            is File -> target.absolutePath
-            else -> target.toString()
-        }
-        viewModelScope.launch {
-            fileRepository.duplicateFile(path)
-                .onSuccess { copyItem ->
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    Toast.makeText(getApplication(), "Duplicated: ${copyItem.name}", Toast.LENGTH_SHORT).show()
-                }
-                .onFailure { err ->
-                    Toast.makeText(getApplication(), "Duplicate failed: ${err.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    fun shareFile(context: Context, item: FileItem) {
-        try {
-            val file = File(item.path)
-            if (item.isDirectory) {
-                // If it is a directory, compress and share the zip archive
-                viewModelScope.launch {
-                    val tempZip = File(context.cacheDir, "${item.name}.zip")
-                    fileRepository.zipDirectory(item.path, tempZip)
-                        .onSuccess {
-                            val uri = try {
-                                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempZip)
-                            } catch (e: Exception) {
-                                Uri.fromFile(tempZip)
-                            }
-
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/zip"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                putExtra(Intent.EXTRA_SUBJECT, "${item.name}.zip")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(Intent.createChooser(intent, "Share ${item.name}.zip").apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            })
-                        }
-                        .onFailure {
-                            Toast.makeText(context, "Could not compress folder to share", Toast.LENGTH_SHORT).show()
-                        }
-                }
-                return
-            }
-
-            // Normal file sharing
-            val uri = try {
-                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-            } catch (e: Exception) {
-                null
-            }
-
-            val ext = file.extension.lowercase()
-            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)
-                ?: when (ext) {
-                    "kt", "java", "py", "js", "ts", "html", "css", "json", "xml", "md", "txt", "sh", "c", "cpp", "rs", "go" -> "text/plain"
-                    else -> "*/*"
-                }
-
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = mimeType
-                if (uri != null) {
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                putExtra(Intent.EXTRA_SUBJECT, file.name)
-                // If small text file, also attach text content as fallback
-                if (file.exists() && file.length() < 300_000) {
-                    try {
-                        val text = file.readText(Charsets.UTF_8)
-                        putExtra(Intent.EXTRA_TEXT, text)
-                    } catch (_: Exception) {}
-                }
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-
-            context.startActivity(Intent.createChooser(intent, "Share ${file.name}").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-        } catch (e: Exception) {
-            Toast.makeText(context, "Failed to share: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun exportZip(destination: Any) {
-        viewModelScope.launch {
-            val currentDir = _uiState.value.currentDirectory
-            val targetFile = when (destination) {
-                is File -> destination
-                is Uri -> File(getApplication<Application>().cacheDir, "workspace_${System.currentTimeMillis()}.zip")
-                else -> File(getApplication<Application>().cacheDir, "workspace.zip")
-            }
-            fileRepository.zipDirectory(currentDir.absolutePath, targetFile)
-                .onSuccess {
-                    Toast.makeText(getApplication(), "Exported ZIP successfully to ${targetFile.name}", Toast.LENGTH_LONG).show()
-                }
-                .onFailure { err ->
-                    Toast.makeText(getApplication(), "Zip export failed: ${err.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    // --- Local Development HTTP Server & Web Preview ---
-
-    fun openWebDemo() {
+    fun startDevServer() {
         val webDir = File(fileRepository.internalWorkspaceDir, "WebStarter")
-        startDevServerAndPreview(webDir, "index.html")
-    }
-
-    fun openWebPreviewForActiveFile(file: CodeFile) {
-        val targetFile = File(file.path)
-        val parent = targetFile.parentFile
-        val parentDir = if (parent != null && parent.exists()) {
-            parent
-        } else {
-            _uiState.value.currentDirectory
-        }
-        startDevServerAndPreview(parentDir, targetFile.name)
-    }
-
-    fun startDevServerAndPreview(dir: File? = null, targetPath: String = "") {
-        val targetDir = dir ?: _uiState.value.currentDirectory
-        when (val result = localDevServer.start(targetDir)) {
-            is ServerStartResult.Success -> {
-                val fullUrl = if (targetPath.isNotEmpty()) {
-                    "${result.url}${targetPath.trimStart('/')}"
-                } else {
-                    result.url
-                }
-                _uiState.update {
-                    it.copy(
-                        previewUrl = fullUrl,
-                        previewHtml = null
-                    )
-                }
-                Toast.makeText(getApplication(), "Dev Server running at ${result.url}", Toast.LENGTH_SHORT).show()
-            }
-            is ServerStartResult.Failure -> {
-                Toast.makeText(getApplication(), result.error, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    fun startDevServer(rootDir: File? = null, port: Int = 8080): ServerStartResult {
-        val dir = rootDir ?: _uiState.value.currentDirectory
-        return localDevServer.start(dir, port)
+        if (!webDir.exists()) webDir.mkdirs()
+        devServer.start(webDir, 8080)
+        _uiState.value = _uiState.value.copy(serverStatus = devServer.status)
     }
 
     fun stopDevServer() {
-        localDevServer.stop()
-        Toast.makeText(getApplication(), "Local dev server stopped", Toast.LENGTH_SHORT).show()
+        devServer.stop()
+        _uiState.value = _uiState.value.copy(serverStatus = devServer.status)
     }
 
     fun restartDevServer() {
-        val dir = (_uiState.value.serverStatus as? ServerStatus.Running)?.rootDir
-            ?: _uiState.value.currentDirectory
-        val port = (_uiState.value.serverStatus as? ServerStatus.Running)?.port ?: 8080
-        val result = localDevServer.restart(dir, port)
-        if (result is ServerStartResult.Success) {
-            Toast.makeText(getApplication(), "Dev Server restarted on port ${result.port}", Toast.LENGTH_SHORT).show()
+        devServer.restart()
+        _uiState.value = _uiState.value.copy(serverStatus = devServer.status)
+    }
+
+    fun openWebDemo() {
+        if (!devServer.status.isRunning) {
+            startDevServer()
+        }
+        val webDir = File(fileRepository.internalWorkspaceDir, "WebStarter")
+        val indexFile = File(webDir, "index.html")
+        val content = if (indexFile.exists()) indexFile.readText() else null
+
+        _uiState.value = _uiState.value.copy(
+            previewUrl = "http://localhost:8080/index.html",
+            previewHtml = content
+        )
+    }
+
+    fun openWebPreviewForActiveFile() {
+        val active = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex)
+        if (active != null) {
+            if (!devServer.status.isRunning) {
+                val dir = active.file.parentFile ?: fileRepository.internalWorkspaceDir
+                devServer.start(dir, 8080)
+            }
+            _uiState.value = _uiState.value.copy(
+                previewUrl = "http://localhost:8080/${active.file.name}",
+                previewHtml = active.content
+            )
+        } else {
+            openWebDemo()
         }
     }
 
     fun closePreview() {
-        _uiState.update { it.copy(previewHtml = null, previewUrl = null) }
-        localDevServer.stop()
+        _uiState.value = _uiState.value.copy(previewUrl = null, previewHtml = null)
     }
 
-    // --- Git & GitHub Account Operations ---
+    // --- Plugin Actions ---
 
-    private fun loadGitHubAccount(): GitHubAccount {
-        val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
-        val isLinked = prefs.getBoolean("is_linked", false)
-        val username = prefs.getString("username", "") ?: ""
-        val token = prefs.getString("token", "") ?: ""
-        val email = prefs.getString("email", "") ?: ""
-        val displayName = prefs.getString("display_name", "") ?: ""
-        val publicRepos = prefs.getInt("public_repos", 0)
-        val linkedAt = prefs.getLong("linked_at", 0L)
-        return GitHubAccount(
-            username = username,
-            token = token,
-            email = email,
-            isLinked = isLinked && username.isNotBlank(),
-            linkedAt = linkedAt,
-            displayName = displayName,
-            publicRepos = publicRepos
-        )
-    }
-
-    fun linkGitHubAccount(username: String, token: String, email: String = "", onResult: (Boolean, String) -> Unit = { _, _ -> }) {
-        val cleanUser = username.trim().removePrefix("@")
-        val cleanToken = token.trim()
-        val cleanEmail = email.trim().ifEmpty { "$cleanUser@users.noreply.github.com" }
-
-        if (cleanUser.isEmpty()) {
-            Toast.makeText(getApplication(), "GitHub username cannot be empty", Toast.LENGTH_SHORT).show()
-            onResult(false, "Username is required")
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val verifyResult = gitService.verifyGitHubCredentials(cleanUser, cleanToken)
-            _uiState.update { it.copy(isGitLoading = false) }
-
-            when (verifyResult) {
-                is GitResult.Success -> {
-                    val verifiedAccount = verifyResult.data
-                    val finalEmail = if (cleanEmail.isNotEmpty() && cleanEmail != "$cleanUser@users.noreply.github.com") cleanEmail else verifiedAccount.email
-                    val accountToSave = verifiedAccount.copy(email = finalEmail)
-
-                    val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
-                    prefs.edit()
-                        .putBoolean("is_linked", true)
-                        .putString("username", accountToSave.username)
-                        .putString("token", accountToSave.token)
-                        .putString("email", accountToSave.email)
-                        .putString("display_name", accountToSave.displayName)
-                        .putInt("public_repos", accountToSave.publicRepos)
-                        .putLong("linked_at", accountToSave.linkedAt)
-                        .apply()
-
-                    _uiState.update { it.copy(githubAccount = accountToSave) }
-                    Toast.makeText(getApplication(), verifyResult.message.ifEmpty { "Linked GitHub account: @${accountToSave.username}" }, Toast.LENGTH_SHORT).show()
-                    onResult(true, verifyResult.message)
-                }
-                is GitResult.Failure -> {
-                    Toast.makeText(getApplication(), verifyResult.error, Toast.LENGTH_LONG).show()
-                    onResult(false, verifyResult.error)
-                }
-            }
+    fun formatActiveFileWithPrettier() {
+        val activeIdx = _uiState.value.activeFileIndex
+        val list = _uiState.value.openFiles.toMutableList()
+        if (activeIdx in list.indices) {
+            val file = list[activeIdx]
+            val formatted = pluginManager.formatCode(file.content, file.file.extension)
+            list[activeIdx] = file.copy(content = formatted, isModified = true)
+            _uiState.value = _uiState.value.copy(openFiles = list)
         }
     }
 
-    fun unlinkGitHubAccount() {
-        val prefs = getApplication<Application>().getSharedPreferences("github_prefs", Context.MODE_PRIVATE)
-        prefs.edit().clear().apply()
-        _uiState.update { it.copy(githubAccount = GitHubAccount()) }
-        Toast.makeText(getApplication(), "Unlinked GitHub account", Toast.LENGTH_SHORT).show()
-    }
-
-    fun toggleGitPanel(open: Boolean? = null) {
-        val nextOpen = open ?: !_uiState.value.isGitPanelOpen
-        _uiState.update { it.copy(isGitPanelOpen = nextOpen) }
-        if (nextOpen) {
-            refreshGitStatus()
-        }
-    }
-
-    fun refreshGitStatus() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val dir = _uiState.value.currentDirectory
-            val statusResult = gitService.status(dir)
-            val branchResult = gitService.currentBranch(dir)
-            val remoteResult = gitService.getRemote(dir, "origin")
-            val logsResult = gitService.log(dir, 15)
-
-            _uiState.update {
-                it.copy(
-                    isGitLoading = false,
-                    gitStatus = statusResult.getOrNull(),
-                    gitCurrentBranch = branchResult.getOrNull() ?: "main",
-                    gitRemoteUrl = remoteResult.getOrNull() ?: "",
-                    gitLogs = logsResult.getOrNull() ?: emptyList()
-                )
-            }
-        }
-    }
-
-    fun gitInitRepo(initialBranch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            when (val res = gitService.init(_uiState.value.currentDirectory, initialBranch)) {
-                is GitResult.Success -> {
-                    // Auto-configure remote if user has linked GitHub account
-                    val account = _uiState.value.githubAccount
-                    if (account.isLinked && account.username.isNotBlank()) {
-                        val folderName = _uiState.value.currentDirectory.name.lowercase().replace(' ', '-')
-                        val defaultRemote = "https://github.com/${account.username}/$folderName.git"
-                        gitService.setRemote(_uiState.value.currentDirectory, "origin", defaultRemote)
-                    }
-                    refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun gitSetRemote(url: String, remote: String = "origin", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            when (val res = gitService.setRemote(_uiState.value.currentDirectory, remote, url)) {
-                is GitResult.Success -> {
-                    refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun gitPull(remote: String = "origin", branch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val account = _uiState.value.githubAccount
-            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
-            when (val res = gitService.pull(_uiState.value.currentDirectory, remote, branch, creds)) {
-                is GitResult.Success -> {
-                    refreshGitStatus()
-                    loadDirectory(_uiState.value.currentDirectory)
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun gitPush(remote: String = "origin", branch: String = "main", onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val account = _uiState.value.githubAccount
-            val dir = _uiState.value.currentDirectory
-
-            // Ensure at least one commit exists before pushing
-            val statusRes = gitService.status(dir)
-            val logsRes = gitService.log(dir, 1)
-            val commitsExist = (logsRes as? GitResult.Success)?.data?.isNotEmpty() == true
-            val hasChanges = (statusRes as? GitResult.Success)?.data?.isClean == false
-
-            if (!commitsExist && hasChanges) {
-                val author = if (account.isLinked) GitAuthor(name = account.username, email = account.email) else GitAuthor()
-                gitService.add(dir, ".")
-                gitService.commit(dir, "Initial commit from Linq Studio", author)
-            } else if (!commitsExist && !hasChanges) {
-                val readme = File(dir, "README.md")
-                if (!readme.exists()) {
-                    readme.writeText("# ${dir.name}\n\nManaged with Linq Studio Git Engine.\n")
-                }
-                val author = if (account.isLinked) GitAuthor(name = account.username, email = account.email) else GitAuthor()
-                gitService.add(dir, ".")
-                gitService.commit(dir, "Initial commit", author)
-            }
-
-            val creds = if (account.isLinked) GitCredentials(account.username, account.token) else null
-            when (val res = gitService.push(dir, remote, branch, creds)) {
-                is GitResult.Success -> {
-                    refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun gitCommit(message: String, onFinished: (Boolean, String) -> Unit = { _, _ -> }) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val account = _uiState.value.githubAccount
-            val author = if (account.isLinked) {
-                GitAuthor(name = account.username, email = account.email)
-            } else {
-                GitAuthor()
-            }
-            when (val res = gitService.commit(_uiState.value.currentDirectory, message, author)) {
-                is GitResult.Success -> {
-                    refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun gitClone(
-        repoUrl: String,
-        targetFolderName: String = "",
-        branch: String = "main",
-        customToken: String = "",
-        onFinished: (Boolean, String) -> Unit = { _, _ -> }
-    ) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isGitLoading = true) }
-            val account = _uiState.value.githubAccount
-            val creds = when {
-                customToken.isNotBlank() -> GitCredentials(
-                    username = if (account.isLinked) account.username else "git",
-                    tokenOrPassword = customToken
-                )
-                account.isLinked -> GitCredentials(account.username, account.token)
-                else -> null
-            }
-
-            val defaultName = repoUrl.trim().removeSuffix("/").substringAfterLast('/').removeSuffix(".git").ifEmpty { "repo" }
-            val folderName = targetFolderName.trim().ifEmpty { defaultName }
-
-            val baseDir = _uiState.value.currentDirectory.let {
-                if (it.exists() && it.isDirectory && it.canWrite()) it else fileRepository.internalWorkspaceDir
-            }
-            val targetDir = File(baseDir, folderName)
-
-            when (val res = gitService.clone(repoUrl, targetDir, creds, branch.trim().ifEmpty { "main" })) {
-                is GitResult.Success -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    loadDirectory(_uiState.value.currentPathOrUri)
-                    refreshGitStatus()
-                    Toast.makeText(getApplication(), res.message, Toast.LENGTH_LONG).show()
-                    onFinished(true, res.message)
-                }
-                is GitResult.Failure -> {
-                    _uiState.update { it.copy(isGitLoading = false) }
-                    Toast.makeText(getApplication(), res.error, Toast.LENGTH_LONG).show()
-                    onFinished(false, res.error)
-                }
-            }
-        }
-    }
-
-    fun openPythonDemo() {
-        val pyFile = File(fileRepository.internalWorkspaceDir, "PythonStarter/main.py")
-        if (pyFile.exists()) {
-            openFile(FileItem(name = pyFile.name, path = pyFile.absolutePath, isDirectory = false))
-        }
-    }
-
-    fun runActiveFile(file: CodeFile) {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isTerminalOpen = true,
-                    isTerminalRunning = true,
-                    activeNavTab = 1 // Switch to Editor screen
-                )
-            }
-
-            // Slight realistic delay to reflect process spin-up
-            kotlinx.coroutines.delay(200)
-
-            val outputLines = getTerminalEngine().executeCode(file)
-            _uiState.update {
-                it.copy(
-                    terminalLines = it.terminalLines + outputLines,
-                    isTerminalRunning = false
-                )
-            }
-        }
-    }
-
-    fun rerunActiveFile() {
-        val currentFile = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex)
-        if (currentFile != null) {
-            runActiveFile(currentFile)
+    fun lintActiveFile() {
+        val active = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex) ?: return
+        val diagnostics = pluginManager.lintCode(active.content, active.file.extension)
+        val lines = _uiState.value.terminalLines.toMutableList()
+        lines.add(TerminalLine("--- ESLint Diagnostics for ${active.name} ---", isCommand = true))
+        if (diagnostics.isEmpty()) {
+            lines.add(TerminalLine("✓ No lint errors found! Clean code."))
         } else {
-            sendTerminalCommand("echo 'No active file selected to run'")
-        }
-    }
-
-    fun selectTerminalSession(sessionId: String) {
-        _uiState.update { it.copy(activeSessionId = sessionId) }
-    }
-
-    fun newTerminalSession() {
-        val nextNum = _uiState.value.terminalSessions.size + 1
-        val newSess = ShellSession(
-            id = "session_$nextNum",
-            name = "Session $nextNum",
-            workingDir = _uiState.value.currentDirectory
-        )
-        _uiState.update {
-            it.copy(
-                terminalSessions = it.terminalSessions + newSess,
-                activeSessionId = newSess.id
-            )
-        }
-    }
-
-    fun closeTerminalSession(sessionId: String) {
-        val current = _uiState.value.terminalSessions
-        if (current.size <= 1) return
-        val remaining = current.filter { it.id != sessionId }
-        val newActive = if (_uiState.value.activeSessionId == sessionId) remaining.first().id else _uiState.value.activeSessionId
-        _uiState.update {
-            it.copy(
-                terminalSessions = remaining,
-                activeSessionId = newActive
-            )
-        }
-    }
-
-    fun ctrlCTerminal() {
-        linuxRunner.sendCtrlC()
-        appendTerminalLineToActiveSession(TerminalLine("^C [Process interrupted]", TerminalLineType.STDERR))
-        _uiState.update { it.copy(isTerminalRunning = false) }
-    }
-
-    fun uninstallPackage(pkgName: String) {
-        val success = linuxRunner.uninstallPackage(pkgName)
-        _uiState.update {
-            it.copy(installedPackages = linuxRunner.getInstalledPackages())
-        }
-        if (success) {
-            Toast.makeText(getApplication(), "Uninstalled $pkgName", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun appendTerminalLineToActiveSession(line: TerminalLine) {
-        val activeId = _uiState.value.activeSessionId
-        _uiState.update { state ->
-            val updatedSessions = state.terminalSessions.map { sess ->
-                if (sess.id == activeId) {
-                    sess.copy(lines = sess.lines + line)
-                } else sess
+            for (diag in diagnostics) {
+                lines.add(TerminalLine("L${diag.line}: ${diag.message} (${diag.ruleId})", isError = diag.severity == com.example.plugin.DiagnosticSeverity.ERROR))
             }
-            state.copy(
-                terminalSessions = updatedSessions,
-                terminalLines = state.terminalLines + line
-            )
         }
+        _uiState.value = _uiState.value.copy(terminalLines = lines, activeNavTab = 3)
     }
 
-    fun sendTerminalCommand(command: String) {
-        val trimmed = command.trim()
-        if (trimmed.equals("clear", ignoreCase = true)) {
-            clearTerminal()
-            return
+    fun showActiveStats() {
+        val active = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex) ?: return
+        val stats = pluginManager.calculateStats(active.content, active.file.extension)
+        val lines = _uiState.value.terminalLines.toMutableList()
+        lines.add(TerminalLine("--- Code Statistics: ${active.name} ---", isCommand = true))
+        lines.add(TerminalLine("Total Lines: ${stats.lines} | Words: ${stats.words} | Characters: ${stats.characters}"))
+        lines.add(TerminalLine("Blank Lines: ${stats.blankLines} | Comments: ${stats.commentLines}"))
+        _uiState.value = _uiState.value.copy(terminalLines = lines, activeNavTab = 3)
+    }
+
+    fun showActiveTodos() {
+        val active = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex) ?: return
+        val todos = pluginManager.extractTodos(active.content)
+        val lines = _uiState.value.terminalLines.toMutableList()
+        lines.add(TerminalLine("--- TODO / FIXME Tasks: ${active.name} ---", isCommand = true))
+        if (todos.isEmpty()) {
+            lines.add(TerminalLine("No pending TODO comments found."))
+        } else {
+            for (t in todos) lines.add(TerminalLine(t))
         }
+        _uiState.value = _uiState.value.copy(terminalLines = lines, activeNavTab = 3)
+    }
 
-        val activeSession = _uiState.value.terminalSessions.firstOrNull { it.id == _uiState.value.activeSessionId }
-            ?: _uiState.value.terminalSessions.firstOrNull()
-        val currentDir = activeSession?.workingDir ?: _uiState.value.currentDirectory
+    // --- Terminal Actions ---
 
-        // Echo command
-        appendTerminalLineToActiveSession(TerminalLine("$ $trimmed", TerminalLineType.COMMAND))
+    fun sendTerminalCommand(cmd: String) {
+        val lines = _uiState.value.terminalLines.toMutableList()
+        lines.add(TerminalLine("$ $cmd", isCommand = true))
 
-        // Handle cd command synchronously
-        if (trimmed.startsWith("cd ") || trimmed == "cd") {
-            val targetPath = trimmed.removePrefix("cd").trim()
-            val targetDir = when {
-                targetPath.isEmpty() || targetPath == "~" -> linuxRunner.homeDir
-                targetPath == ".." -> currentDir.parentFile ?: currentDir
-                targetPath.startsWith("/") -> File(targetPath)
-                else -> File(currentDir, targetPath)
+        when (val firstWord = cmd.trim().split(" ").firstOrNull()?.lowercase()) {
+            "help" -> {
+                lines.add(TerminalLine("Available commands:"))
+                lines.add(TerminalLine("  ls        - List workspace files"))
+                lines.add(TerminalLine("  cat <f>   - Print file contents"))
+                lines.add(TerminalLine("  echo <m>  - Print message"))
+                lines.add(TerminalLine("  server    - Check HTTP server status"))
+                lines.add(TerminalLine("  plugins   - List installed extensions"))
+                lines.add(TerminalLine("  clear     - Clear terminal screen"))
             }
-
-            if (targetDir.exists() && targetDir.isDirectory) {
-                _uiState.update { state ->
-                    val updatedSessions = state.terminalSessions.map { sess ->
-                        if (sess.id == state.activeSessionId) {
-                            sess.copy(workingDir = targetDir)
-                        } else sess
-                    }
-                    state.copy(
-                        terminalSessions = updatedSessions,
-                        currentDirectory = targetDir,
-                        currentPathOrUri = targetDir.absolutePath
-                    )
+            "ls" -> {
+                val files = fileRepository.listFiles(_uiState.value.currentDirectory)
+                for (f in files) {
+                    lines.add(TerminalLine(if (f.isDirectory) "${f.name}/" else f.name))
                 }
-                loadDirectory(targetDir.absolutePath)
-                appendTerminalLineToActiveSession(TerminalLine("Changed directory to: ${targetDir.absolutePath}", TerminalLineType.INFO))
-            } else {
-                appendTerminalLineToActiveSession(TerminalLine("cd: $targetPath: No such directory", TerminalLineType.STDERR))
             }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isTerminalRunning = true) }
-
-            // Execute in real Linux process with live output streaming
-            linuxRunner.executeShellCommand(
-                cmd = trimmed,
-                workingDir = currentDir,
-                onOutputLine = { outLine ->
-                    appendTerminalLineToActiveSession(outLine)
+            "server" -> {
+                lines.add(TerminalLine("Server Running: ${devServer.status.isRunning} (Port: ${devServer.status.portOrNull ?: 8080})"))
+            }
+            "plugins" -> {
+                for (p in _uiState.value.plugins.filter { it.isInstalled }) {
+                    lines.add(TerminalLine("• ${p.name} (v${p.version}) - ${if (p.isEnabled) "ACTIVE" else "DISABLED"}"))
                 }
-            )
-
-            // Auto-refresh file manager list in case command created or altered files
-            loadDirectory(currentDir.absolutePath)
-            _uiState.update {
-                it.copy(
-                    isTerminalRunning = false,
-                    installedPackages = linuxRunner.getInstalledPackages()
-                )
+            }
+            "clear" -> {
+                lines.clear()
+            }
+            "echo" -> {
+                lines.add(TerminalLine(cmd.removePrefix("echo").trim()))
+            }
+            else -> {
+                lines.add(TerminalLine("bash: $firstWord: command not found (type 'help' for options)", isError = true))
             }
         }
+
+        _uiState.value = _uiState.value.copy(terminalLines = lines)
     }
 
     fun clearTerminal() {
-        val activeId = _uiState.value.activeSessionId
-        _uiState.update { state ->
-            val updated = state.terminalSessions.map {
-                if (it.id == activeId) it.copy(lines = emptyList()) else it
-            }
-            state.copy(
-                terminalSessions = updated,
-                terminalLines = emptyList()
-            )
-        }
-    }
-
-    fun toggleTerminal(open: Boolean? = null) {
-        _uiState.update {
-            it.copy(isTerminalOpen = open ?: !it.isTerminalOpen)
-        }
-    }
-
-    fun setNavTab(tabIndex: Int) {
-        _uiState.update { it.copy(activeNavTab = tabIndex) }
-        when (tabIndex) {
-            1 -> {
-                // Switching to Editor panel: initialize syntax highlighter lazily
-                com.example.editor.FastSyntaxTokenizer.ensureInitialized()
-                com.example.syntax.SyntaxHighlighter.ensureInitialized()
-            }
-            3 -> {
-                // Switching to Terminal panel: initialize terminal environment & packages lazily
-                ensureTerminalInitialized()
-            }
-        }
+        _uiState.value = _uiState.value.copy(terminalLines = emptyList())
     }
 
     override fun onCleared() {
         super.onCleared()
-        com.example.memory.MemoryManager.unregisterListener(memoryTrimListener)
-        localDevServer.stop()
+        devServer.stop()
     }
 }

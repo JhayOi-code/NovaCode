@@ -3,534 +3,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Linq Studio - Mobile Code Editor & Explorer</title>
+  <title>Linq Studio - Live Web Application &amp; IDE</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="app" class="app-container">
+    <!-- Main Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-box">
+          <img src="logo.svg" alt="Linq Studio Logo" class="header-logo" />
+          <span class="logo-text">Linq Studio</span>
+        </div>
+      </div>
 
-    <!-- MAIN EDITOR CANVAS (Background underneath drawer) -->
-    <main class="editor-viewport">
-      <!-- Editor Top Bar -->
-      <header class="editor-header">
-        <button id="btnOpenDrawer" class="btn-icon drawer-toggle-btn" aria-label="Open File Explorer" title="Open File Explorer">
-          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+      <!-- View Switcher Tabs -->
+      <div class="view-mode-switcher" role="tablist" aria-label="Editor View Mode">
+        <button id="btnViewResult" class="view-mode-btn active" role="tab" aria-selected="true" title="Show Live Result Image &amp; App">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
+          <span>Result</span>
         </button>
+        <button id="btnViewCode" class="view-mode-btn" role="tab" aria-selected="false" title="Show Source Code">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>Code</span>
+        </button>
+      </div>
 
-        <div class="editor-tab-scroll">
-          <div id="activeEditorTab" class="editor-tab active">
-            <span id="editorTabIcon" class="tab-icon"></span>
-            <span id="editorTabTitle" class="tab-title">index.html</span>
-            <span class="tab-dot"></span>
+      <div class="header-right">
+        <button id="btnRunActive" class="btn-run" title="Start &amp; Run Live Result">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span>Run</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- LIVE RESULT VIEW -->
+    <main id="liveResultView" class="live-result-view">
+      <div class="result-scroll-container">
+        <div class="result-hero-card">
+          <div class="result-logo-wrapper">
+            <img src="logo.svg" alt="Linq Studio Main Logo" id="mainResultLogo" class="result-main-logo" />
+          </div>
+          <div class="result-hero-text">
+            <div class="result-status-badge">
+              <span class="status-pulse-dot"></span>
+              <span>LIVE RESULT READY</span>
+            </div>
+            <h1 class="result-title">Linq Studio Web Application</h1>
+            <p class="result-subtitle">Rendered visual result of your HTML, CSS &amp; JavaScript workspace</p>
           </div>
         </div>
 
-        <div class="editor-header-actions">
-          <button id="btnCommandPalette" class="btn-header-action" title="Command Palette (Ctrl+Shift+P / F1)" aria-label="Command Palette">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="4 17 10 11 4 5"></polyline>
-              <line x1="12" y1="19" x2="20" y2="19"></line>
-            </svg>
-            <span>Palette</span>
-          </button>
-          <button id="btnToggleOrientation" class="btn-header-action" title="Screen Orientation: Auto-Rotate (Landscape on Flip)" aria-label="Toggle Screen Orientation">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-              <line x1="12" y1="18" x2="12" y2="18.01"></line>
-            </svg>
-            <span id="orientationBtnLabel">Auto</span>
-          </button>
-          <button id="btnRunActive" class="btn-run" title="Run Active File">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            <span>Run</span>
-          </button>
+        <!-- Interactive Demo Output Section -->
+        <div class="result-interactive-section">
+          <div class="result-card">
+            <div class="result-card-header">
+              <h3>⚡ Interactive Component Output</h3>
+              <span class="result-badge">Active</span>
+            </div>
+            <p class="result-card-desc">Your code logic executed seamlessly on the local development engine:</p>
+            
+            <div class="result-controls-row">
+              <button id="btnResultCounter" class="result-action-btn primary">
+                <span id="counterLabel">Clicks: 0</span>
+              </button>
+              <button id="btnResultReset" class="result-action-btn secondary">
+                Reset
+              </button>
+              <button id="btnResultToggleTheme" class="result-action-btn accent">
+                Toggle Visualizer
+              </button>
+            </div>
+
+            <!-- Canvas Graphic Visualizer -->
+            <div class="canvas-wrapper">
+              <canvas id="resultCanvas" width="480" height="100"></canvas>
+            </div>
+          </div>
+
+          <!-- Code Runner Dynamic Sandbox Container -->
+          <div class="result-card sandbox-card">
+            <div class="result-card-header">
+              <h3>📱 Dynamic Output Sandbox</h3>
+              <span class="result-badge live">Live Sync</span>
+            </div>
+            <div id="userRenderedContent" class="user-rendered-content">
+              <div class="live-app-mockup">
+                <div class="mockup-header">
+                  <span class="dot red"></span>
+                  <span class="dot yellow"></span>
+                  <span class="dot green"></span>
+                  <span class="mockup-url">http://localhost:8080/index.html</span>
+                </div>
+                <div class="mockup-body">
+                  <h2>🎉 Ready to Code!</h2>
+                  <p>Edit your code in the <b>Code</b> tab and click <b>Run</b> to update this live view instantly.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </header>
-
-      <!-- Breadcrumb Navigation Bar -->
-      <nav id="editorBreadcrumbs" class="editor-breadcrumbs" aria-label="File path breadcrumb">
-        <span class="breadcrumb-item breadcrumb-root">workspace</span>
-        <span class="breadcrumb-separator">›</span>
-        <span id="breadcrumbFolder" class="breadcrumb-item">web_explorer</span>
-        <span class="breadcrumb-separator">›</span>
-        <span id="breadcrumbFile" class="breadcrumb-item active">index.html</span>
-      </nav>
-
-      <!-- Editor Content & Line Numbers -->
-      <div class="editor-body">
-        <div id="lineNumbers" class="line-numbers"></div>
-        <pre class="code-area"><code id="codeContent" class="language-html" contenteditable="plaintext-only" spellcheck="false" autocomplete="off" autocapitalize="off" role="textbox" aria-multiline="true" aria-label="Code Editor Area"></code></pre>
       </div>
-
-      <!-- Editor Status Bar -->
-      <footer class="editor-statusbar">
-        <div class="status-left">
-          <span class="status-branch">
-            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none">
-              <line x1="6" y1="3" x2="6" y2="15"></line>
-              <circle cx="18" cy="6" r="3"></circle>
-              <circle cx="6" cy="18" r="3"></circle>
-              <path d="M18 9a9 9 0 0 1-9 9"></path>
-            </svg>
-            main
-          </span>
-          <span id="statusFile">index.html</span>
-          <span id="statusMultiCursor" class="status-cursor hidden">1 cursor</span>
-        </div>
-        <div class="status-right">
-          <span id="statusLang">HTML</span>
-          <span>UTF-8</span>
-          <span>Ln 1, Col 1</span>
-        </div>
-      </footer>
     </main>
 
-    <!-- DRAWER BACKDROP OVERLAY -->
-    <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
-
-    <!-- SIDE DRAWER PANEL -->
-    <aside id="sideDrawer" class="drawer-panel" role="dialog" aria-modal="true" aria-label="Explorer Panel">
-
-      <!-- TOP TAB BAR -->
-      <nav class="top-tab-bar" aria-label="Sidebar Navigation">
-        <!-- 1. Deploy / Share -->
-        <button class="nav-tab" data-tab="deploy" aria-label="Deploy and Share" title="Deploy / Share">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-            <polyline points="16 6 12 2 8 6"></polyline>
-            <line x1="12" y1="2" x2="12" y2="15"></line>
-          </svg>
-        </button>
-
-        <!-- 2. Files (Active by Default) -->
-        <button class="nav-tab active" data-tab="files" aria-label="File Explorer" title="Files">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-            <polyline points="13 2 13 9 20 9"></polyline>
-          </svg>
-        </button>
-
-        <!-- 3. Code Search -->
-        <button class="nav-tab" data-tab="search" aria-label="Search Across Project" title="Code Search">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </button>
-
-        <!-- 4. Source Control -->
-        <button class="nav-tab" data-tab="git" aria-label="Source Control" title="Source Control">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="6" cy="6" r="3"></circle>
-            <circle cx="18" cy="6" r="3"></circle>
-            <line x1="6" y1="9" x2="6" y2="15"></line>
-            <path d="M9 18h3a6 6 0 0 0 6-6V9"></path>
-          </svg>
-        </button>
-
-        <!-- 5. Terminal (Project CLI + Termux Shell) -->
-        <button class="nav-tab" data-tab="terminal" aria-label="Terminal and Shell" title="Terminal (CLI & Termux)">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4 17 10 11 4 5"></polyline>
-            <line x1="12" y1="19" x2="20" y2="19"></line>
-          </svg>
-        </button>
-
-        <!-- 6. Profile -->
-        <button class="nav-tab" data-tab="profile" aria-label="User Profile" title="Profile">
-          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-        </button>
-      </nav>
-
-      <!-- TAB PANELS CONTAINER -->
-      <div class="drawer-content">
-
-        <!-- TAB PANEL: FILES (Full Implementation) -->
-        <section id="panelFiles" class="tab-panel active" aria-labelledby="tab-files">
-
-          <!-- Files Header Row -->
-          <div class="panel-header-row">
-            <span class="header-label">FILES</span>
-
-            <div class="header-actions">
-              <!-- Filter / Search -->
-              <button id="btnToggleSearch" class="btn-header-action" aria-label="Search files" title="Filter files">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </button>
-
-              <!-- Reveal Active File -->
-              <button id="btnRevealActive" class="btn-header-action" aria-label="Reveal Active File" title="Reveal Active File">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-
-              <!-- New File -->
-              <button id="btnNewFile" class="btn-header-action" aria-label="New File" title="New File">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="12" y1="18" x2="12" y2="12"></line>
-                  <line x1="9" y1="15" x2="15" y2="15"></line>
-                </svg>
-              </button>
-
-              <!-- New Folder -->
-              <button id="btnNewFolder" class="btn-header-action" aria-label="New Folder" title="New Folder">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                  <line x1="12" y1="11" x2="12" y2="17"></line>
-                  <line x1="9" y1="14" x2="15" y2="14"></line>
-                </svg>
-              </button>
-
-              <!-- Overflow Menu -->
-              <button id="btnHeaderOverflow" class="btn-header-action" aria-label="More Options" title="More options">
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
-                  <circle cx="12" cy="12" r="1"></circle>
-                  <circle cx="12" cy="5" r="1"></circle>
-                  <circle cx="12" cy="19" r="1"></circle>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Quick Filter Input (Collapsible) -->
-          <div id="quickFilterRow" class="quick-filter-row hidden">
-            <input type="text" id="quickFilterInput" placeholder="Filter files by name..." autocomplete="off">
-            <button id="btnCloseFilter" class="btn-clear-filter">✕</button>
-          </div>
-
-          <!-- Project Root Folder & Tree -->
-          <div class="tree-scroll-container">
-
-            <!-- Collapsible Project Root -->
-            <div id="projectRootHeader" class="project-root-row" tabindex="0" role="button" aria-expanded="true">
-              <span id="rootChevron" class="chevron open">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </span>
-              <span class="root-folder-icon">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="#38BDF8">
-                  <path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"></path>
-                </svg>
-              </span>
-              <span class="root-name">my-project</span>
-              <span class="root-badge">workspace</span>
-
-              <button class="btn-row-overflow root-overflow" title="Root options">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                  <circle cx="12" cy="12" r="1.5"></circle>
-                  <circle cx="12" cy="6" r="1.5"></circle>
-                  <circle cx="12" cy="18" r="1.5"></circle>
-                </svg>
-              </button>
-            </div>
-
-            <!-- Inline Creator Row (Appears when New File / Folder is clicked) -->
-            <div id="inlineCreator" class="inline-creator-row hidden">
-              <span id="creatorIcon" class="creator-preview-icon"></span>
-              <input type="text" id="creatorInput" placeholder="filename.ext" autocomplete="off" spellcheck="false">
-              <div class="creator-actions">
-                <button id="btnConfirmCreate" class="btn-creator-ok" title="Confirm (Enter)">✓</button>
-                <button id="btnCancelCreate" class="btn-creator-cancel" title="Cancel (Esc)">✕</button>
-              </div>
-            </div>
-
-            <!-- Dynamic File Tree Container -->
-            <div id="fileTree" class="file-tree" role="tree"></div>
-          </div>
-        </section>
-
-        <!-- TAB PANEL: SEARCH (Placeholder) -->
-        <section id="panelSearch" class="tab-panel" aria-labelledby="tab-search">
-          <div class="panel-placeholder">
-            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <h3>Code Search</h3>
-            <p>Full-text regex search across all files in the current workspace.</p>
-          </div>
-        </section>
-
-        <!-- TAB PANEL: SOURCE CONTROL (Placeholder) -->
-        <section id="panelGit" class="tab-panel" aria-labelledby="tab-git">
-          <div class="panel-placeholder">
-            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none">
-              <circle cx="6" cy="18" r="3"></circle>
-              <circle cx="6" cy="6" r="3"></circle>
-              <circle cx="18" cy="6" r="3"></circle>
-              <line x1="6" y1="9" x2="6" y2="15"></line>
-              <path d="M9 18h3a6 6 0 0 0 6-6V9"></path>
-            </svg>
-            <h3>Source Control</h3>
-            <p>Git status, staged changes, and asynchronous commit & push.</p>
-          </div>
-        </section>
-
-        <!-- TAB PANEL: TERMINAL (Project CLI + Termux Linux Shell) -->
-        <section id="panelTerminal" class="tab-panel" aria-labelledby="tab-terminal">
-          <div class="terminal-container">
-            <!-- Terminal Session Switcher Bar -->
-            <div class="terminal-topbar">
-              <div class="terminal-tabs-group">
-                <button id="btnTermTabCli" class="term-session-tab active" data-term="cli">
-                  <span class="session-dot cli-dot"></span>
-                  <span>Project CLI</span>
-                </button>
-                <button id="btnTermTabTermux" class="term-session-tab" data-term="termux">
-                  <span class="session-dot termux-dot"></span>
-                  <span>Termux Shell</span>
-                </button>
-              </div>
-
-              <div class="term-top-actions">
-                <button id="btnClearActiveTerm" class="btn-term-tool" title="Clear Screen" aria-label="Clear Screen">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                </button>
-                <button id="btnResetActiveTerm" class="btn-term-tool" title="Reset Session" aria-label="Reset Session">
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
-                    <path d="M23 4v6h-6"></path>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- SESSION 1: PROJECT SCRIPTS CLI -->
-            <div id="termSessionCli" class="terminal-session active">
-              <!-- Quick Scripts Chips Row -->
-              <div class="cli-quick-chips">
-                <span class="chips-label">Run:</span>
-                <button class="cli-chip" data-cmd="npm run dev">npm run dev</button>
-                <button class="cli-chip" data-cmd="npm test">npm test</button>
-                <button class="cli-chip" data-cmd="npm run build">npm build</button>
-                <button class="cli-chip" data-cmd="git status">git status</button>
-                <button class="cli-chip" data-cmd="help">help</button>
-              </div>
-
-              <!-- Output Screen -->
-              <div id="cliOutput" class="terminal-screen" role="log" aria-live="polite"></div>
-
-              <!-- Input Row -->
-              <form id="cliInputForm" class="terminal-input-bar">
-                <span class="cli-prompt-label">project$</span>
-                <input type="text" id="cliCommandInput" class="terminal-input" placeholder="npm run dev, test, build..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                <button type="submit" class="terminal-submit-btn" aria-label="Execute Command">↵</button>
-              </form>
-            </div>
-
-            <!-- SESSION 2: TERMUX / ANDROID LINUX SHELL -->
-            <div id="termSessionTermux" class="terminal-session">
-              <!-- Termux Extra Keys Row -->
-              <div class="termux-keys-row" aria-label="Termux Touch Keyboard Shortcuts">
-                <button type="button" class="termux-key" data-key="ESC">ESC</button>
-                <button type="button" class="termux-key" data-key="TAB">TAB</button>
-                <button type="button" class="termux-key" data-key="CTRL">CTRL</button>
-                <button type="button" class="termux-key" data-key="ALT">ALT</button>
-                <button type="button" class="termux-key" data-char="-">-</button>
-                <button type="button" class="termux-key" data-char="/">/</button>
-                <button type="button" class="termux-key" data-char="|">|</button>
-                <button type="button" class="termux-key" data-key="UP">▲</button>
-                <button type="button" class="termux-key" data-key="DOWN">▼</button>
-              </div>
-
-              <!-- Termux Output Screen -->
-              <div id="termuxOutput" class="terminal-screen termux-screen" role="log" aria-live="polite"></div>
-
-              <!-- Termux Input Row -->
-              <form id="termuxInputForm" class="terminal-input-bar termux-input-bar">
-                <span id="termuxPromptLabel" class="termux-prompt-label">u0_a249@localhost:~$</span>
-                <input type="text" id="termuxCommandInput" class="terminal-input termux-input" placeholder="neofetch, ls -la, pkg, uname..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                <button type="submit" class="terminal-submit-btn" aria-label="Execute Shell Command">↵</button>
-              </form>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB PANEL: DEPLOY (Placeholder) -->
-        <section id="panelDeploy" class="tab-panel" aria-labelledby="tab-deploy">
-          <div class="panel-placeholder">
-            <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-              <polyline points="16 6 12 2 8 6"></polyline>
-              <line x1="12" y1="2" x2="12" y2="15"></line>
-            </svg>
-            <h3>Deploy & Share</h3>
-            <p>Publish to static web hosting or share workspace preview link.</p>
-          </div>
-        </section>
-
-        <!-- TAB PANEL: PROFILE (With High-Contrast Theme Toggle) -->
-        <section id="panelProfile" class="tab-panel" aria-labelledby="tab-profile">
-          <div class="panel-profile-content">
-            <div class="profile-header-card">
-              <div class="profile-avatar"><img src="logo.png" alt="Linq Studio Logo" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"></div>
-              <div class="profile-info">
-                <h3>Linq Studio</h3>
-                <p>developer@linqstudio.dev</p>
-                <span class="profile-badge">Pro Edition</span>
-              </div>
-            </div>
-
-            <div class="profile-settings-group">
-              <span class="settings-group-label">APPEARANCE & THEME</span>
-              
-              <!-- THEME TOGGLE BUTTON -->
-              <button id="btnThemeToggle" class="theme-toggle-row" aria-label="Toggle Theme Mode">
-                <div class="theme-toggle-left">
-                  <span id="themeToggleIcon" class="theme-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
-                      <circle cx="12" cy="12" r="5"></circle>
-                      <line x1="12" y1="1" x2="12" y2="3"></line>
-                      <line x1="12" y1="21" x2="12" y2="23"></line>
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                      <line x1="1" y1="12" x2="3" y2="12"></line>
-                      <line x1="21" y1="12" x2="23" y2="12"></line>
-                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                  </span>
-                  <div class="theme-toggle-text">
-                    <span class="theme-title">Theme Mode</span>
-                    <span id="themeStatusDesc" class="theme-desc">Dark Studio</span>
-                  </div>
-                </div>
-
-                <div class="theme-switch-pill">
-                  <span id="themePillLabel" class="theme-pill-text">Dark</span>
-                  <span class="theme-switch-slider"></span>
-                </div>
-              </button>
-            </div>
-
-            <div class="profile-settings-group">
-              <span class="settings-group-label">EDITOR PREFERENCES</span>
-
-              <!-- AUTO-SAVE TOGGLE BUTTON -->
-              <button id="btnAutoSaveToggle" class="theme-toggle-row" aria-label="Toggle Auto-Save">
-                <div class="theme-toggle-left">
-                  <span id="autoSaveIcon" class="theme-icon auto-save-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                      <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                  </span>
-                  <div class="theme-toggle-text">
-                    <span class="theme-title">Auto-Save</span>
-                    <span id="autoSaveDesc" class="theme-desc">Saves to local storage automatically</span>
-                  </div>
-                </div>
-
-                <div class="theme-switch-pill" id="autoSavePill">
-                  <span id="autoSavePillLabel" class="theme-pill-text">On</span>
-                  <span id="autoSaveSlider" class="theme-switch-slider active"></span>
-                </div>
-              </button>
-            </div>
-
-            <div class="profile-settings-group">
-              <span class="settings-group-label">WORKSPACE INFO</span>
-              <div class="workspace-stat-row">
-                <span>Active Branch</span>
-                <code>main</code>
-              </div>
-              <div class="workspace-stat-row">
-                <span>Syntax Engine</span>
-                <span class="text-success">Active (JS/TS/HTML/CSS)</span>
-              </div>
-              <div class="workspace-stat-row">
-                <span>Dev Server</span>
-                <span class="text-success">Port 8080 (Ready)</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      </div>
-    </aside>
-
-    <!-- ROW OVERFLOW POPUP MENU -->
-    <div id="rowPopupMenu" class="popup-menu hidden" role="menu">
-      <button class="popup-item" data-action="rename">
-        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-          <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-        </svg>
-        <span>Rename</span>
-      </button>
-      <button class="popup-item" data-action="duplicate">
-        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <span>Duplicate</span>
-      </button>
-      <div class="popup-divider"></div>
-      <button class="popup-item text-danger" data-action="delete">
-        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-        <span>Delete</span>
-      </button>
-    </div>
-
-    <!-- GLOBAL COMMAND PALETTE MODAL -->
-    <div id="commandPaletteModal" class="palette-modal hidden" role="dialog" aria-modal="true" aria-label="Command Palette">
-      <div id="commandPaletteBackdrop" class="palette-backdrop"></div>
-      <div class="palette-dialog">
-        <div class="palette-header">
-          <div class="palette-search-wrapper">
-            <svg class="palette-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="4 17 10 11 4 5"></polyline>
-              <line x1="12" y1="19" x2="20" y2="19"></line>
-            </svg>
-            <input id="commandPaletteInput" type="text" placeholder="Type a command or search IDE actions... (e.g. file, theme, run, cursor, orientation)" autocomplete="off" spellcheck="false" />
-            <span class="palette-esc-badge">ESC</span>
-          </div>
-        </div>
-        <div id="commandPaletteList" class="palette-list" role="listbox">
-          <!-- Populated dynamically -->
-        </div>
-        <div class="palette-footer">
-          <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
-          <span><kbd>Enter</kbd> to execute</span>
-          <span><kbd>Esc</kbd> to close</span>
-        </div>
+    <!-- SOURCE CODE VIEW -->
+    <div id="editorCodeBody" class="editor-code-body" style="display: none;">
+      <div class="editor-pane">
+        <textarea id="codeEditorArea" class="code-editor-area" spellcheck="false">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;My Linq Studio Project&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h1&gt;Hello from Linq Studio!&lt;/h1&gt;
+  &lt;p&gt;Built with ultra-fast mobile tooling.&lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
       </div>
     </div>
 
-    <!-- TOAST NOTIFICATION CONTAINER -->
-    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
-
+    <!-- Toast message container -->
+    <div id="toastContainer" class="toast-container"></div>
   </div>
 
-  <script src="prism.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

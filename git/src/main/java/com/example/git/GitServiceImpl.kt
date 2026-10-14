@@ -823,7 +823,8 @@ class GitServiceImpl(
                 val actionAndMsg = parts[1]
                 val hash = metaParts.getOrNull(1) ?: "0000000"
                 val author = metaParts.getOrNull(2) ?: "Developer"
-                val timestamp = metaParts.getOrNull(4)?.toLongOrNull() ?: System.currentTimeMillis()
+                val rawSec = metaParts.getOrNull(4)?.toLongOrNull() ?: (System.currentTimeMillis() / 1000)
+                val timestamp = if (rawSec < 100_000_000_000L) rawSec * 1000 else rawSec
                 val message = actionAndMsg.substringAfter(": ").ifEmpty { actionAndMsg }
 
                 commits.add(

@@ -1,64 +1,45 @@
 package com.example.model
 
-import java.util.UUID
+import java.io.File
 
 data class CodeFile(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val path: String,
-    val content: String = "",
-    val language: SupportedLanguage = SupportedLanguage.fromFilename(name),
-    val isDirty: Boolean = false,
-    val cursorPosition: Int = 0,
-    val scrollOffset: Int = 0,
-    val undoStack: List<String> = emptyList(),
-    val redoStack: List<String> = emptyList()
-) {
-    val lineCount: Int
-        get() = content.count { it == '\n' } + 1
+    val file: File,
+    val name: String = file.name,
+    var content: String = "",
+    var isModified: Boolean = false,
+    val language: SupportedLanguage = SupportedLanguage.fromExtension(file.extension)
+)
 
-    val charCount: Int
-        get() = content.length
+data class FileItem(
+    val file: File,
+    val name: String = file.name,
+    val isDirectory: Boolean = file.isDirectory,
+    val sizeBytes: Long = if (file.isFile) file.length() else 0L,
+    val extension: String = file.extension
+)
 
-    val byteSize: Long
-        get() = content.toByteArray().size.toLong()
+enum class SupportedLanguage(val displayName: String, val extension: String) {
+    KOTLIN("Kotlin", "kt"),
+    JAVA("Java", "java"),
+    JAVASCRIPT("JavaScript", "js"),
+    TYPESCRIPT("TypeScript", "ts"),
+    HTML("HTML", "html"),
+    CSS("CSS", "css"),
+    JSON("JSON", "json"),
+    PYTHON("Python", "py"),
+    XML("XML", "xml"),
+    MARKDOWN("Markdown", "md"),
+    TEXT("Text", "txt");
 
-    fun withUpdatedContent(newContent: String): CodeFile {
-        if (newContent == content) return this
-        val newUndo = (undoStack + content).takeLast(50)
-        return copy(
-            content = newContent,
-            isDirty = true,
-            undoStack = newUndo,
-            redoStack = emptyList()
-        )
+    companion object {
+        fun fromExtension(ext: String): SupportedLanguage {
+            return entries.find { it.extension.equals(ext, ignoreCase = true) } ?: TEXT
+        }
     }
-
-    fun undo(): CodeFile {
-        if (undoStack.isEmpty()) return this
-        val previousContent = undoStack.last()
-        val newUndo = undoStack.dropLast(1)
-        val newRedo = (redoStack + content).takeLast(50)
-        return copy(
-            content = previousContent,
-            isDirty = true,
-            undoStack = newUndo,
-            redoStack = newRedo
-        )
-    }
-
-    fun redo(): CodeFile {
-        if (redoStack.isEmpty()) return this
-        val nextContent = redoStack.last()
-        val newRedo = redoStack.dropLast(1)
-        val newUndo = (undoStack + content).takeLast(50)
-        return copy(
-            content = nextContent,
-            isDirty = true,
-            undoStack = newUndo,
-            redoStack = newRedo
-        )
-    }
-
-    fun markSaved(): CodeFile = copy(isDirty = false)
 }
+
+data class TerminalLine(
+    val text: String,
+    val isError: Boolean = false,
+    val isCommand: Boolean = false
+)
