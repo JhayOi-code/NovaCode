@@ -19,21 +19,48 @@ data class FileItem(
 )
 
 enum class SupportedLanguage(val displayName: String, val extension: String) {
-    KOTLIN("Kotlin", "kt"),
-    JAVA("Java", "java"),
+    HTML("HTML / Web", "html"),
+    CSS("CSS", "css"),
     JAVASCRIPT("JavaScript", "js"),
     TYPESCRIPT("TypeScript", "ts"),
-    HTML("HTML", "html"),
-    CSS("CSS", "css"),
-    JSON("JSON", "json"),
     PYTHON("Python", "py"),
-    XML("XML", "xml"),
+    SHELL("Shell / Bash", "sh"),
+    KOTLIN("Kotlin", "kt"),
+    JAVA("Java", "java"),
+    C("C", "c"),
+    CPP("C++", "cpp"),
+    RUST("Rust", "rs"),
+    GO("Go", "go"),
+    SQL("SQL", "sql"),
+    PHP("PHP", "php"),
+    JSON("JSON", "json"),
     MARKDOWN("Markdown", "md"),
+    XML("XML", "xml"),
     TEXT("Text", "txt");
 
     companion object {
         fun fromExtension(ext: String): SupportedLanguage {
-            return entries.find { it.extension.equals(ext, ignoreCase = true) } ?: TEXT
+            val cleanExt = ext.lowercase()
+            return when (cleanExt) {
+                "html", "htm" -> HTML
+                "css" -> CSS
+                "js", "mjs", "cjs" -> JAVASCRIPT
+                "ts", "tsx" -> TYPESCRIPT
+                "py", "pyw" -> PYTHON
+                "sh", "bash", "zsh" -> SHELL
+                "kt", "kts" -> KOTLIN
+                "java" -> JAVA
+                "c", "h" -> C
+                "cpp", "cc", "cxx", "hpp" -> CPP
+                "rs" -> RUST
+                "go" -> GO
+                "sql" -> SQL
+                "php" -> PHP
+                "json" -> JSON
+                "md", "markdown" -> MARKDOWN
+                "xml" -> XML
+                else -> TEXT
+            }
         }
     }
 }

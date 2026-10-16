@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.EditorTheme
@@ -36,81 +37,135 @@ fun SettingsScreen(
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(currentTheme.editorBackground)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(currentTheme.editorBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
-        Text(
-            text = "Settings",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = currentTheme.onSurfaceColor
-        )
-
-        // User Profile Section
-        Card(
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = currentTheme.surfaceColor),
-            border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showEditProfileDialog = true }
-                .testTag("settings_profile_card")
+                .fillMaxSize()
+                .widthIn(max = 700.dp)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Text(
+                text = "Settings",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = currentTheme.onSurfaceColor
+            )
+
+            // User Profile Section
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = currentTheme.surfaceColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showEditProfileDialog = true }
+                    .testTag("settings_profile_card")
             ) {
-                UserProfileAvatarView(account = userAccount, size = 52.dp, borderColor = currentTheme.primaryColor)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = userAccount?.name ?: "Developer",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = currentTheme.onSurfaceColor
-                    )
-                    Text(
-                        text = userAccount?.customTitle ?: "Mobile Developer",
-                        fontSize = 12.sp,
-                        color = currentTheme.primaryColor
-                    )
-                    Text(
-                        text = "Tap to customize username & profile photo",
-                        fontSize = 11.sp,
-                        color = currentTheme.lineNumberColor
-                    )
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    UserProfileAvatarView(account = userAccount, size = 50.dp, borderColor = currentTheme.primaryColor)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = userAccount?.name ?: "Developer",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = currentTheme.onSurfaceColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = userAccount?.customTitle ?: "Mobile Developer",
+                            fontSize = 12.sp,
+                            color = currentTheme.primaryColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Tap to customize username & profile photo",
+                            fontSize = 11.sp,
+                            color = currentTheme.lineNumberColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = currentTheme.lineNumberColor)
                 }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = currentTheme.lineNumberColor)
             }
-        }
 
-        // Themes Section
-        Text(
-            text = "Editor Theme",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = currentTheme.onSurfaceColor
-        )
+            // Themes Section
+            Text(
+                text = "Editor Theme",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = currentTheme.onSurfaceColor
+            )
 
-        val themes = listOf(EditorTheme.LinqDark, EditorTheme.OneDark, EditorTheme.Dracula)
-        themes.forEach { theme ->
-            val isSelected = currentTheme.id == theme.id
+            val themes = listOf(EditorTheme.LinqDark, EditorTheme.OneDark, EditorTheme.Dracula)
+            themes.forEach { theme ->
+                val isSelected = currentTheme.id == theme.id
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = currentTheme.surfaceColor,
+                    border = androidx.compose.foundation.BorderStroke(
+                        if (isSelected) 1.5.dp else 1.dp,
+                        if (isSelected) currentTheme.primaryColor else currentTheme.borderColor
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectTheme(theme) }
+                        .testTag("theme_item_${theme.id}")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(theme.editorBackground, RoundedCornerShape(4.dp))
+                                    .border(1.dp, theme.primaryColor, RoundedCornerShape(4.dp))
+                            )
+                            Text(
+                                text = theme.name,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = currentTheme.onSurfaceColor
+                            )
+                        }
+                        if (isSelected) {
+                            Text(
+                                text = "ACTIVE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = currentTheme.primaryColor
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Extensions Section
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 color = currentTheme.surfaceColor,
-                border = androidx.compose.foundation.BorderStroke(
-                    if (isSelected) 1.5.dp else 1.dp,
-                    if (isSelected) currentTheme.primaryColor else currentTheme.borderColor
-                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSelectTheme(theme) }
-                    .testTag("theme_item_${theme.id}")
+                    .clickable { onOpenPlugins() }
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -121,52 +176,11 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .background(theme.editorBackground, RoundedCornerShape(4.dp))
-                                .border(1.dp, theme.primaryColor, RoundedCornerShape(4.dp))
-                        )
-                        Text(
-                            text = theme.name,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = currentTheme.onSurfaceColor
-                        )
+                        Icon(Icons.Default.Extension, contentDescription = null, tint = Color(0xFFA855F7))
+                        Text(text = "Manage Extensions", color = currentTheme.onSurfaceColor)
                     }
-                    if (isSelected) {
-                        Text(
-                            text = "ACTIVE",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = currentTheme.primaryColor
-                        )
-                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = currentTheme.lineNumberColor)
                 }
-            }
-        }
-
-        // Extensions Section
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = currentTheme.surfaceColor,
-            border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onOpenPlugins() }
-        ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(Icons.Default.Extension, contentDescription = null, tint = Color(0xFFA855F7))
-                    Text(text = "Manage Extensions", color = currentTheme.onSurfaceColor)
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = currentTheme.lineNumberColor)
             }
         }
     }

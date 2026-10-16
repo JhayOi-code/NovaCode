@@ -59,6 +59,99 @@ class FileRepositoryImpl(private val context: Context) : FileRepository {
             "logo.svg",
             ""
         )
+
+        // Python Starter
+        val pyFile = File(workspace, "main.py")
+        if (!pyFile.exists() || pyFile.length() == 0L) {
+            pyFile.writeText(
+                """# Linq Studio - Python Multi-Language Runner
+def calculate_fibonacci(n):
+    fib = [0, 1]
+    for i in range(2, n):
+        fib.append(fib[i - 1] + fib[i - 2])
+    return fib
+
+print("=== Linq Studio Python 3.11 Runtime ===")
+print("System initialized successfully.")
+
+# Math and variables
+name = "Developer"
+score = 42 * 2 + 10
+print(f"Hello, {name}! Your computed score is {score}")
+
+# Loops and lists
+numbers = [1, 2, 3, 4, 5]
+total = sum(numbers)
+print("List sum:", total)
+
+for i in range(4):
+    print(f"Iteration {i}: square = {i * i}")
+
+print("Python execution complete!")
+"""
+            )
+        }
+
+        // JavaScript Starter
+        val jsFile = File(workspace, "script.js")
+        if (!jsFile.exists() || jsFile.length() == 0L) {
+            jsFile.writeText(
+                """// Linq Studio - JavaScript Runner
+console.log("=== Linq Studio JavaScript Runner ===");
+
+const appName = "Linq Studio IDE";
+const version = 2.0;
+console.log("Environment: " + appName + " v" + version);
+
+const numbers = [10, 25, 40, 55];
+console.log("Input array: " + numbers.join(", "));
+
+let sum = 0;
+for (let i = 0; i < numbers.length; i++) {
+    sum += numbers[i];
+}
+console.log("Computed total sum: " + sum);
+console.log("Finished executing script.js with status OK");
+"""
+            )
+        }
+
+        // Bash / Shell Starter
+        val shFile = File(workspace, "deploy.sh")
+        if (!shFile.exists() || shFile.length() == 0L) {
+            shFile.writeText(
+                """#!/bin/bash
+# Linq Studio - Shell Automation Script
+echo "=== Linq Studio Bash Script ==="
+echo "Running automated environment check..."
+echo "Current directory:"
+pwd
+echo "System date and time:"
+date
+echo "Available files in workspace:"
+ls
+echo "Automation task completed successfully!"
+"""
+            )
+        }
+
+        // Kotlin Starter
+        val ktFile = File(workspace, "Main.kt")
+        if (!ktFile.exists() || ktFile.length() == 0L) {
+            ktFile.writeText(
+                """// Linq Studio - Kotlin Runner
+fun main() {
+    println("=== Linq Studio Kotlin Console ===")
+    val greeting = "Welcome to Kotlin on Linq Studio!"
+    println(greeting)
+
+    val numbers = listOf(5, 12, 19, 26)
+    println("Numbers: " + numbers.joinToString(", "))
+    println("Execution finished cleanly.")
+}
+"""
+            )
+        }
     }
 
     override fun listFiles(dir: File): List<FileItem> {

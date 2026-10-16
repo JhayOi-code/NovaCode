@@ -1,0 +1,97 @@
+/**
+ * Prism.js Dark Theme for Linq Studio
+ * Tailored for HTML, CSS, and JavaScript real-time syntax highlighting
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: #E2E8F0;
+  background: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  tab-size: 2;
+  hyphens: none;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #64748B;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #94A3B8;
+}
+
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #F43F5E;
+}
+
+.token.tag .token.punctuation {
+  color: #38BDF8;
+}
+
+.token.tag-id,
+.token.selector,
+.token.atrule {
+  color: #FBBF24;
+}
+
+.token.attr-name {
+  color: #38BDF8;
+}
+
+.token.string,
+.token.char,
+.token.attr-value {
+  color: #34D399;
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: #67E8F9;
+}
+
+.token.keyword {
+  color: #C084FC;
+  font-weight: 600;
+}
+
+.token.function,
+.token.class-name {
+  color: #60A5FA;
+}
+
+.token.number,
+.token.boolean {
+  color: #FB923C;
+}
+
+.token.property {
+  color: #38BDF8;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #F59E0B;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}

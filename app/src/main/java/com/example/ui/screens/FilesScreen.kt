@@ -49,17 +49,21 @@ fun FilesScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Workspace Files",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = theme.onSurfaceColor
+                    color = theme.onSurfaceColor,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
                     text = currentDirectory.name,
                     fontSize = 12.sp,
-                    color = theme.lineNumberColor
+                    color = theme.lineNumberColor,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
@@ -126,7 +130,10 @@ fun FilesScreen(
                                 text = item.name,
                                 color = theme.onSurfaceColor,
                                 fontSize = 13.sp,
-                                fontWeight = if (item.isDirectory) FontWeight.SemiBold else FontWeight.Normal
+                                fontWeight = if (item.isDirectory) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                         }
 

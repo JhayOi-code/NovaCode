@@ -76,7 +76,8 @@ fun PluginsScreen(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -90,14 +91,18 @@ fun PluginsScreen(
                 Column {
                     Text(
                         text = "Extensions Marketplace",
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = theme.onSurfaceColor
+                        color = theme.onSurfaceColor,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     Text(
                         text = "VS Code-compatible plugin engine",
-                        fontSize = 12.sp,
-                        color = theme.lineNumberColor
+                        fontSize = 11.sp,
+                        color = theme.lineNumberColor,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
@@ -231,17 +236,21 @@ fun PluginsScreen(
                                     }
                                 }
 
-                                Column {
+                                Column(modifier = Modifier.weight(1f, fill = false)) {
                                     Text(
                                         text = plugin.name,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = theme.onSurfaceColor
+                                        color = theme.onSurfaceColor,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = "${plugin.author} • v${plugin.version} • ★ ${plugin.rating}",
                                         fontSize = 11.sp,
-                                        color = theme.lineNumberColor
+                                        color = theme.lineNumberColor,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
                             }
