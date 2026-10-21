@@ -1,14 +1,14 @@
 /**
- * Prism.js Dark Theme for Linq Studio
- * Tailored for HTML, CSS, and JavaScript real-time syntax highlighting
+ * Prism.js Vivid Neon Dark Theme for Linq Studios
+ * Precision syntax highlighting for Python, JavaScript, CSS, Markdown, HTML, JSON, SQL, Kotlin, Java
  */
 code[class*="language-"],
 pre[class*="language-"] {
-  color: #E2E8F0;
+  color: #F1F5F9;
   background: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   text-align: left;
   white-space: pre;
   word-spacing: normal;
@@ -18,6 +18,7 @@ pre[class*="language-"] {
   hyphens: none;
 }
 
+/* Comments */
 .token.comment,
 .token.prolog,
 .token.doctype,
@@ -26,72 +27,155 @@ pre[class*="language-"] {
   font-style: italic;
 }
 
+/* Punctuation & Delimiters */
 .token.punctuation {
   color: #94A3B8;
 }
 
-.token.tag,
-.token.constant,
-.token.symbol,
-.token.deleted {
+/* Markup Tags (HTML / XML) */
+.token.tag {
   color: #F43F5E;
+  font-weight: 600;
 }
 
 .token.tag .token.punctuation {
   color: #38BDF8;
 }
 
-.token.tag-id,
-.token.selector,
-.token.atrule {
-  color: #FBBF24;
-}
-
 .token.attr-name {
   color: #38BDF8;
 }
 
-.token.string,
-.token.char,
-.token.attr-value {
+.token.attr-value,
+.token.attr-value .token.punctuation {
   color: #34D399;
 }
 
-.token.operator,
-.token.entity,
-.token.url {
-  color: #67E8F9;
-}
-
-.token.keyword {
-  color: #C084FC;
+/* CSS Specific */
+.token.selector {
+  color: #FBBF24;
   font-weight: 600;
-}
-
-.token.function,
-.token.class-name {
-  color: #60A5FA;
-}
-
-.token.number,
-.token.boolean {
-  color: #FB923C;
 }
 
 .token.property {
   color: #38BDF8;
 }
 
-.token.regex,
-.token.important,
-.token.variable {
+.token.atrule,
+.token.rule {
+  color: #C084FC;
+}
+
+.token.unit {
+  color: #F472B6;
+}
+
+/* Strings (Python, JS, etc.) */
+.token.string,
+.token.char {
+  color: #34D399;
+}
+
+.token.string-interpolation,
+.token.triple-quoted-string {
+  color: #2DD4BF;
+  font-style: normal;
+}
+
+/* Keywords & Control Flow */
+.token.keyword {
+  color: #C084FC;
+  font-weight: 700;
+}
+
+/* Functions & Methods */
+.token.function,
+.token.class-name {
+  color: #60A5FA;
+  font-weight: 600;
+}
+
+/* Builtins & Decorators */
+.token.builtin {
   color: #F59E0B;
 }
 
-.token.important,
-.token.bold {
-  font-weight: bold;
+.token.decorator,
+.token.annotation {
+  color: #FDE047;
+  font-weight: 600;
 }
+
+/* Numbers & Booleans */
+.token.number {
+  color: #FB923C;
+}
+
+.token.boolean {
+  color: #EC4899;
+  font-weight: 700;
+}
+
+.token.constant,
+.token.symbol {
+  color: #F472B6;
+}
+
+/* Operators & Variables */
+.token.operator {
+  color: #67E8F9;
+}
+
+.token.variable {
+  color: #FCD34D;
+}
+
+.token.regex {
+  color: #F87171;
+}
+
+/* Markdown Specific Tokens */
+.token.title,
+.token.header {
+  color: #38BDF8;
+  font-weight: 800;
+}
+
+.token.code {
+  color: #FBBF24;
+  background: rgba(251, 191, 36, 0.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.token.bold {
+  color: #FFFFFF;
+  font-weight: 800;
+}
+
 .token.italic {
   font-style: italic;
+  color: #CBD5E1;
+}
+
+.token.list {
+  color: #34D399;
+  font-weight: 700;
+}
+
+.token.blockquote {
+  color: #94A3B8;
+  border-left: 2px solid #38BDF8;
+  padding-left: 6px;
+  font-style: italic;
+}
+
+.token.hr {
+  color: #475569;
+}
+
+.token.url {
+  color: #818CF8;
+  text-decoration: underline;
 }

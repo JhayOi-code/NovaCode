@@ -1,233 +1,127 @@
 package com.example.git
 
-import android.content.Context
 import com.example.model.CodeFile
-import com.example.model.FileItem
 import com.example.model.GitCommit
-import com.example.model.GitFileItem
+import com.example.model.GitFileChange
 import com.example.model.GitFileStatus
-import com.example.model.GitStatus
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
+import com.example.model.GitRepositoryStatus
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
-class GitManager(private val context: Context, private val workspaceDir: File) {
+class GitManager {
 
-    private val gitStoreFile = File(workspaceDir, ".linq_git.json")
-    private val stagedPaths = mutableSetOf<String>()
-    private var currentBranch: String = "main"
-    private val branches = mutableListOf("main", "feature/workspace", "dev")
-    private val commits = mutableListOf<GitCommit>()
-    private var lastPushMessage: String? = "Everything up to date with origin/main"
-
-    init {
-        loadGitStore()
-    }
-
-    private fun loadGitStore() {
-        if (!gitStoreFile.exists()) {
-            // Seed initial commit
-            commits.add(
+    private val _repoStatus = MutableStateFlow(
+        GitRepositoryStatus(
+            currentBranch = "main",
+            availableBranches = listOf("main", "develop", "feature/mobile-ide"),
+            commits = listOf(
                 GitCommit(
-                    id = "init89a",
-                    message = "Initial workspace setup with boilerplate templates",
-                    author = "Developer <dev@linqstudio.local>",
+                    id = "a1b2c3d",
+                    message = "Initial project setup with starter guides",
+                    author = "linq_dev",
                     timestamp = System.currentTimeMillis() - 86400000L,
-                    fileCount = 3,
-                    branch = "main"
+                    filesChangedCount = 5
                 )
             )
-            saveGitStore()
-            return
-        }
+        )
+    )
+    val repoStatus: StateFlow<GitRepositoryStatus> = _repoStatus.asStateFlow()
 
-        try {
-            val jsonStr = gitStoreFile.readText()
-            val json = JSONObject(jsonStr)
-            currentBranch = json.optString("branch", "main")
-            
-            val branchArr = json.optJSONArray("branches")
-            if (branchArr != null) {
-                branches.clear()
-                for (i in 0 until branchArr.length()) {
-                    branches.add(branchArr.getString(i))
-                }
-            }
-            if (!branches.contains("main")) branches.add(0, "main")
+    fun updateFromFiles(files: List<CodeFile>) {
+        val currentChanges = _repoStatus.value.changes.associateBy { it.filePath }
+        val newChanges = mutableListOf<GitFileChange>()
 
-            val stagedArr = json.optJSONArray("staged")
-            if (stagedArr != null) {
-                stagedPaths.clear()
-                for (i in 0 until stagedArr.length()) {
-                    stagedPaths.add(stagedArr.getString(i))
-                }
-            }
-
-            val commitArr = json.optJSONArray("commits")
-            if (commitArr != null) {
-                commits.clear()
-                for (i in 0 until commitArr.length()) {
-                    val cObj = commitArr.getJSONObject(i)
-                    commits.add(
-                        GitCommit(
-                            id = cObj.optString("id", UUID.randomUUID().toString().take(7)),
-                            message = cObj.optString("message", "Commit"),
-                            author = cObj.optString("author", "Developer"),
-                            timestamp = cObj.optLong("timestamp", System.currentTimeMillis()),
-                            fileCount = cObj.optInt("fileCount", 1),
-                            branch = cObj.optString("branch", "main")
-                        )
-                    )
-                }
-            }
-        } catch (_: Exception) {
-            // fallback
-        }
-    }
-
-    private fun saveGitStore() {
-        try {
-            val json = JSONObject()
-            json.put("branch", currentBranch)
-            val branchArr = JSONArray()
-            branches.forEach { branchArr.put(it) }
-            json.put("branches", branchArr)
-
-            val stagedArr = JSONArray()
-            stagedPaths.forEach { stagedArr.put(it) }
-            json.put("staged", stagedArr)
-
-            val commitArr = JSONArray()
-            commits.forEach { commit ->
-                val cObj = JSONObject()
-                cObj.put("id", commit.id)
-                cObj.put("message", commit.message)
-                cObj.put("author", commit.author)
-                cObj.put("timestamp", commit.timestamp)
-                cObj.put("fileCount", commit.fileCount)
-                cObj.put("branch", commit.branch)
-                commitArr.put(cObj)
-            }
-            json.put("commits", commitArr)
-
-            gitStoreFile.writeText(json.toString(2))
-        } catch (_: Exception) {
-            // ignore
-        }
-    }
-
-    fun computeStatus(allFiles: List<FileItem>, openFiles: List<CodeFile>): GitStatus {
-        val staged = mutableListOf<GitFileItem>()
-        val unstaged = mutableListOf<GitFileItem>()
-
-        for (item in allFiles) {
-            if (item.isDirectory || item.name.startsWith(".")) continue
-
-            val relPath = item.file.relativeToOrNull(workspaceDir)?.path ?: item.name
-            val isOpenModified = openFiles.any { it.file.absolutePath == item.file.absolutePath && it.isModified }
-
-            if (stagedPaths.contains(relPath)) {
-                staged.add(
-                    GitFileItem(
-                        file = item.file,
-                        relativePath = relPath,
-                        status = GitFileStatus.STAGED
-                    )
-                )
-            } else {
-                // If it's modified in memory or modified recently
-                val status = if (isOpenModified) {
-                    GitFileStatus.MODIFIED
-                } else if (item.file.lastModified() > (commits.firstOrNull()?.timestamp ?: 0L)) {
-                    GitFileStatus.MODIFIED
-                } else {
-                    GitFileStatus.UNTRACKED
-                }
-                unstaged.add(
-                    GitFileItem(
-                        file = item.file,
-                        relativePath = relPath,
-                        status = status
+        for (file in files) {
+            if (file.isModified || file.content != file.originalContent) {
+                val existing = currentChanges[file.path]
+                newChanges.add(
+                    GitFileChange(
+                        filePath = file.path,
+                        fileName = file.name,
+                        status = GitFileStatus.MODIFIED,
+                        isStaged = existing?.isStaged ?: false,
+                        additions = 3,
+                        deletions = 1
                     )
                 )
             }
         }
 
-        return GitStatus(
-            branch = currentBranch,
-            branches = branches.toList(),
-            stagedFiles = staged,
-            unstagedFiles = unstaged,
-            commits = commits.sortedByDescending { it.timestamp },
-            isClean = staged.isEmpty() && unstaged.isEmpty(),
-            lastPushStatus = lastPushMessage
+        _repoStatus.value = _repoStatus.value.copy(
+            changes = newChanges,
+            isClean = newChanges.isEmpty()
         )
     }
 
-    fun stageFile(relPath: String) {
-        stagedPaths.add(relPath)
-        saveGitStore()
+    fun stageFile(filePath: String) {
+        val updated = _repoStatus.value.changes.map {
+            if (it.filePath == filePath) it.copy(isStaged = true) else it
+        }
+        _repoStatus.value = _repoStatus.value.copy(changes = updated)
     }
 
-    fun stageAll(unstaged: List<GitFileItem>) {
-        unstaged.forEach { stagedPaths.add(it.relativePath) }
-        saveGitStore()
+    fun unstageFile(filePath: String) {
+        val updated = _repoStatus.value.changes.map {
+            if (it.filePath == filePath) it.copy(isStaged = false) else it
+        }
+        _repoStatus.value = _repoStatus.value.copy(changes = updated)
     }
 
-    fun unstageFile(relPath: String) {
-        stagedPaths.remove(relPath)
-        saveGitStore()
+    fun stageAll() {
+        val updated = _repoStatus.value.changes.map { it.copy(isStaged = true) }
+        _repoStatus.value = _repoStatus.value.copy(changes = updated)
     }
 
     fun unstageAll() {
-        stagedPaths.clear()
-        saveGitStore()
+        val updated = _repoStatus.value.changes.map { it.copy(isStaged = false) }
+        _repoStatus.value = _repoStatus.value.copy(changes = updated)
     }
 
-    fun commit(message: String, author: String): GitCommit? {
-        val trimmed = message.trim()
-        if (trimmed.isEmpty() || stagedPaths.isEmpty()) return null
+    fun commit(message: String): Boolean {
+        if (message.isBlank()) return false
+        val staged = _repoStatus.value.changes.filter { it.isStaged }
+        if (staged.isEmpty()) return false
 
-        val commitId = UUID.randomUUID().toString().replace("-", "").take(7)
-        val commit = GitCommit(
-            id = commitId,
-            message = trimmed,
-            author = author,
+        val newCommit = GitCommit(
+            id = UUID.randomUUID().toString().substring(0, 7),
+            message = message.trim(),
+            author = "linq_dev",
             timestamp = System.currentTimeMillis(),
-            fileCount = stagedPaths.size,
-            branch = currentBranch
+            filesChangedCount = staged.size
         )
 
-        commits.add(0, commit)
-        stagedPaths.clear()
-        lastPushMessage = "1 local commit ahead of origin/$currentBranch. Ready to push."
-        saveGitStore()
-        return commit
+        val remainingChanges = _repoStatus.value.changes.filter { !it.isStaged }
+        _repoStatus.value = _repoStatus.value.copy(
+            changes = remainingChanges,
+            commits = listOf(newCommit) + _repoStatus.value.commits,
+            isClean = remainingChanges.isEmpty(),
+            aheadCount = _repoStatus.value.aheadCount + 1
+        )
+        return true
     }
 
     fun push(): String {
-        val count = commits.take(3).size
-        val hash = commits.firstOrNull()?.id ?: "HEAD"
-        lastPushMessage = "✓ Successfully pushed $count commit(s) [${hash}] to origin/$currentBranch"
-        return lastPushMessage ?: "Pushed to origin/$currentBranch"
+        val ahead = _repoStatus.value.aheadCount
+        if (ahead == 0) return "Everything up-to-date"
+        _repoStatus.value = _repoStatus.value.copy(aheadCount = 0)
+        return "Successfully pushed $ahead commit(s) to origin/${_repoStatus.value.currentBranch}"
     }
 
-    fun createBranch(name: String): Boolean {
-        val clean = name.trim().replace("\\s+".toRegex(), "-")
-        if (clean.isNotEmpty() && !branches.contains(clean)) {
-            branches.add(clean)
-            currentBranch = clean
-            saveGitStore()
-            return true
+    fun createBranch(name: String) {
+        val cleanName = name.trim().replace(" ", "-")
+        if (cleanName.isNotEmpty() && !_repoStatus.value.availableBranches.contains(cleanName)) {
+            _repoStatus.value = _repoStatus.value.copy(
+                availableBranches = _repoStatus.value.availableBranches + cleanName,
+                currentBranch = cleanName
+            )
         }
-        return false
     }
 
     fun switchBranch(name: String) {
-        if (branches.contains(name)) {
-            currentBranch = name
-            saveGitStore()
+        if (_repoStatus.value.availableBranches.contains(name)) {
+            _repoStatus.value = _repoStatus.value.copy(currentBranch = name)
         }
     }
 }

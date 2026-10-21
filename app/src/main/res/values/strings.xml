@@ -1,11 +1,3 @@
 <resources>
-    <string name="app_name">Linq Studio</string>
-    <string name="company_name">LinqStudiosLLC</string>
-    <string name="footer_credit">Developed by Ljhay • %1$s</string>
-    <string name="tagline">Ultra-Fast Mobile IDE &amp; Code Studio</string>
-    <string name="welcome_heading">Code anywhere without compromise.</string>
-    <string name="founder_heading">Founder &amp; Developer</string>
-    <string name="founder_name">Ljhay</string>
-    <string name="founder_role">Main Founder &amp; Lead Developer</string>
-    <string name="founder_bio">Sole creator, main founder, and lead developer of Linq Studio.</string>
+    <string name="app_name">Linq Studios</string>
 </resources>

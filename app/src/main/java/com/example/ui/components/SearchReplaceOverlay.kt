@@ -1,19 +1,42 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.EditorTheme
@@ -21,225 +44,146 @@ import com.example.model.EditorTheme
 @Composable
 fun SearchReplaceOverlay(
     theme: EditorTheme,
-    activeFileContent: String,
-    onContentChange: (String) -> Unit,
-    onClose: () -> Unit
+    onFindNext: (String) -> Unit,
+    onFindPrevious: (String) -> Unit,
+    onReplace: (String, String) -> Unit,
+    onReplaceAll: (String, String) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var replaceQuery by remember { mutableStateOf("") }
-    var matchCase by remember { mutableStateOf(false) }
-    var wholeWord by remember { mutableStateOf(false) }
-    var currentMatchIndex by remember { mutableIntStateOf(0) }
 
-    // Find all matches
-    val matchRanges = remember(searchQuery, activeFileContent, matchCase, wholeWord) {
-        if (searchQuery.isEmpty()) {
-            emptyList()
-        } else {
-            val list = mutableListOf<IntRange>()
-            val pattern = if (wholeWord) "\\b${Regex.escape(searchQuery)}\\b" else Regex.escape(searchQuery)
-            val regex = if (matchCase) Regex(pattern) else Regex(pattern, RegexOption.IGNORE_CASE)
-            regex.findAll(activeFileContent).forEach { match ->
-                list.add(match.range)
-            }
-            list
-        }
-    }
-
-    val matchCount = matchRanges.size
-    val currentPositionDisplay = if (matchCount == 0) {
-        if (searchQuery.isEmpty()) "" else "No results"
-    } else {
-        "${(currentMatchIndex % matchCount) + 1} of $matchCount"
-    }
-
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
-        border = androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        modifier = Modifier
+    Surface(
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-            .testTag("search_replace_modal")
+            .padding(8.dp)
+            .testTag("search_replace_overlay"),
+        shape = RoundedCornerShape(12.dp),
+        color = theme.surfaceColor,
+        tonalElevation = 6.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
     ) {
         Column(
-            modifier = Modifier
-                .padding(10.dp)
-                .fillMaxWidth()
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // ROW 1: SEARCH BAR
+            // Find Row - with proper minHeight and line-height so descenders aren't clipped!
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = searchQuery,
-                    onValueChange = {
-                        searchQuery = it
-                        currentMatchIndex = 0
+                    onValueChange = { searchQuery = it },
+                    placeholder = {
+                        Text(
+                            text = "Find in file...",
+                            color = theme.lineNumberColor,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        )
                     },
-                    placeholder = { Text("Find...", fontSize = 12.sp, color = theme.lineNumberColor) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = theme.editorBackground,
-                        unfocusedContainerColor = theme.editorBackground,
-                        focusedBorderColor = theme.primaryColor,
-                        unfocusedBorderColor = theme.borderColor
+                    textStyle = TextStyle(
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = theme.onSurfaceColor
                     ),
+                    singleLine = true,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
-                        .testTag("input_search_query")
+                        .heightIn(min = 48.dp)
+                        .testTag("search_input_field"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = theme.onSurfaceColor,
+                        unfocusedTextColor = theme.onSurfaceColor,
+                        focusedBorderColor = theme.primaryColor,
+                        unfocusedBorderColor = theme.borderColor,
+                        focusedContainerColor = theme.editorBackground,
+                        unfocusedContainerColor = theme.editorBackground
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 )
 
-                // Match Count Display
-                if (currentPositionDisplay.isNotEmpty()) {
-                    Text(
-                        text = currentPositionDisplay,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (matchCount > 0) theme.primaryColor else Color(0xFFEF4444),
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
-
-                // Match Case Toggle (Aa)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (matchCase) theme.primaryColor.copy(alpha = 0.25f) else Color.Transparent,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (matchCase) theme.primaryColor else theme.borderColor.copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.clickable { matchCase = !matchCase }
-                ) {
-                    Text(
-                        text = "Aa",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (matchCase) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
-                    )
-                }
-
-                // Whole Word Toggle (\b)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (wholeWord) theme.primaryColor.copy(alpha = 0.25f) else Color.Transparent,
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (wholeWord) theme.primaryColor else theme.borderColor.copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.clickable { wholeWord = !wholeWord }
-                ) {
-                    Text(
-                        text = "\\b",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (wholeWord) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp)
-                    )
-                }
-
-                // Previous Match Button
                 IconButton(
-                    onClick = {
-                        if (matchCount > 0) {
-                            currentMatchIndex = (currentMatchIndex - 1 + matchCount) % matchCount
-                        }
-                    },
-                    enabled = matchCount > 0,
-                    modifier = Modifier.size(28.dp).testTag("btn_find_prev")
+                    onClick = { onFindPrevious(searchQuery) },
+                    modifier = Modifier.size(36.dp).testTag("find_prev_button")
                 ) {
-                    Icon(Icons.Default.ArrowUpward, contentDescription = "Previous Match", tint = if (matchCount > 0) theme.onSurfaceColor else theme.lineNumberColor.copy(alpha = 0.4f), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowUpward, contentDescription = "Find Previous", tint = theme.onSurfaceColor, modifier = Modifier.size(18.dp))
                 }
 
-                // Next Match Button
                 IconButton(
-                    onClick = {
-                        if (matchCount > 0) {
-                            currentMatchIndex = (currentMatchIndex + 1) % matchCount
-                        }
-                    },
-                    enabled = matchCount > 0,
-                    modifier = Modifier.size(28.dp).testTag("btn_find_next")
+                    onClick = { onFindNext(searchQuery) },
+                    modifier = Modifier.size(36.dp).testTag("find_next_button")
                 ) {
-                    Icon(Icons.Default.ArrowDownward, contentDescription = "Next Match", tint = if (matchCount > 0) theme.onSurfaceColor else theme.lineNumberColor.copy(alpha = 0.4f), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowDownward, contentDescription = "Find Next", tint = theme.onSurfaceColor, modifier = Modifier.size(18.dp))
                 }
 
-                // Close Button
                 IconButton(
                     onClick = onClose,
-                    modifier = Modifier.size(28.dp).testTag("btn_close_search")
+                    modifier = Modifier.size(36.dp).testTag("close_search_button")
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = theme.lineNumberColor, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = theme.lineNumberColor, modifier = Modifier.size(18.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ROW 2: REPLACE BAR
+            // Replace Row - unclipped placeholder and text!
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
                     value = replaceQuery,
                     onValueChange = { replaceQuery = it },
-                    placeholder = { Text("Replace with...", fontSize = 12.sp, color = theme.lineNumberColor) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = theme.editorBackground,
-                        unfocusedContainerColor = theme.editorBackground,
-                        focusedBorderColor = theme.primaryColor,
-                        unfocusedBorderColor = theme.borderColor
+                    placeholder = {
+                        Text(
+                            text = "Replace with...",
+                            color = theme.lineNumberColor,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp
+                        )
+                    },
+                    textStyle = TextStyle(
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = theme.onSurfaceColor
                     ),
+                    singleLine = true,
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
-                        .testTag("input_replace_query")
+                        .heightIn(min = 48.dp)
+                        .testTag("replace_input_field"),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = theme.onSurfaceColor,
+                        unfocusedTextColor = theme.onSurfaceColor,
+                        focusedBorderColor = theme.primaryColor,
+                        unfocusedBorderColor = theme.borderColor,
+                        focusedContainerColor = theme.editorBackground,
+                        unfocusedContainerColor = theme.editorBackground
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 )
 
-                // Replace One
                 Button(
-                    onClick = {
-                        if (matchRanges.isNotEmpty()) {
-                            val activeIdx = currentMatchIndex.coerceIn(0, matchRanges.lastIndex)
-                            val targetRange = matchRanges[activeIdx]
-                            val newText = activeFileContent.substring(0, targetRange.first) +
-                                    replaceQuery +
-                                    activeFileContent.substring(targetRange.last + 1)
-                            onContentChange(newText)
-                        }
-                    },
-                    enabled = matchRanges.isNotEmpty(),
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
-                    modifier = Modifier.height(34.dp).testTag("btn_replace_one")
+                    onClick = { onReplace(searchQuery, replaceQuery) },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.surfaceVariant, contentColor = theme.onSurfaceColor),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(44.dp).testTag("replace_one_button")
                 ) {
-                    Text("Replace", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Replace", fontSize = 12.sp)
                 }
 
-                // Replace All
-                OutlinedButton(
-                    onClick = {
-                        if (searchQuery.isNotEmpty()) {
-                            val pattern = if (wholeWord) "\\b${Regex.escape(searchQuery)}\\b" else Regex.escape(searchQuery)
-                            val regex = if (matchCase) Regex(pattern) else Regex(pattern, RegexOption.IGNORE_CASE)
-                            val newText = regex.replace(activeFileContent, replaceQuery)
-                            onContentChange(newText)
-                        }
-                    },
-                    enabled = matchCount > 0,
-                    shape = RoundedCornerShape(6.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                    modifier = Modifier.height(34.dp).testTag("btn_replace_all")
+                Button(
+                    onClick = { onReplaceAll(searchQuery, replaceQuery) },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(44.dp).testTag("replace_all_button")
                 ) {
-                    Text("Replace All", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("All", fontSize = 12.sp)
                 }
             }
         }

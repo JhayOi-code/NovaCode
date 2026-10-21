@@ -1,916 +1,958 @@
 package com.example.ui.screens
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.ZoomOutMap
+import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import com.example.ai.AiChatMessage
+import com.example.ai.ProposedDiff
 import com.example.autocomplete.AutocompleteSuggestion
-import com.example.linter.LintIssue
-import com.example.linter.LintSeverity
-import com.example.model.CapturedLog
+import com.example.engine.CodeExecutionEngine
+import com.example.engine.ExecutionResult
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
-import com.example.model.FileItem
-import com.example.model.GitStatus
-import com.example.runner.CodeExecutionEngine
-import com.example.runner.ExecutionResult
+import com.example.model.GitRepositoryStatus
+import com.example.model.LintIssue
+import com.example.model.LintSeverity
+import com.example.ui.components.AiAssistantPanel
 import com.example.ui.components.AutocompleteBar
 import com.example.ui.components.CodeMinimap
-import com.example.ui.components.CodeOutputConsole
-import com.example.ui.components.ExpandableTerminalDrawer
+import com.example.ui.components.DiffPreviewDialog
+import com.example.ui.components.ExecutionOutputSheet
 import com.example.ui.components.FileExplorerSidebar
 import com.example.ui.components.SearchReplaceOverlay
-import com.example.ui.components.TemplatesSidebar
-import com.example.ui.editor.PrismSyntaxVisualTransformation
-import java.io.File
+import com.example.ui.editor.PrismSyntaxHighlighter
+import com.example.ui.editor.SmartCodeInputHandler
+import com.example.ui.editor.SpecialCharactersToolbar
 
 @Composable
 fun EditorScreen(
     theme: EditorTheme,
     openFiles: List<CodeFile>,
     activeFileIndex: Int,
-    directoryFiles: List<FileItem> = emptyList(),
-    isExplorerSidebarOpen: Boolean = false,
-    isTemplatesPanelOpen: Boolean = false,
-    isSearchReplaceOpen: Boolean = false,
-    lintIssues: List<LintIssue> = emptyList(),
-    capturedLogs: List<CapturedLog> = emptyList(),
-    showTerminalDrawer: Boolean = false,
-    isTerminalDrawerExpanded: Boolean = false,
-    executionResult: ExecutionResult? = null,
-    showOutputConsole: Boolean = false,
-    isFullScreen: Boolean = false,
-    isZenMode: Boolean = false,
-    isMinimapVisible: Boolean = true,
-    gitStatus: GitStatus? = null,
-    autocompleteSuggestions: List<AutocompleteSuggestion> = emptyList(),
-    prettierFormatNotice: String? = null,
+    isExplorerSidebarOpen: Boolean,
+    isSearchReplaceOpen: Boolean,
+    lintIssues: List<LintIssue>,
+    isFullScreen: Boolean,
+    isZenMode: Boolean,
+    isMinimapVisible: Boolean,
+    gitStatus: GitRepositoryStatus,
+    autocompleteSuggestions: List<AutocompleteSuggestion>,
+    prettierFormatNotice: String?,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    isAiPanelOpen: Boolean,
+    aiMessages: List<AiChatMessage>,
+    isAiLoading: Boolean,
+    activeProposedDiff: ProposedDiff?,
+    isDiffPreviewOpen: Boolean,
+    prefilledAiPrompt: String,
+    isSuggestionsEnabled: Boolean,
     onSelectTab: (Int) -> Unit,
     onCloseTab: (Int) -> Unit,
-    onCloseAllTabs: () -> Unit = {},
-    onCloseOtherTabs: (Int) -> Unit = {},
-    onSaveAllTabs: () -> Unit = {},
+    onCloseOtherTabs: (Int) -> Unit,
     onNewTab: () -> Unit,
     onContentChange: (String) -> Unit,
     onSaveCurrent: () -> Unit,
     onRunCode: () -> Unit,
-    onFormatWithPrettier: () -> Unit = {},
-    onToggleZenMode: () -> Unit = {},
-    onToggleMinimap: () -> Unit = {},
-    onSelectAutocompleteSuggestion: (AutocompleteSuggestion) -> Unit = {},
-    onDismissAutocomplete: () -> Unit = {},
-    onStageGitFile: (String) -> Unit = {},
-    onStageAllGitFiles: () -> Unit = {},
-    onUnstageGitFile: (String) -> Unit = {},
-    onUnstageAllGitFiles: () -> Unit = {},
-    onCommitGit: (String) -> Unit = {},
-    onPushGit: () -> Unit = {},
-    onCreateGitBranch: (String) -> Unit = {},
-    onSwitchGitBranch: (String) -> Unit = {},
-    onToggleExplorerSidebar: () -> Unit = {},
-    onOpenFileFromSidebar: (File) -> Unit = {},
-    onNewFileInSidebar: (String) -> Unit = {},
-    onToggleTemplatesPanel: () -> Unit = {},
-    onInsertTemplateSnippet: (String) -> Unit = {},
-    onCreateFileFromTemplate: (fileName: String, content: String) -> Unit = { _, _ -> },
-    onToggleSearchReplace: () -> Unit = {},
-    onToggleTerminalDrawer: () -> Unit = {},
-    onToggleTerminalDrawerExpand: () -> Unit = {},
-    onClearSandboxLogs: () -> Unit = {},
-    onCloseTerminalDrawer: () -> Unit = {},
-    onSendTerminalDrawerCommand: (String) -> Unit = {},
-    onCloseOutputConsole: () -> Unit = {},
-    onToggleFullScreen: () -> Unit = {},
-    onOpenWebPreview: () -> Unit,
-    onOpenPlugins: () -> Unit
+    onFormatWithPrettier: () -> Unit,
+    onToggleZenMode: () -> Unit,
+    onToggleMinimap: () -> Unit,
+    onSelectAutocompleteSuggestion: (AutocompleteSuggestion) -> Unit,
+    onDismissAutocomplete: () -> Unit,
+    onStageGitFile: (String) -> Unit,
+    onStageAllGitFiles: () -> Unit,
+    onUnstageGitFile: (String) -> Unit,
+    onUnstageAllGitFiles: () -> Unit,
+    onCommitGit: (String) -> Unit,
+    onPushGit: () -> Unit,
+    onToggleExplorerSidebar: () -> Unit,
+    onOpenFileFromSidebar: (CodeFile) -> Unit,
+    onNewFileInSidebar: (String) -> Unit,
+    onNewFolderInSidebar: (String) -> Unit = {},
+    onToggleSearchReplace: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onToggleAiPanel: () -> Unit,
+    onCloseAiPanel: () -> Unit,
+    onSendAiMessage: (String) -> Unit,
+    onStopAiGenerating: () -> Unit,
+    onClearAiChat: () -> Unit,
+    onOpenAiWithPrompt: (String) -> Unit,
+    onReviewDiff: (String, String) -> Unit,
+    onApplyDiff: (String) -> Unit,
+    onRejectDiff: () -> Unit,
+    onToggleSuggestionsEnabled: () -> Unit,
+    onOpenAiSettings: () -> Unit,
+    onOpenTerminal: () -> Unit = {}
 ) {
     val activeFile = openFiles.getOrNull(activeFileIndex)
-    val detectedLanguage = activeFile?.let { CodeExecutionEngine.detectLanguage(it.name) } ?: "Plain Text"
 
-    var showTabMenu by remember { mutableStateOf(false) }
-    var showProblemsDrawer by remember { mutableStateOf(false) }
-
-    // In Zen Mode, back press exits Zen Mode
-    BackHandler(enabled = isZenMode) {
-        onToggleZenMode()
+    var textFieldValue by remember(activeFile?.id) {
+        val initialContent = activeFile?.content ?: ""
+        mutableStateOf(TextFieldValue(initialContent, TextRange(initialContent.length)))
     }
 
-    // Map line number to lint issue
-    val lineToLintIssue = remember(lintIssues) {
-        lintIssues.groupBy { it.line }
+    // Keep text in sync when external change happens
+    LaunchedEffect(activeFile?.content) {
+        val currentContent = activeFile?.content ?: ""
+        if (currentContent != textFieldValue.text) {
+            val cursor = minOf(textFieldValue.selection.start, currentContent.length)
+            textFieldValue = TextFieldValue(currentContent, TextRange(cursor))
+        }
     }
+
+    val currentLineIndex by remember(textFieldValue.text, textFieldValue.selection.start) {
+        derivedStateOf {
+            val cursor = textFieldValue.selection.start.coerceIn(0, textFieldValue.text.length)
+            textFieldValue.text.take(cursor).count { it == '\n' }
+        }
+    }
+
+    val errorCount = remember(lintIssues) { lintIssues.count { it.severity == LintSeverity.ERROR } }
+    val warningCount = remember(lintIssues) { lintIssues.count { it.severity == LintSeverity.WARNING } }
+    val infoCount = remember(lintIssues) { lintIssues.count { it.severity == LintSeverity.INFO } }
+
+    var selectedLintIssue by remember { mutableStateOf<LintIssue?>(null) }
+    var executionResult by remember { mutableStateOf<ExecutionResult?>(null) }
+    var showCreateFileDialog by remember { mutableStateOf(false) }
+    var createFileNameInput by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
+    val editorScrollState = rememberScrollState()
+    val lines = remember(textFieldValue.text) { textFieldValue.text.lines() }
+    val totalLines = maxOf(1, lines.size)
+    val digitsCount = remember(totalLines) { totalLines.toString().length }
+    val gutterWidthDp = (digitsCount * 8 + 24).dp
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(theme.editorBackground)
+            .testTag("editor_screen")
     ) {
-        // TOP FILE TABS BAR WITH FULL TAB MANAGEMENT (Hidden in Zen Mode)
+        // TOP TOOLBAR
+        if (!isZenMode) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                color = theme.surfaceColor,
+                tonalElevation = 3.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Left action icons
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Sidebar toggle
+                        IconButton(
+                            onClick = onToggleExplorerSidebar,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_sidebar_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = "Toggle Files",
+                                tint = if (isExplorerSidebarOpen) theme.primaryColor else theme.lineNumberColor,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        // Create File Button
+                        IconButton(
+                            onClick = {
+                                createFileNameInput = ""
+                                showCreateFileDialog = true
+                            },
+                            modifier = Modifier.size(34.dp).testTag("toolbar_create_file_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NoteAdd,
+                                contentDescription = "Create File",
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        // Search & Replace
+                        IconButton(
+                            onClick = onToggleSearchReplace,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_search_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Find & Replace",
+                                tint = if (isSearchReplaceOpen) theme.primaryColor else theme.lineNumberColor,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        // Undo
+                        IconButton(
+                            onClick = onUndo,
+                            enabled = canUndo,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_undo_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Undo,
+                                contentDescription = "Undo",
+                                tint = if (canUndo) theme.onSurfaceColor else theme.lineNumberColor.copy(alpha = 0.4f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Redo
+                        IconButton(
+                            onClick = onRedo,
+                            enabled = canRedo,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_redo_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Redo,
+                                contentDescription = "Redo",
+                                tint = if (canRedo) theme.onSurfaceColor else theme.lineNumberColor.copy(alpha = 0.4f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Prettier Code Formatter
+                        IconButton(
+                            onClick = onFormatWithPrettier,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_prettier_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Format with Prettier",
+                                tint = theme.secondaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Center Lint Indicators Badge
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .background(theme.surfaceVariant, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .testTag("lint_indicators_badge")
+                    ) {
+                        if (errorCount > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(7.dp).background(Color(0xFFEF4444), CircleShape))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("$errorCount", color = Color(0xFFEF4444), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (warningCount > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(7.dp).background(Color(0xFFF59E0B), CircleShape))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("$warningCount", color = Color(0xFFF59E0B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (infoCount > 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(7.dp).background(Color(0xFF3B82F6), CircleShape))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("$infoCount", color = Color(0xFF3B82F6), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (errorCount == 0 && warningCount == 0 && infoCount == 0) {
+                            Text("No issues", color = Color(0xFF10B981), fontSize = 11.sp)
+                        }
+                    }
+
+                    // Right action icons: Minimap, Zen Mode, Ask AI, and REAL RUN BUTTON
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        // Minimap Toggle
+                        IconButton(
+                            onClick = onToggleMinimap,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_minimap_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = "Minimap",
+                                tint = if (isMinimapVisible) theme.primaryColor else theme.lineNumberColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Zen Mode Toggle
+                        IconButton(
+                            onClick = onToggleZenMode,
+                            modifier = Modifier.size(34.dp).testTag("toolbar_zen_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ZoomOutMap,
+                                contentDescription = "Zen Mode",
+                                tint = if (isZenMode) theme.primaryColor else theme.lineNumberColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Ask AI Button in toolbar
+                        IconButton(
+                            onClick = onToggleAiPanel,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(theme.primaryColor.copy(alpha = 0.15f))
+                                .testTag("toolbar_ask_ai_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = "Ask AI",
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Open Terminal quick button
+                        IconButton(
+                            onClick = onOpenTerminal,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(theme.surfaceVariant)
+                                .testTag("toolbar_open_terminal_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Terminal,
+                                contentDescription = "Terminal",
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // REAL RUN BUTTON (Runs active code & opens live execution output)
+                        Button(
+                            onClick = {
+                                val current = activeFile ?: openFiles.firstOrNull()
+                                if (current != null) {
+                                    val result = CodeExecutionEngine.execute(current, openFiles)
+                                    executionResult = result
+                                    onRunCode()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.White),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .testTag("run_code_button")
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Run Active Code", modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Run", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            val ext = activeFile?.name?.substringAfterLast('.', "")?.uppercase() ?: ""
+                            if (ext.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = ext,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color(0xFFD1FAE5),
+                                    modifier = Modifier
+                                        .background(Color(0xFF047857), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // TAB BAR (Multi-file tabs with dirty indicators & close buttons)
         if (!isZenMode) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(theme.surfaceColor)
+                    .height(38.dp)
+                    .background(theme.surfaceColor.copy(alpha = 0.7f))
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .testTag("tab_bar"),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Explorer Sidebar Quick Toggle
-                IconButton(
-                    onClick = onToggleExplorerSidebar,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .testTag("btn_tab_toggle_sidebar")
-                ) {
-                    Icon(
-                        imageVector = if (isExplorerSidebarOpen) Icons.Default.FolderOpen else Icons.Default.Folder,
-                        contentDescription = "Project Files",
-                        tint = if (isExplorerSidebarOpen) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-
-                // Templates Panel Quick Toggle
-                IconButton(
-                    onClick = onToggleTemplatesPanel,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .testTag("btn_tab_toggle_templates")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DashboardCustomize,
-                        contentDescription = "Code Templates",
-                        tint = if (isTemplatesPanelOpen) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-
-                VerticalDivider(
-                    color = theme.borderColor.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .height(20.dp)
-                        .padding(horizontal = 4.dp)
-                )
-
-                // Dynamic File Tabs
                 openFiles.forEachIndexed { index, file ->
-                    val isSelected = index == activeFileIndex
-                    Surface(
-                        shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-                        color = if (isSelected) theme.editorBackground else Color.Transparent,
-                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor.copy(alpha = 0.4f)) else null,
+                    val isActive = index == activeFileIndex
+                    Row(
                         modifier = Modifier
+                            .fillMaxHeight()
+                            .background(if (isActive) theme.editorBackground else Color.Transparent)
                             .clickable { onSelectTab(index) }
-                            .testTag("editor_tab_$index")
+                            .padding(horizontal = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-                        ) {
-                            if (file.isModified) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .background(Color(0xFFF59E0B), CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(5.dp))
-                            }
-
-                            Text(
-                                text = file.name,
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) theme.onSurfaceColor else theme.lineNumberColor,
-                                maxLines = 1
-                            )
-
-                            Spacer(modifier = Modifier.width(6.dp))
-
-                            // Close single tab button
-                            IconButton(
-                                onClick = { onCloseTab(index) },
+                        if (file.isModified) {
+                            Box(
                                 modifier = Modifier
-                                    .size(16.dp)
-                                    .testTag("btn_close_tab_$index")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close Tab",
-                                    tint = theme.lineNumberColor,
-                                    modifier = Modifier.size(11.dp)
-                                )
-                            }
+                                    .size(7.dp)
+                                    .background(Color(0xFFF59E0B), CircleShape)
+                            )
+                        }
+
+                        Text(
+                            text = file.name,
+                            color = if (isActive) theme.primaryColor else theme.lineNumberColor,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1
+                        )
+
+                        if (openFiles.size > 1) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close tab",
+                                tint = theme.lineNumberColor,
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clickable { onCloseTab(index) }
+                                    .testTag("close_tab_${file.name}")
+                            )
                         }
                     }
+                    Box(modifier = Modifier.width(1.dp).fillMaxHeight(0.6f).background(theme.borderColor))
                 }
 
-                // New Tab '+' Button
+                // Add new tab button
                 IconButton(
                     onClick = onNewTab,
-                    modifier = Modifier
-                        .size(26.dp)
-                        .testTag("btn_new_tab")
+                    modifier = Modifier.size(32.dp).testTag("add_new_tab_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "New File",
-                        tint = theme.primaryColor,
+                        contentDescription = "New Tab",
+                        tint = theme.lineNumberColor,
                         modifier = Modifier.size(16.dp)
                     )
                 }
-
-                // Tab Management Dropdown Menu Button
-                Box {
-                    IconButton(
-                        onClick = { showTabMenu = true },
-                        modifier = Modifier
-                            .size(26.dp)
-                            .testTag("btn_tab_overflow_menu")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Tab Options",
-                            tint = theme.lineNumberColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showTabMenu,
-                        onDismissRequest = { showTabMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Save Current File", fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                onSaveCurrent()
-                                showTabMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Save All Files", fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.SaveAs, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                onSaveAllTabs()
-                                showTabMenu = false
-                            }
-                        )
-                        HorizontalDivider()
-                        DropdownMenuItem(
-                            text = { Text("Close Other Tabs", fontSize = 12.sp) },
-                            leadingIcon = { Icon(Icons.Default.TabUnselected, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                onCloseOtherTabs(activeFileIndex)
-                                showTabMenu = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Close All Tabs", fontSize = 12.sp, color = Color(0xFFEF4444)) },
-                            leadingIcon = { Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                onCloseAllTabs()
-                                showTabMenu = false
-                            }
-                        )
-                    }
-                }
             }
-
-            // QUICK EDITOR ACTION BAR (Hidden in Zen Mode)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(theme.surfaceColor.copy(alpha = 0.65f))
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Sidebar Toggle Button
-                IconButton(
-                    onClick = onToggleExplorerSidebar,
-                    modifier = Modifier.size(32.dp).testTag("btn_toggle_explorer_sidebar")
-                ) {
-                    Icon(
-                        imageVector = if (isExplorerSidebarOpen) Icons.Default.FolderOpen else Icons.Default.Folder,
-                        contentDescription = "Project Files Sidebar",
-                        tint = if (isExplorerSidebarOpen) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Templates Panel Toggle Button
-                IconButton(
-                    onClick = onToggleTemplatesPanel,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_templates")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DashboardCustomize,
-                        contentDescription = "Boilerplate Templates",
-                        tint = if (isTemplatesPanelOpen) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Search and Replace Overlay Toggle Button
-                IconButton(
-                    onClick = onToggleSearchReplace,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_search_replace")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FindReplace,
-                        contentDescription = "Search and Replace",
-                        tint = if (isSearchReplaceOpen) Color(0xFF38BDF8) else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Save Button
-                IconButton(
-                    onClick = onSaveCurrent,
-                    modifier = Modifier.size(32.dp).testTag("btn_save_file")
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = "Save", tint = theme.primaryColor, modifier = Modifier.size(18.dp))
-                }
-
-                // PRETTIER STYLE CODE FORMATTING BUTTON
-                Button(
-                    onClick = onFormatWithPrettier,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFA855F7)),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    modifier = Modifier
-                        .height(30.dp)
-                        .testTag("btn_editor_prettier")
-                ) {
-                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(15.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Prettier", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // ZEN MODE TOGGLE BUTTON (Distraction-Free)
-                IconButton(
-                    onClick = onToggleZenMode,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_zen_mode")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SelfImprovement,
-                        contentDescription = "Zen Mode (Distraction-Free)",
-                        tint = if (isZenMode) Color(0xFF10B981) else Color(0xFFCBD5E1),
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
-
-                // CODE MINIMAP TOGGLE BUTTON
-                IconButton(
-                    onClick = onToggleMinimap,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_minimap")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Map,
-                        contentDescription = "Code Minimap",
-                        tint = if (isMinimapVisible) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Expandable Terminal Drawer Toggle Button
-                IconButton(
-                    onClick = onToggleTerminalDrawer,
-                    modifier = Modifier.size(32.dp).testTag("btn_toggle_terminal_drawer")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Terminal,
-                        contentDescription = "Console & Sandbox Terminal",
-                        tint = if (showTerminalDrawer) Color(0xFF10B981) else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Extensions / Plugins Button
-                IconButton(
-                    onClick = onOpenPlugins,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_plugins")
-                ) {
-                    Icon(Icons.Default.Extension, contentDescription = "VS Code Plugins", tint = Color(0xFFA855F7), modifier = Modifier.size(18.dp))
-                }
-
-                // Full Screen / Fit Screen Button
-                IconButton(
-                    onClick = onToggleFullScreen,
-                    modifier = Modifier.size(32.dp).testTag("btn_editor_fullscreen")
-                ) {
-                    Icon(
-                        imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                        contentDescription = if (isFullScreen) "Exit Full Screen" else "Full Screen",
-                        tint = if (isFullScreen) Color(0xFF10B981) else theme.primaryColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Active Language Badge (with Prism indicator)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = theme.primaryColor.copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor.copy(alpha = 0.35f))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = detectedLanguage,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = theme.primaryColor,
-                            maxLines = 1
-                        )
-                        Text(
-                            text = "• Prism",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF10B981)
-                        )
-                    }
-                }
-
-                // Linter Status Pill
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (lintIssues.isNotEmpty()) Color(0xFFEF4444).copy(alpha = 0.15f) else Color(0xFF10B981).copy(alpha = 0.12f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (lintIssues.isNotEmpty()) Color(0xFFEF4444).copy(alpha = 0.4f) else Color(0xFF10B981).copy(alpha = 0.3f)
-                    ),
-                    modifier = Modifier
-                        .clickable { showProblemsDrawer = !showProblemsDrawer }
-                        .testTag("btn_linter_status")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (lintIssues.isNotEmpty()) Icons.Default.ErrorOutline else Icons.Default.CheckCircleOutline,
-                            contentDescription = null,
-                            tint = if (lintIssues.isNotEmpty()) Color(0xFFEF4444) else Color(0xFF10B981),
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = if (lintIssues.isNotEmpty()) "${lintIssues.size} Issues" else "0 Issues",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (lintIssues.isNotEmpty()) Color(0xFFEF4444) else Color(0xFF10B981)
-                        )
-                    }
-                }
-
-                // Web Preview quick button if HTML/Web
-                if (detectedLanguage == "HTML / Web") {
-                    IconButton(
-                        onClick = onOpenWebPreview,
-                        modifier = Modifier.size(30.dp).testTag("btn_editor_web_preview_icon")
-                    ) {
-                        Icon(Icons.Default.Visibility, contentDescription = "Web Preview", tint = Color(0xFF38BDF8), modifier = Modifier.size(18.dp))
-                    }
-                }
-
-                // Primary Run Code button for ANY language (Python, JS, Bash, Kotlin, C, etc.)
-                Button(
-                    onClick = onRunCode,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier
-                        .height(30.dp)
-                        .testTag("btn_editor_run_code")
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (detectedLanguage == "HTML / Web") "Preview" else "Run",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                }
-            }
-
-            HorizontalDivider(color = theme.borderColor)
         }
 
-        // MAIN WORKSPACE (SIDEBARS + CODE EDITOR BODY + OVERLAYS + TERMINAL DRAWER)
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
+        // Search / Replace overlay
+        if (isSearchReplaceOpen) {
+            SearchReplaceOverlay(
+                theme = theme,
+                onFindNext = { query ->
+                    if (query.isNotEmpty()) {
+                        val text = textFieldValue.text
+                        val start = (textFieldValue.selection.end).coerceAtMost(text.length)
+                        val idx = text.indexOf(query, start, ignoreCase = true)
+                        if (idx != -1) {
+                            textFieldValue = TextFieldValue(text, TextRange(idx, idx + query.length))
+                        } else {
+                            val wrapIdx = text.indexOf(query, 0, ignoreCase = true)
+                            if (wrapIdx != -1) {
+                                textFieldValue = TextFieldValue(text, TextRange(wrapIdx, wrapIdx + query.length))
+                            }
+                        }
+                    }
+                },
+                onFindPrevious = { query ->
+                    if (query.isNotEmpty()) {
+                        val text = textFieldValue.text
+                        val start = (textFieldValue.selection.start - 1).coerceAtLeast(0)
+                        val idx = text.lastIndexOf(query, start, ignoreCase = true)
+                        if (idx != -1) {
+                            textFieldValue = TextFieldValue(text, TextRange(idx, idx + query.length))
+                        }
+                    }
+                },
+                onReplace = { query, replaceWith ->
+                    if (query.isNotEmpty()) {
+                        val text = textFieldValue.text
+                        val curSel = textFieldValue.selection
+                        if (curSel.length > 0 && text.substring(curSel.start, curSel.end).equals(query, ignoreCase = true)) {
+                            val newText = text.substring(0, curSel.start) + replaceWith + text.substring(curSel.end)
+                            textFieldValue = TextFieldValue(newText, TextRange(curSel.start + replaceWith.length))
+                            onContentChange(newText)
+                        } else {
+                            val idx = text.indexOf(query, curSel.start, ignoreCase = true)
+                            if (idx != -1) {
+                                val newText = text.substring(0, idx) + replaceWith + text.substring(idx + query.length)
+                                textFieldValue = TextFieldValue(newText, TextRange(idx + replaceWith.length))
+                                onContentChange(newText)
+                            }
+                        }
+                    }
+                },
+                onReplaceAll = { query, replaceWith ->
+                    if (query.isNotEmpty()) {
+                        val newText = textFieldValue.text.replace(query, replaceWith, ignoreCase = true)
+                        textFieldValue = TextFieldValue(newText, TextRange(0))
+                        onContentChange(newText)
+                    }
+                },
+                onClose = onToggleSearchReplace
+            )
+        }
+
+        // MAIN WORKSPACE BODY (Sidebar + Editor + Minimap)
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxSize()) {
-                // FILE EXPLORER SIDEBAR WITH GIT SIDE PANEL (Hidden in Zen Mode)
-                if (!isZenMode) {
-                    AnimatedVisibility(
-                        visible = isExplorerSidebarOpen,
-                        enter = expandHorizontally(),
-                        exit = shrinkHorizontally()
-                    ) {
-                        FileExplorerSidebar(
-                            theme = theme,
-                            directoryFiles = directoryFiles,
-                            openFiles = openFiles,
-                            activeFileIndex = activeFileIndex,
-                            gitStatus = gitStatus,
-                            onStageFile = onStageGitFile,
-                            onStageAll = onStageAllGitFiles,
-                            onUnstageFile = onUnstageGitFile,
-                            onUnstageAll = onUnstageAllGitFiles,
-                            onCommit = onCommitGit,
-                            onPush = onPushGit,
-                            onCreateBranch = onCreateGitBranch,
-                            onSwitchBranch = onSwitchGitBranch,
-                            onOpenFile = onOpenFileFromSidebar,
-                            onNewFile = onNewFileInSidebar,
-                            onSaveActive = onSaveCurrent,
-                            onCloseSidebar = onToggleExplorerSidebar
-                        )
-                    }
-
-                    // TEMPLATES SIDEBAR PANEL
-                    AnimatedVisibility(
-                        visible = isTemplatesPanelOpen,
-                        enter = expandHorizontally(),
-                        exit = shrinkHorizontally()
-                    ) {
-                        TemplatesSidebar(
-                            theme = theme,
-                            onInsertSnippet = onInsertTemplateSnippet,
-                            onCreateFileWithSnippet = onCreateFileFromTemplate,
-                            onClose = onToggleTemplatesPanel
-                        )
-                    }
+                // File Explorer Sidebar
+                if (isExplorerSidebarOpen && !isZenMode) {
+                    FileExplorerSidebar(
+                        theme = theme,
+                        files = openFiles,
+                        gitStatus = gitStatus,
+                        onOpenFile = onOpenFileFromSidebar,
+                        onNewFile = onNewFileInSidebar,
+                        onNewFolder = onNewFolderInSidebar,
+                        onStageFile = onStageGitFile,
+                        onUnstageFile = onUnstageGitFile,
+                        onStageAll = onStageAllGitFiles,
+                        onUnstageAll = onUnstageAllGitFiles,
+                        onCommit = onCommitGit,
+                        onPush = onPushGit,
+                        onCloseSidebar = onToggleExplorerSidebar
+                    )
                 }
 
-                // CODE EDITOR BODY (With Line Numbers, Linter Gutter Squiggle Dots, Prism Highlighting, and Minimap)
-                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    if (activeFile != null) {
-                        Row(
+                // Code Editor with Full Syntax Highlighting & Line Numbers
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(theme.editorBackground)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(editorScrollState)
+                            .padding(bottom = 60.dp)
+                    ) {
+                        // Slim Gutter
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(theme.editorBackground)
+                                .width(gutterWidthDp)
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.End
                         ) {
-                            // Dynamic line numbers gutter with Linter status dots
-                            val lineCount = remember(activeFile.content) {
-                                maxOf(1, activeFile.content.count { it == '\n' } + 1)
-                            }
+                            for (lineIdx in 0 until totalLines) {
+                                val lineNum = lineIdx + 1
+                                val isCurrentLine = lineIdx == currentLineIndex
+                                val issueOnLine = lintIssues.firstOrNull { it.line == lineNum }
 
-                            Column(
-                                modifier = Modifier
-                                    .widthIn(min = 44.dp, max = 56.dp)
-                                    .fillMaxHeight()
-                                    .background(theme.surfaceColor.copy(alpha = 0.35f))
-                                    .padding(top = 8.dp, end = 4.dp, start = 4.dp)
-                            ) {
-                                for (lineNum in 1..lineCount) {
-                                    val issuesForLine = lineToLintIssue[lineNum]
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(18.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        if (issuesForLine != null) {
-                                            val hasError = issuesForLine.any { it.severity == LintSeverity.ERROR }
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .background(
-                                                        if (hasError) Color(0xFFEF4444) else Color(0xFFF59E0B),
-                                                        CircleShape
-                                                    )
-                                            )
-                                            Spacer(modifier = Modifier.width(3.dp))
-                                        }
-                                        Text(
-                                            text = "$lineNum",
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 11.sp,
-                                            color = if (issuesForLine != null) Color(0xFFEF4444) else theme.lineNumberColor.copy(alpha = 0.6f),
-                                            textAlign = TextAlign.End
-                                        )
-                                    }
-                                }
-                            }
-
-                            VerticalDivider(color = theme.borderColor.copy(alpha = 0.5f), thickness = 1.dp)
-
-                            // Editor Code Body with Prism.js Real-Time Syntax Highlighting
-                            OutlinedTextField(
-                                value = activeFile.content,
-                                onValueChange = onContentChange,
-                                visualTransformation = remember(detectedLanguage) {
-                                    PrismSyntaxVisualTransformation(detectedLanguage)
-                                },
-                                textStyle = LocalTextStyle.current.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 13.sp,
-                                    color = theme.onSurfaceColor,
-                                    lineHeight = 18.sp
-                                ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.Transparent,
-                                    unfocusedBorderColor = Color.Transparent,
-                                    focusedContainerColor = theme.editorBackground,
-                                    unfocusedContainerColor = theme.editorBackground
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .testTag("code_editor_text_field")
-                            )
-
-                            // CODE MINIMAP (Overview scrollbar on right side of editor pane)
-                            if (isMinimapVisible) {
-                                CodeMinimap(
-                                    theme = theme,
-                                    codeContent = activeFile.content,
-                                    lintIssues = lintIssues,
-                                    scrollFraction = 0f,
-                                    onScrollToLineFraction = { /* Minimap click handled */ },
-                                    modifier = Modifier.fillMaxHeight()
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("No file open", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = theme.onSurfaceColor)
-                                Text("Tap '+' to create a new file or select from Templates", fontSize = 12.sp, color = theme.lineNumberColor)
-                                Button(onClick = onToggleTemplatesPanel, shape = RoundedCornerShape(8.dp)) {
-                                    Text("Open Templates")
-                                }
-                            }
-                        }
-                    }
-
-                    // CONTEXT-AWARE AUTOCOMPLETE & AI COPILOT SUGGESTIONS BAR
-                    if (autocompleteSuggestions.isNotEmpty() && activeFile != null) {
-                        AutocompleteBar(
-                            theme = theme,
-                            suggestions = autocompleteSuggestions,
-                            onSelectSuggestion = onSelectAutocompleteSuggestion,
-                            onDismiss = onDismissAutocomplete,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(
-                                    bottom = if (!isZenMode && (showTerminalDrawer || (showOutputConsole && executionResult != null))) 220.dp else 12.dp,
-                                    start = 48.dp,
-                                    end = if (isMinimapVisible) 48.dp else 12.dp
-                                )
-                        )
-                    }
-
-                    // PRETTIER FORMAT NOTIFICATION BANNER
-                    if (!prettierFormatNotice.isNullOrEmpty()) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFA855F7).copy(alpha = 0.95f),
-                            contentColor = Color.White,
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 8.dp)
-                                .testTag("prettier_notice_banner")
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Text(prettierFormatNotice, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    // SEARCH AND REPLACE OVERLAY MODAL
-                    if (isSearchReplaceOpen && activeFile != null) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                        ) {
-                            SearchReplaceOverlay(
-                                theme = theme,
-                                activeFileContent = activeFile.content,
-                                onContentChange = onContentChange,
-                                onClose = onToggleSearchReplace
-                            )
-                        }
-                    }
-
-                    // LINTER PROBLEMS PANEL (EXPANDABLE)
-                    if (showProblemsDrawer && lintIssues.isNotEmpty() && !isZenMode) {
-                        Card(
-                            shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                            colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .heightIn(max = 160.dp)
-                                .testTag("problems_drawer")
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.End,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(20.dp)
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
-                                        Text("Syntax Issues (${lintIssues.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = theme.onSurfaceColor)
-                                    }
-                                    IconButton(onClick = { showProblemsDrawer = false }, modifier = Modifier.size(20.dp)) {
-                                        Icon(Icons.Default.Close, contentDescription = "Close", tint = theme.lineNumberColor, modifier = Modifier.size(14.dp))
-                                    }
-                                }
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = theme.borderColor.copy(alpha = 0.4f))
-                                LazyColumn {
-                                    items(lintIssues) { issue ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(
-                                                text = "Line ${issue.line}:",
-                                                fontFamily = FontFamily.Monospace,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFEF4444)
-                                            )
-                                            Text(
-                                                text = issue.message,
-                                                fontSize = 11.sp,
-                                                color = theme.onSurfaceColor,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                    if (issueOnLine != null) {
+                                        val icon = when (issueOnLine.severity) {
+                                            LintSeverity.ERROR -> Icons.Default.Error
+                                            LintSeverity.WARNING -> Icons.Default.Warning
+                                            LintSeverity.INFO -> Icons.Default.Info
                                         }
+                                        val iconColor = when (issueOnLine.severity) {
+                                            LintSeverity.ERROR -> Color(0xFFEF4444)
+                                            LintSeverity.WARNING -> Color(0xFFF59E0B)
+                                            LintSeverity.INFO -> Color(0xFF3B82F6)
+                                        }
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = issueOnLine.message,
+                                            tint = iconColor,
+                                            modifier = Modifier
+                                                .size(12.dp)
+                                                .clickable { selectedLintIssue = issueOnLine }
+                                                .testTag("lint_icon_line_$lineNum")
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
                                     }
+
+                                    Text(
+                                        text = "$lineNum",
+                                        color = if (isCurrentLine) theme.activeLineNumberColor else theme.lineNumberColor,
+                                        fontWeight = if (isCurrentLine) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        lineHeight = 20.sp,
+                                        modifier = Modifier.testTag("line_number_$lineNum")
+                                    )
                                 }
                             }
                         }
-                    }
 
-                    // FLOATING ACTION BUTTON (FAB) FOR 'RUN' (Hidden in Zen Mode)
-                    if (!isZenMode) {
-                        ExtendedFloatingActionButton(
-                            onClick = onRunCode,
-                            icon = {
-                                Icon(
-                                    imageVector = if (detectedLanguage == "HTML / Web") Icons.Default.Visibility else Icons.Default.PlayArrow,
-                                    contentDescription = if (detectedLanguage == "HTML / Web") "Preview" else "Run"
-                                )
+                        // Code Text Area with FULL SYNTAX HIGHLIGHTING (PrismSyntaxHighlighter via VisualTransformation)
+                        BasicTextField(
+                            value = textFieldValue,
+                            onValueChange = { newVal ->
+                                val transformed = SmartCodeInputHandler.handleTextChange(textFieldValue, newVal)
+                                textFieldValue = transformed
+                                onContentChange(transformed.text)
                             },
-                            text = {
-                                Text(
-                                    text = if (detectedLanguage == "HTML / Web") "Preview" else "Run",
-                                    fontWeight = FontWeight.Bold
-                                )
+                            textStyle = TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 13.sp,
+                                lineHeight = 20.sp,
+                                color = Color.Unspecified
+                            ),
+                            cursorBrush = SolidColor(theme.primaryColor),
+                            visualTransformation = { text ->
+                                val lang = activeFile?.language ?: CodeFile.detectLanguage(activeFile?.name ?: "")
+                                val annotated = PrismSyntaxHighlighter.highlightCode(text.text, lang, theme)
+                                TransformedText(annotated, OffsetMapping.Identity)
                             },
-                            containerColor = Color(0xFF10B981),
-                            contentColor = Color.White,
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(
-                                    bottom = if (showTerminalDrawer || (showOutputConsole && executionResult != null)) 220.dp else 20.dp,
-                                    end = if (isMinimapVisible) 56.dp else 20.dp
-                                )
-                                .testTag("btn_editor_run_fab")
+                                .weight(1f)
+                                .padding(top = 12.dp, bottom = 12.dp, start = 8.dp, end = 12.dp)
+                                .testTag("code_editor_textarea")
                         )
                     }
 
-                    // FLOATING 'EXIT ZEN MODE' PILL (Shown in Zen Mode)
-                    if (isZenMode) {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = theme.surfaceColor.copy(alpha = 0.94f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.6f)),
-                            shadowElevation = 6.dp,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(12.dp)
-                                .clickable { onToggleZenMode() }
-                                .testTag("btn_exit_zen_mode")
+                    // Popup for Lint Issue
+                    selectedLintIssue?.let { issue ->
+                        Popup(
+                            alignment = Alignment.TopCenter,
+                            onDismissRequest = { selectedLintIssue = null }
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = theme.surfaceColor,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                                tonalElevation = 8.dp,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth(0.9f)
                             ) {
-                                Icon(
-                                    Icons.Default.CloseFullscreen,
-                                    contentDescription = "Exit Zen Mode",
-                                    tint = Color(0xFF10B981),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Exit Zen Mode",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = theme.onSurfaceColor
-                                )
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Line ${issue.line}: ${issue.severity.name}",
+                                            color = when (issue.severity) {
+                                                LintSeverity.ERROR -> Color(0xFFEF4444)
+                                                LintSeverity.WARNING -> Color(0xFFF59E0B)
+                                                LintSeverity.INFO -> Color(0xFF3B82F6)
+                                            },
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                        IconButton(
+                                            onClick = { selectedLintIssue = null },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "Close", tint = theme.lineNumberColor, modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = issue.message,
+                                        color = theme.onSurfaceColor,
+                                        fontSize = 12.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Button(
+                                        onClick = {
+                                            val prompt = "Fix the following issue on line ${issue.line}: ${issue.message}\nCode:\n```\n${textFieldValue.text}\n```"
+                                            onOpenAiWithPrompt(prompt)
+                                            selectedLintIssue = null
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.fillMaxWidth().height(32.dp).testTag("fix_with_ai_button")
+                                    ) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Fix with AI", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // EXPANDABLE TERMINAL DRAWER AT BOTTOM OF APP (Hidden in Zen Mode)
-            if (showTerminalDrawer && !isZenMode) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                ) {
-                    ExpandableTerminalDrawer(
+                // Code Minimap (Connected to editor scrolling)
+                if (isMinimapVisible) {
+                    val scrollFraction = if (editorScrollState.maxValue > 0) {
+                        (editorScrollState.value.toFloat() / editorScrollState.maxValue.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+                    CodeMinimap(
+                        content = textFieldValue.text,
                         theme = theme,
-                        logs = capturedLogs,
-                        isExpanded = isTerminalDrawerExpanded,
-                        onToggleExpand = onToggleTerminalDrawerExpand,
-                        onClear = onClearSandboxLogs,
-                        onClose = onCloseTerminalDrawer,
-                        onSendCommand = onSendTerminalDrawerCommand
+                        scrollProgress = scrollFraction,
+                        onScrollToFraction = { fraction ->
+                            coroutineScope.launch {
+                                val target = (fraction * editorScrollState.maxValue).toInt()
+                                editorScrollState.scrollTo(target)
+                            }
+                        },
+                        modifier = Modifier.fillMaxHeight()
                     )
                 }
             }
 
-            // Interactive Output Console Drawer inside Editor (Hidden in Zen Mode)
-            if (showOutputConsole && executionResult != null && !isZenMode) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                ) {
-                    CodeOutputConsole(
-                        theme = theme,
-                        result = executionResult,
-                        onRerun = onRunCode,
-                        onClose = onCloseOutputConsole
-                    )
-                }
-            }
-
-            // Quick Exit Full Screen FAB when in full-screen mode (and not in Zen Mode)
-            if (isFullScreen && !isZenMode) {
-                SmallFloatingActionButton(
-                    onClick = onToggleFullScreen,
-                    containerColor = theme.surfaceColor.copy(alpha = 0.92f),
-                    contentColor = Color(0xFF10B981),
+            // FLOATING ZEN MODE EXIT PILL (Always visible when Zen mode is active so user is NEVER stuck!)
+            if (isZenMode) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = theme.primaryColor,
+                    shadowElevation = 8.dp,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(10.dp)
-                        .size(36.dp)
-                        .testTag("btn_floating_exit_fullscreen")
+                        .padding(16.dp)
+                        .clickable { onToggleZenMode() }
+                        .testTag("exit_zen_mode_floating_pill")
                 ) {
-                    Icon(
-                        Icons.Default.FullscreenExit,
-                        contentDescription = "Exit Full Screen",
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FullscreenExit,
+                            contentDescription = "Exit Zen Mode",
+                            tint = Color.Black,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Exit Zen",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }
+
+        // BOTTOM TOOLBARS (Strictly ordered):
+        // 1. Suggestion bar row
+        AutocompleteBar(
+            theme = theme,
+            suggestions = autocompleteSuggestions,
+            isEnabled = isSuggestionsEnabled,
+            onToggleEnabled = onToggleSuggestionsEnabled,
+            onSelectSuggestion = { suggestion ->
+                val text = textFieldValue.text
+                val cursor = textFieldValue.selection.start
+                val newText = text.substring(0, cursor) + suggestion.insertText + text.substring(cursor)
+                val newCursor = cursor + suggestion.insertText.length
+                textFieldValue = TextFieldValue(newText, TextRange(newCursor))
+                onContentChange(newText)
+                onDismissAutocomplete()
+            },
+            onDismiss = onDismissAutocomplete
+        )
+
+        // 2. Special-character toolbar row
+        SpecialCharactersToolbar(
+            theme = theme,
+            onInsertSymbol = { symbol ->
+                val transformed = SmartCodeInputHandler.insertToolbarSymbol(textFieldValue, symbol)
+                textFieldValue = transformed
+                onContentChange(transformed.text)
+            }
+        )
+    }
+
+    // LIVE EXECUTION OUTPUT SHEET (Appears immediately when code is run!)
+    executionResult?.let { result ->
+        ExecutionOutputSheet(
+            theme = theme,
+            result = result,
+            onRerun = {
+                val current = activeFile ?: openFiles.firstOrNull()
+                if (current != null) {
+                    executionResult = CodeExecutionEngine.execute(current, openFiles)
+                }
+            },
+            onOpenInTerminal = {
+                onOpenTerminal()
+                executionResult = null
+            },
+            onDismiss = { executionResult = null }
+        )
+    }
+
+    // AI Assistant Bottom Sheet Panel
+    if (isAiPanelOpen) {
+        AiAssistantPanel(
+            theme = theme,
+            messages = aiMessages,
+            isLoading = isAiLoading,
+            prefilledPrompt = prefilledAiPrompt,
+            onSendMessage = onSendAiMessage,
+            onStopGenerating = onStopAiGenerating,
+            onClearChat = onClearAiChat,
+            onClose = onCloseAiPanel,
+            onReviewDiff = onReviewDiff,
+            currentEditorCode = textFieldValue.text
+        )
+    }
+
+    // Diff Preview Dialog for AI code proposals
+    if (isDiffPreviewOpen && activeProposedDiff != null) {
+        DiffPreviewDialog(
+            theme = theme,
+            diff = activeProposedDiff,
+            onApply = onApplyDiff,
+            onReject = onRejectDiff
+        )
+    }
+
+    // Create New File Dialog in Editor
+    if (showCreateFileDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateFileDialog = false },
+            title = {
+                Text(
+                    text = "Create New File",
+                    color = theme.onSurfaceColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Enter file name with extension (e.g. Main.java, script.py, index.html, app.js):",
+                        color = theme.lineNumberColor,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                    OutlinedTextField(
+                        value = createFileNameInput,
+                        onValueChange = { createFileNameInput = it },
+                        placeholder = { Text("Main.java", color = theme.lineNumberColor, fontSize = 13.sp) },
+                        textStyle = TextStyle(fontSize = 13.sp, color = theme.onSurfaceColor),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag("editor_create_file_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = theme.onSurfaceColor,
+                            unfocusedTextColor = theme.onSurfaceColor,
+                            focusedBorderColor = theme.primaryColor,
+                            unfocusedBorderColor = theme.borderColor
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = createFileNameInput.trim()
+                        if (trimmed.isNotEmpty()) {
+                            onNewFileInSidebar(trimmed)
+                            showCreateFileDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag("editor_confirm_create_file_button")
+                ) {
+                    Text("Create", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCreateFileDialog = false },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Cancel", color = theme.onSurfaceColor)
+                }
+            },
+            containerColor = theme.surfaceColor,
+            shape = RoundedCornerShape(12.dp)
+        )
     }
 }

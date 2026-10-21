@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -17,17 +16,16 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import androidx.compose.ui.unit.sp
 import com.example.model.ProfileAvatarPresets
 import com.example.model.UserAccount
 
@@ -38,8 +36,8 @@ fun UserProfileAvatarView(
     borderColor: Color = Color(0xFF6366F1),
     modifier: Modifier = Modifier
 ) {
-    val customUri = account?.avatarCustomUri
     val preset = ProfileAvatarPresets.getById(account?.avatarId ?: "avatar_terminal")
+    val initial = account?.username?.firstOrNull()?.uppercaseChar()?.toString() ?: "L"
 
     Box(
         modifier = modifier
@@ -49,30 +47,26 @@ fun UserProfileAvatarView(
             .background(Color(preset.secondaryColorHex)),
         contentAlignment = Alignment.Center
     ) {
-        if (!customUri.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(Uri.parse(customUri))
-                    .crossfade(true)
-                    .build(),
-                contentDescription = "Profile Photo",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(size)
-                    .clip(CircleShape)
+        val icon = when (preset.iconKey) {
+            "terminal" -> Icons.Default.Terminal
+            "security" -> Icons.Default.Security
+            "cloud" -> Icons.Default.Cloud
+            "palette" -> Icons.Default.Palette
+            "phone_android" -> Icons.Default.PhoneAndroid
+            "code" -> Icons.Default.Code
+            "storage" -> Icons.Default.Storage
+            "bug_report" -> Icons.Default.BugReport
+            else -> Icons.Default.Person
+        }
+
+        if (account?.isSignedIn == true && account.authProvider == "Google") {
+            Text(
+                text = initial,
+                color = Color(preset.primaryColorHex),
+                fontWeight = FontWeight.Bold,
+                fontSize = (size.value * 0.45f).sp
             )
         } else {
-            val icon = when (preset.iconKey) {
-                "terminal" -> Icons.Default.Terminal
-                "security" -> Icons.Default.Security
-                "cloud" -> Icons.Default.Cloud
-                "palette" -> Icons.Default.Palette
-                "phone_android" -> Icons.Default.PhoneAndroid
-                "code" -> Icons.Default.Code
-                "storage" -> Icons.Default.Storage
-                "bug_report" -> Icons.Default.BugReport
-                else -> Icons.Default.Person
-            }
             Icon(
                 imageVector = icon,
                 contentDescription = preset.name,

@@ -6,18 +6,56 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.ZoomOutMap
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,32 +64,45 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.components.PluginQuickSheet
+import com.example.model.CodeFile
+import com.example.ui.components.AiSettingsDialog
 import com.example.ui.components.WebPreviewDialog
-import com.example.ui.screens.*
+import com.example.ui.screens.AboutScreen
+import com.example.ui.screens.EditorScreen
+import com.example.ui.screens.FilesScreen
+import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.LanguageGuideData
+import com.example.ui.screens.LanguageGuideScreen
+import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.TerminalScreen
 import com.example.ui.theme.LinqStudioTheme
 import com.example.viewmodel.EditorViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: EditorViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-
-        try {
-            java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/js").mkdirs()
-            java.io.File(cacheDir, "WebView/Default/HTTP Cache/Code Cache/wasm").mkdirs()
-        } catch (_: Exception) {}
+        enableEdgeToEdge()
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
             val theme = uiState.currentTheme
 
             LinqStudioTheme {
-                BackHandler(enabled = uiState.activeNavTab != 0) {
-                    viewModel.setNavTab(0)
+                var selectedLanguageGuide by remember { mutableStateOf<LanguageGuideData?>(null) }
+                var showAiSettingsDialog by remember { mutableStateOf(false) }
+
+                BackHandler(enabled = uiState.isFullScreen || uiState.isZenMode || selectedLanguageGuide != null || uiState.activeNavTab != 0) {
+                    if (uiState.isFullScreen || uiState.isZenMode) {
+                        viewModel.exitFullScreen()
+                    } else if (selectedLanguageGuide != null) {
+                        selectedLanguageGuide = null
+                    } else {
+                        viewModel.setNavTab(0)
+                    }
                 }
 
                 val navItems = listOf(
@@ -59,9 +110,8 @@ class MainActivity : ComponentActivity() {
                     Triple(1, "Editor", Icons.Default.Code),
                     Triple(2, "Files", Icons.Default.Folder),
                     Triple(3, "Terminal", Icons.Default.Terminal),
-                    Triple(4, "Plugins", Icons.Default.Extension),
-                    Triple(5, "Settings", Icons.Default.Settings),
-                    Triple(6, "About", Icons.Default.Info)
+                    Triple(4, "Settings", Icons.Default.Settings),
+                    Triple(5, "About", Icons.Default.Info)
                 )
 
                 BoxWithConstraints(
@@ -79,7 +129,7 @@ class MainActivity : ComponentActivity() {
                             if (!uiState.isFullScreen && !uiState.isZenMode && !isWideScreen) {
                                 NavigationBar(
                                     containerColor = theme.surfaceColor,
-                                    tonalElevation = 4.dp,
+                                    tonalElevation = 6.dp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .testTag("bottom_nav_bar")
@@ -104,8 +154,7 @@ class MainActivity : ComponentActivity() {
                                                     color = if (isSelected) theme.primaryColor else theme.lineNumberColor,
                                                     fontSize = 10.sp,
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                    maxLines = 1,
-                                                    softWrap = false
+                                                    maxLines = 1
                                                 )
                                             },
                                             colors = NavigationBarItemDefaults.colors(
@@ -120,12 +169,13 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     ) { innerPadding ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(if (uiState.isFullScreen || uiState.isZenMode) PaddingValues(0.dp) else innerPadding)
-                        ) {
-                            // WIDE SCREEN ADAPTIVE NAVIGATION RAIL (Tablets, Foldables, Landscape)
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(if (uiState.isFullScreen || uiState.isZenMode) PaddingValues(0.dp) else innerPadding)
+                            ) {
+                            // Adaptive Navigation Rail for Wide Screens
                             if (!uiState.isFullScreen && !uiState.isZenMode && isWideScreen) {
                                 NavigationRail(
                                     containerColor = theme.surfaceColor,
@@ -142,32 +192,27 @@ class MainActivity : ComponentActivity() {
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
                                                     Image(
-                                                        painter = painterResource(id = R.drawable.ic_linq_logo),
-                                                        contentDescription = "Linq Studio",
+                                                        painter = painterResource(id = R.drawable.ic_linq_user_logo),
+                                                        contentDescription = "Linq Studios",
                                                         modifier = Modifier.size(26.dp)
                                                     )
                                                 }
                                             }
 
-                                            // Full Screen toggle button in rail header
                                             IconButton(
                                                 onClick = { viewModel.toggleFullScreen() },
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .testTag("btn_rail_fullscreen")
+                                                modifier = Modifier.size(32.dp).testTag("rail_fullscreen_toggle")
                                             ) {
                                                 Icon(
-                                                    Icons.Default.Fullscreen,
+                                                    imageVector = Icons.Default.ZoomOutMap,
                                                     contentDescription = "Full Screen",
-                                                    tint = theme.primaryColor,
-                                                    modifier = Modifier.size(22.dp)
+                                                    tint = if (uiState.isFullScreen) theme.primaryColor else theme.lineNumberColor,
+                                                    modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
                                     },
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .testTag("navigation_rail")
+                                    modifier = Modifier.fillMaxHeight().testTag("navigation_rail")
                                 ) {
                                     navItems.forEach { (tabIndex, label, icon) ->
                                         val isSelected = uiState.activeNavTab == tabIndex
@@ -185,9 +230,9 @@ class MainActivity : ComponentActivity() {
                                             label = {
                                                 Text(
                                                     text = label,
+                                                    color = if (isSelected) theme.primaryColor else theme.lineNumberColor,
                                                     fontSize = 11.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (isSelected) theme.primaryColor else theme.lineNumberColor
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                                 )
                                             },
                                             colors = NavigationRailItemDefaults.colors(
@@ -200,213 +245,254 @@ class MainActivity : ComponentActivity() {
                                 VerticalDivider(color = theme.borderColor, thickness = 1.dp)
                             }
 
-                            // MAIN SCREEN VIEWPORT
+                            // Main Viewport with Animated Transitions
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .background(theme.editorBackground)
                             ) {
-                                when (uiState.activeNavTab) {
-                                    0 -> HomeScreen(
-                                        theme = theme,
-                                        recentFiles = uiState.openFiles,
-                                        serverStatus = uiState.serverStatus,
-                                        userAccount = uiState.userAccount,
-                                        isFullScreen = uiState.isFullScreen,
-                                        onToggleFullScreen = { viewModel.toggleFullScreen() },
-                                        onOpenRecent = { file ->
-                                            val idx = uiState.openFiles.indexOf(file)
-                                            if (idx != -1) viewModel.selectTab(idx)
-                                            viewModel.setNavTab(1)
-                                        },
-                                        onNewFile = {
-                                            viewModel.newTab()
-                                            viewModel.setNavTab(1)
-                                        },
-                                        onOpenWorkspace = { viewModel.setNavTab(2) },
-                                        onOpenPlugins = { viewModel.setNavTab(4) },
-                                        onOpenStarterFile = { fileName ->
-                                            viewModel.openFileByName(fileName)
-                                            viewModel.setNavTab(1)
-                                        },
-                                        onOpenWebDemo = { viewModel.openWebDemo() },
-                                        onStartDevServer = { viewModel.startDevServer() },
-                                        onStopDevServer = { viewModel.stopDevServer() },
-                                        onUpdateProfile = { u, t, a, p -> viewModel.updateUserProfile(u, t, a, p) }
-                                    )
-
-                                    1 -> EditorScreen(
-                                        theme = theme,
-                                        openFiles = uiState.openFiles,
-                                        activeFileIndex = uiState.activeFileIndex,
-                                        directoryFiles = uiState.directoryFiles,
-                                        isExplorerSidebarOpen = uiState.isExplorerSidebarOpen,
-                                        isTemplatesPanelOpen = uiState.isTemplatesPanelOpen,
-                                        isSearchReplaceOpen = uiState.isSearchReplaceOpen,
-                                        lintIssues = uiState.lintIssues,
-                                        capturedLogs = uiState.capturedSandboxLogs,
-                                        showTerminalDrawer = uiState.showTerminalDrawer,
-                                        isTerminalDrawerExpanded = uiState.isTerminalDrawerExpanded,
-                                        executionResult = uiState.executionResult,
-                                        showOutputConsole = uiState.showOutputConsole,
-                                        isFullScreen = uiState.isFullScreen,
-                                        isZenMode = uiState.isZenMode,
-                                        isMinimapVisible = uiState.isMinimapVisible,
-                                        gitStatus = uiState.gitStatus,
-                                        autocompleteSuggestions = uiState.autocompleteSuggestions,
-                                        prettierFormatNotice = uiState.prettierFormatNotice,
-                                        onSelectTab = { viewModel.selectTab(it) },
-                                        onCloseTab = { viewModel.closeTab(it) },
-                                        onCloseAllTabs = { viewModel.closeAllTabs() },
-                                        onCloseOtherTabs = { viewModel.closeOtherTabs(it) },
-                                        onSaveAllTabs = { viewModel.saveAllTabs() },
-                                        onNewTab = { viewModel.newTab() },
-                                        onContentChange = { viewModel.updateActiveFileContent(it) },
-                                        onSaveCurrent = { viewModel.saveActiveFile() },
-                                        onRunCode = { viewModel.runActiveFile() },
-                                        onFormatWithPrettier = { viewModel.formatActiveFileWithPrettier() },
-                                        onToggleZenMode = { viewModel.toggleZenMode() },
-                                        onToggleMinimap = { viewModel.toggleMinimap() },
-                                        onSelectAutocompleteSuggestion = { viewModel.acceptSuggestion(it) },
-                                        onDismissAutocomplete = { viewModel.dismissAutocomplete() },
-                                        onStageGitFile = { viewModel.stageGitFile(it) },
-                                        onStageAllGitFiles = { viewModel.stageAllGitFiles() },
-                                        onUnstageGitFile = { viewModel.unstageGitFile(it) },
-                                        onUnstageAllGitFiles = { viewModel.unstageAllGitFiles() },
-                                        onCommitGit = { viewModel.commitGitChanges(it) },
-                                        onPushGit = { viewModel.pushGitChanges() },
-                                        onCreateGitBranch = { viewModel.createGitBranch(it) },
-                                        onSwitchGitBranch = { viewModel.switchGitBranch(it) },
-                                        onToggleExplorerSidebar = { viewModel.toggleExplorerSidebar() },
-                                        onOpenFileFromSidebar = { file -> viewModel.openFile(file) },
-                                        onNewFileInSidebar = { name -> viewModel.createNewFileInExplorer(name) },
-                                        onToggleTemplatesPanel = { viewModel.toggleTemplatesPanel() },
-                                        onInsertTemplateSnippet = { viewModel.insertTemplateSnippet(it) },
-                                        onCreateFileFromTemplate = { name, content -> viewModel.createFileFromTemplate(name, content) },
-                                        onToggleSearchReplace = { viewModel.toggleSearchReplace() },
-                                        onToggleTerminalDrawer = { viewModel.toggleTerminalDrawer() },
-                                        onToggleTerminalDrawerExpand = { viewModel.setTerminalDrawerExpanded(!uiState.isTerminalDrawerExpanded) },
-                                        onClearSandboxLogs = { viewModel.clearSandboxLogs() },
-                                        onCloseTerminalDrawer = { viewModel.setShowTerminalDrawer(false) },
-                                        onSendTerminalDrawerCommand = { cmd -> viewModel.sendTerminalCommand(cmd) },
-                                        onCloseOutputConsole = { viewModel.closeOutputConsole() },
-                                        onToggleFullScreen = { viewModel.toggleFullScreen() },
-                                        onOpenWebPreview = { viewModel.openWebPreviewForActiveFile() },
-                                        onOpenPlugins = { viewModel.togglePluginSheet(true) }
-                                    )
-
-                                    2 -> FilesScreen(
-                                        theme = theme,
-                                        files = uiState.directoryFiles,
-                                        currentDirectory = uiState.currentDirectory,
-                                        onOpenFile = { file ->
-                                            viewModel.openFile(file)
-                                            viewModel.setNavTab(1)
-                                        },
-                                        onNavigateDir = { viewModel.loadDirectory(it) },
-                                        onNavigateUp = { viewModel.navigateUp() },
-                                        onNewFile = { viewModel.createNewFileInExplorer(it) },
-                                        onNewFolder = { viewModel.createNewFolderInExplorer(it) },
-                                        onDelete = { viewModel.deleteFileInExplorer(it) }
-                                    )
-
-                                    3 -> TerminalScreen(
-                                        theme = theme,
-                                        terminalLines = uiState.terminalLines,
-                                        isFullScreen = uiState.isFullScreen,
-                                        onToggleFullScreen = { viewModel.toggleFullScreen() },
-                                        onSendCommand = { viewModel.sendTerminalCommand(it) },
-                                        onClearTerminal = { viewModel.clearTerminal() }
-                                    )
-
-                                    4 -> PluginsScreen(
-                                        theme = theme,
-                                        pluginManager = viewModel.pluginManager,
-                                        plugins = uiState.plugins,
-                                        onOpenEditorWithPlugin = { viewModel.setNavTab(1) }
-                                    )
-
-                                    5 -> SettingsScreen(
-                                        currentTheme = theme,
-                                        userAccount = uiState.userAccount,
-                                        onSelectTheme = { viewModel.selectTheme(it) },
-                                        onUpdateProfile = { u, t, a, p -> viewModel.updateUserProfile(u, t, a, p) },
-                                        onOpenPlugins = { viewModel.setNavTab(4) }
-                                    )
-
-                                    6 -> AboutScreen(theme = theme)
-                                }
-
-                                // GLOBAL FLOATING EXIT FULL SCREEN BUTTON
-                                if (uiState.isFullScreen) {
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = theme.surfaceColor.copy(alpha = 0.92f),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF10B981)),
-                                        shadowElevation = 6.dp,
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(14.dp)
-                                            .testTag("btn_global_exit_fullscreen")
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            modifier = Modifier
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            IconButton(
-                                                onClick = { viewModel.toggleFullScreen() },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.FullscreenExit,
-                                                    contentDescription = "Exit Full Screen",
-                                                    tint = Color(0xFF10B981),
-                                                    modifier = Modifier.size(20.dp)
+                                AnimatedContent(
+                                    targetState = uiState.activeNavTab,
+                                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                    label = "tab_content_transition"
+                                ) { activeTab ->
+                                    when (activeTab) {
+                                        0 -> {
+                                            if (selectedLanguageGuide != null) {
+                                                LanguageGuideScreen(
+                                                    theme = theme,
+                                                    guide = selectedLanguageGuide!!,
+                                                    onBack = { selectedLanguageGuide = null },
+                                                    onOpenStarterCode = { name, code ->
+                                                        viewModel.createNewFileInExplorer(name, code)
+                                                        viewModel.setNavTab(1)
+                                                        selectedLanguageGuide = null
+                                                    }
+                                                )
+                                            } else {
+                                                HomeScreen(
+                                                    theme = theme,
+                                                    recentFiles = uiState.openFiles,
+                                                    serverStatus = uiState.serverStatus,
+                                                    userAccount = uiState.userAccount,
+                                                    isFullScreen = uiState.isFullScreen,
+                                                    onToggleFullScreen = { viewModel.toggleFullScreen() },
+                                                    onOpenRecent = { file ->
+                                                        val idx = uiState.openFiles.indexOf(file)
+                                                        if (idx != -1) viewModel.selectTab(idx)
+                                                        viewModel.setNavTab(1)
+                                                    },
+                                                    onNewFile = {
+                                                        viewModel.newTab()
+                                                        viewModel.setNavTab(1)
+                                                    },
+                                                    onOpenWorkspace = { viewModel.setNavTab(2) },
+                                                    onOpenLanguageGuide = { guide ->
+                                                        selectedLanguageGuide = guide
+                                                    },
+                                                    onOpenWebDemo = { viewModel.setNavTab(1) },
+                                                    onStartDevServer = { viewModel.startDevServer() },
+                                                    onStopDevServer = { viewModel.stopDevServer() },
+                                                    onOpenWebPreview = { viewModel.openWebPreview(it) },
+                                                    onUpdateProfile = { u, t, b, a, c, s, id -> viewModel.updateUserProfile(u, t, b, a, c, s, id) },
+                                                    onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
+                                                    onSignOut = { viewModel.signOut() },
+                                                    onResetWorkspace = { viewModel.resetWorkspace() }
                                                 )
                                             }
-                                            Text(
-                                                text = "Fit Screen",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF10B981)
-                                            )
                                         }
+
+                                        1 -> EditorScreen(
+                                            theme = theme,
+                                            openFiles = uiState.openFiles,
+                                            activeFileIndex = uiState.activeFileIndex,
+                                            isExplorerSidebarOpen = uiState.isExplorerSidebarOpen,
+                                            isSearchReplaceOpen = uiState.isSearchReplaceOpen,
+                                            lintIssues = uiState.lintIssues,
+                                            isFullScreen = uiState.isFullScreen,
+                                            isZenMode = uiState.isZenMode,
+                                            isMinimapVisible = uiState.isMinimapVisible,
+                                            gitStatus = uiState.gitStatus,
+                                            autocompleteSuggestions = uiState.autocompleteSuggestions,
+                                            prettierFormatNotice = uiState.prettierFormatNotice,
+                                            canUndo = uiState.canUndo,
+                                            canRedo = uiState.canRedo,
+                                            isAiPanelOpen = uiState.isAiPanelOpen,
+                                            aiMessages = uiState.aiMessages,
+                                            isAiLoading = uiState.isAiLoading,
+                                            activeProposedDiff = uiState.activeProposedDiff,
+                                            isDiffPreviewOpen = uiState.isDiffPreviewOpen,
+                                            prefilledAiPrompt = uiState.prefilledAiPrompt,
+                                            isSuggestionsEnabled = uiState.isSuggestionsEnabled,
+                                            onSelectTab = { viewModel.selectTab(it) },
+                                            onCloseTab = { viewModel.closeTab(it) },
+                                            onCloseOtherTabs = { viewModel.closeOtherTabs(it) },
+                                            onNewTab = { viewModel.newTab() },
+                                            onContentChange = { viewModel.updateActiveFileContent(it) },
+                                            onSaveCurrent = { },
+                                            onRunCode = { viewModel.runActiveFile() },
+                                            onFormatWithPrettier = { viewModel.formatActiveFileWithPrettier() },
+                                            onToggleZenMode = { viewModel.toggleZenMode() },
+                                            onToggleMinimap = { viewModel.toggleMinimap() },
+                                            onSelectAutocompleteSuggestion = {
+                                                val currentFile = uiState.openFiles.getOrNull(uiState.activeFileIndex)
+                                                if (currentFile != null) {
+                                                    viewModel.updateActiveFileContent(currentFile.content + it.insertText)
+                                                }
+                                            },
+                                            onDismissAutocomplete = { viewModel.dismissAutocomplete() },
+                                            onStageGitFile = { viewModel.stageGitFile(it) },
+                                            onStageAllGitFiles = { viewModel.stageAllGitFiles() },
+                                            onUnstageGitFile = { viewModel.unstageGitFile(it) },
+                                            onUnstageAllGitFiles = { viewModel.unstageAllGitFiles() },
+                                            onCommitGit = { viewModel.commitGitChanges(it) },
+                                            onPushGit = { viewModel.pushGitChanges() },
+                                            onToggleExplorerSidebar = { viewModel.toggleExplorerSidebar() },
+                                            onOpenFileFromSidebar = { viewModel.openFile(it) },
+                                            onNewFileInSidebar = { viewModel.createNewFileInExplorer(it) },
+                                            onNewFolderInSidebar = { viewModel.createFolderInExplorer(it) },
+                                            onToggleSearchReplace = { viewModel.toggleSearchReplace() },
+                                            onUndo = { viewModel.undo() },
+                                            onRedo = { viewModel.redo() },
+                                            onToggleAiPanel = { viewModel.toggleAiPanel() },
+                                            onCloseAiPanel = { viewModel.setAiPanelOpen(false) },
+                                            onSendAiMessage = { viewModel.sendAiMessage(it) },
+                                            onStopAiGenerating = { viewModel.stopAiGeneration() },
+                                            onClearAiChat = { viewModel.clearAiChat() },
+                                            onOpenAiWithPrompt = { viewModel.openAiWithPrompt(it) },
+                                            onReviewDiff = { orig, prop -> viewModel.reviewDiff(orig, prop) },
+                                            onApplyDiff = { viewModel.applyProposedDiff(it) },
+                                            onRejectDiff = { viewModel.dismissDiffPreview() },
+                                            onToggleSuggestionsEnabled = { viewModel.toggleSuggestionsEnabled() },
+                                            onOpenAiSettings = { showAiSettingsDialog = true },
+                                            onOpenTerminal = { viewModel.setNavTab(3) }
+                                        )
+
+                                        2 -> FilesScreen(
+                                            theme = theme,
+                                            files = uiState.directoryFiles,
+                                            currentDirectory = uiState.currentDirectory,
+                                            onOpenFile = { file ->
+                                                viewModel.openFile(file)
+                                                viewModel.setNavTab(1)
+                                            },
+                                            onNavigateDir = { viewModel.loadDirectory(it) },
+                                            onNavigateUp = { viewModel.navigateUp() },
+                                            onNewFile = {
+                                                viewModel.createNewFileInExplorer(it)
+                                                viewModel.setNavTab(1)
+                                            },
+                                            onNewFolder = { viewModel.createFolderInExplorer(it) },
+                                            onDelete = { viewModel.deleteFileInExplorer(it) }
+                                        )
+
+                                        3 -> TerminalScreen(
+                                            theme = theme,
+                                            terminalLines = uiState.terminalLines,
+                                            isFullScreen = uiState.isFullScreen,
+                                            onToggleFullScreen = { viewModel.toggleFullScreen() },
+                                            onSendCommand = { viewModel.sendTerminalCommand(it) },
+                                            onClearTerminal = { viewModel.clearTerminal() }
+                                        )
+
+                                        4 -> SettingsScreen(
+                                            currentTheme = theme,
+                                            userAccount = uiState.userAccount,
+                                            aiSettings = uiState.aiSettings,
+                                            hasApiKey = uiState.hasAiApiKey,
+                                            isSuggestionsEnabled = uiState.isSuggestionsEnabled,
+                                            isMinimapVisible = uiState.isMinimapVisible,
+                                            openFilesCount = uiState.openFiles.size,
+                                            activeFileName = uiState.openFiles.getOrNull(uiState.activeFileIndex)?.name ?: "",
+                                            serverStatus = uiState.serverStatus,
+                                            onSelectTheme = { viewModel.selectTheme(it) },
+                                            onUpdateProfile = { u, t, b, a, c, s, id -> viewModel.updateUserProfile(u, t, b, a, c, s, id) },
+                                            onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
+                                            onSignOut = { viewModel.signOut() },
+                                            onResetWorkspace = { viewModel.resetWorkspace() },
+                                            onToggleSuggestionsEnabled = { viewModel.toggleSuggestionsEnabled() },
+                                            onToggleMinimap = { viewModel.toggleMinimap() },
+                                            onOpenAiSettings = { showAiSettingsDialog = true }
+                                        )
+
+                                        5 -> AboutScreen(theme = theme)
                                     }
                                 }
+                            }
+                        }
 
-                                // Web Live Preview Dialog
-                                if (uiState.previewUrl != null || uiState.previewHtml != null) {
-                                    WebPreviewDialog(
-                                        theme = theme,
-                                        serverUrl = uiState.previewUrl,
-                                        htmlContent = uiState.previewHtml,
-                                        serverStatus = uiState.serverStatus,
-                                        onRestartServer = { viewModel.restartDevServer() },
-                                        onClose = { viewModel.closePreview() },
-                                        onConsoleLog = { level, msg, src, line ->
-                                            viewModel.addSandboxConsoleLog(level, msg, src, line)
-                                        }
+                        // FLOATING EXIT FULL SCREEN PILL (Ensures user is NEVER trapped in Fullscreen)
+                        if (uiState.isFullScreen || uiState.isZenMode) {
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = theme.primaryColor,
+                                shadowElevation = 12.dp,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 48.dp, end = 16.dp)
+                                    .clickable { viewModel.exitFullScreen() }
+                                    .testTag("exit_fullscreen_floating_button")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FullscreenExit,
+                                        contentDescription = "Exit Full Screen",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                }
-
-                                // Plugins Quick Action Sheet
-                                if (uiState.showPluginSheet) {
-                                    PluginQuickSheet(
-                                        theme = theme,
-                                        installedPlugins = uiState.plugins.filter { it.isInstalled },
-                                        onDismiss = { viewModel.togglePluginSheet(false) },
-                                        onFormatDocument = { viewModel.formatActiveFileWithPrettier() },
-                                        onRunDiagnostics = { viewModel.lintActiveFile() },
-                                        onShowStats = { viewModel.showActiveStats() },
-                                        onShowTodos = { viewModel.showActiveTodos() },
-                                        onOpenMarketplace = { viewModel.setNavTab(4) }
+                                    Text(
+                                        text = "Exit Full Screen",
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
                                     )
                                 }
                             }
                         }
+                    }
+                }
+
+                    // AI Assistant Settings Dialog
+                    if (showAiSettingsDialog) {
+                        AiSettingsDialog(
+                            theme = theme,
+                            settings = uiState.aiSettings,
+                            keyStore = viewModel.keyStore,
+                            onSaveSettings = {
+                                viewModel.updateAiSettings(it)
+                                showAiSettingsDialog = false
+                            },
+                            onTestConnection = { testSettings, callback ->
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                                    val res = viewModel.aiService.testConnection(testSettings)
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        callback(res)
+                                    }
+                                }
+                            },
+                            onDismiss = { showAiSettingsDialog = false }
+                        )
+                    }
+
+                    // Local Dev Server Web Preview Dialog (Tests multiple website files locally)
+                    if (uiState.isWebPreviewOpen) {
+                        WebPreviewDialog(
+                            theme = theme,
+                            files = uiState.openFiles,
+                            initialFileName = uiState.activeWebPreviewFileName,
+                            serverStatus = viewModel.localDevServer.status,
+                            currentHostFolder = uiState.hostedFolder,
+                            availableFolders = uiState.availableHostFolders,
+                            onSelectHostFolder = { viewModel.setDevServerHostFolder(it) },
+                            onCreateHostFolder = { viewModel.setDevServerHostFolder(it) },
+                            onRestartServer = { viewModel.startDevServer() },
+                            onClose = { viewModel.closeWebPreview() }
+                        )
                     }
                 }
             }
