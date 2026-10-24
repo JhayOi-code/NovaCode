@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import com.example.util.rememberHardwareFps
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -196,7 +198,7 @@ fun HomeScreen(
     onStartDevServer: () -> Unit,
     onStopDevServer: () -> Unit,
     onOpenWebPreview: (String?) -> Unit = {},
-    onUpdateProfile: (String, String, String, String?, Long, String, String) -> Unit,
+    onUpdateProfile: (String, String, String, String?, Long, String, String, String?) -> Unit,
     onSignInWithGoogle: (String, String) -> Unit = { _, _ -> },
     onSignOut: () -> Unit = {},
     onResetWorkspace: () -> Unit = {}
@@ -204,6 +206,8 @@ fun HomeScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showGoogleAuthDialog by remember { mutableStateOf(false) }
     var showDebugDialog by remember { mutableStateOf(false) }
+
+    val fpsState = rememberHardwareFps()
 
     val infiniteTransition = rememberInfiniteTransition(label = "avatar_pulse")
     val avatarPulse by infiniteTransition.animateFloat(
@@ -216,57 +220,63 @@ fun HomeScreen(
         label = "avatar_pulse_anim"
     )
 
-    LazyColumn(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(theme.editorBackground)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .testTag("home_screen"),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(theme.editorBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
-        // App Header with Linq Studio logo & Debug button
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 840.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .testTag("home_screen"),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // App Header with Linq Studio logo & Debug button
+            item {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = theme.primaryColor.copy(alpha = 0.15f),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, theme.primaryColor.copy(alpha = 0.4f)),
-                        modifier = Modifier.size(38.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_linq_user_logo),
-                                contentDescription = "Linq Studios",
-                                modifier = Modifier.size(26.dp)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = theme.primaryColor.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, theme.primaryColor.copy(alpha = 0.4f)),
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_linq_user_logo),
+                                    contentDescription = "Linq Studios",
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = "Linq Studios",
+                                color = theme.onSurfaceColor,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = "Pro Mobile IDE • ${fpsState.currentFps} FPS (${fpsState.targetRefreshRate}Hz)",
+                                color = theme.lineNumberColor,
+                                fontSize = 11.sp
                             )
                         }
                     }
-
-                    Column {
-                        Text(
-                            text = "Linq Studios",
-                            color = theme.onSurfaceColor,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 18.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                        Text(
-                            text = "Pro Mobile IDE • 60 FPS",
-                            color = theme.lineNumberColor,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
 
                 // Quick Debug Inspector Trigger
                 IconButton(
@@ -730,6 +740,7 @@ fun HomeScreen(
             }
         }
     }
+}
 
     if (showEditProfileDialog) {
         EditProfileDialog(

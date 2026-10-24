@@ -14,16 +14,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -47,6 +50,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -54,38 +59,65 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.CodeFile
 import com.example.model.EditorTheme
+import com.example.model.ProjectTemplateType
 
 @Composable
 fun FilesScreen(
     theme: EditorTheme,
     files: List<CodeFile>,
     currentDirectory: String,
+    trackedFolders: List<String> = emptyList(),
     onOpenFile: (CodeFile) -> Unit,
     onNavigateDir: (String) -> Unit,
     onNavigateUp: () -> Unit,
     onNewFile: (String) -> Unit,
     onNewFolder: (String) -> Unit,
+    onNewFolderWithTemplate: (String, ProjectTemplateType) -> Unit = { name, _ -> onNewFolder(name) },
+    onDeleteFolder: (String) -> Unit = {},
     onDelete: (CodeFile) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var currentSubFolder by remember { mutableStateOf<String?>(null) }
     var showNewFileDialog by remember { mutableStateOf(false) }
     var newFileName by remember { mutableStateOf("") }
     var showNewFolderDialog by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
+    var selectedProjectTemplate by remember { mutableStateOf(ProjectTemplateType.BLANK_FOLDER) }
+    var newFolderName by remember { mutableStateOf("my_folder") }
 
-    val filteredFiles = remember(files, searchQuery) {
-        if (searchQuery.isBlank()) files
-        else files.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    val allFolders = remember(files, trackedFolders) {
+        val set = linkedSetOf<String>()
+        set.addAll(trackedFolders)
+        files.forEach { file ->
+            val clean = file.name.trim().removePrefix("/")
+            if (clean.contains('/')) set.add(clean.substringBeforeLast('/'))
+        }
+        set.toList()
     }
 
-    Column(
+    val displayedFiles = remember(files, currentSubFolder, searchQuery) {
+        val base = if (currentSubFolder != null) {
+            files.filter { it.name.startsWith("$currentSubFolder/") }
+        } else {
+            files.filter { !it.name.trim().removePrefix("/").contains('/') }
+        }
+        if (searchQuery.isBlank()) base
+        else base.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(theme.editorBackground)
-            .padding(16.dp)
-            .testTag("files_screen"),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+            .background(theme.editorBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 840.dp)
+                .padding(16.dp)
+                .testTag("files_screen"),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
         // Path navigation bar & actions (Responsive non-overlapping row)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -98,13 +130,19 @@ fun FilesScreen(
                 modifier = Modifier.weight(1f, fill = false)
             ) {
                 IconButton(
-                    onClick = onNavigateUp,
+                    onClick = {
+                        if (currentSubFolder != null) {
+                            currentSubFolder = null
+                        } else {
+                            onNavigateUp()
+                        }
+                    },
                     modifier = Modifier.size(34.dp).testTag("files_nav_up")
                 ) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Up", tint = theme.onSurfaceColor)
                 }
                 Text(
-                    text = currentDirectory.ifEmpty { "/workspace" },
+                    text = if (currentSubFolder != null) "/workspace/$currentSubFolder" else currentDirectory.ifEmpty { "/workspace" },
                     color = theme.onSurfaceColor,
                     fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,
@@ -170,12 +208,124 @@ fun FilesScreen(
             singleLine = true
         )
 
-        // File List
+        // Folders & Files List
         LazyColumn(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredFiles) { file ->
+            // Folders Section (visible at root directory when not searching)
+            if (currentSubFolder == null && searchQuery.isBlank() && allFolders.isNotEmpty()) {
+                item(key = "folders_header") {
+                    Text(
+                        text = "FOLDERS (${allFolders.size})",
+                        color = theme.lineNumberColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                items(allFolders, key = { "folder_$it" }) { folder ->
+                    val fileCount = files.count { it.name.startsWith("$folder/") }
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { currentSubFolder = folder }
+                            .testTag("folder_card_$folder")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = null,
+                                    tint = theme.primaryColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = folder,
+                                        color = theme.onSurfaceColor,
+                                        fontSize = 14.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (fileCount == 0) "Empty folder • Tap to open & add files" else "$fileCount files in directory",
+                                        color = theme.lineNumberColor,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { onDeleteFolder(folder) },
+                                    modifier = Modifier.size(32.dp).testTag("delete_folder_$folder")
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Folder", tint = theme.lineNumberColor, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item(key = "files_header") {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "ROOT FILES (${displayedFiles.size})",
+                        color = theme.lineNumberColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            // Empty state for subfolder
+            if (currentSubFolder != null && displayedFiles.isEmpty()) {
+                item(key = "empty_subfolder") {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = theme.surfaceColor,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(36.dp))
+                            Text(
+                                text = "This folder is empty",
+                                color = theme.onSurfaceColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = "Tap '+ File' in the top bar to create your first file inside '$currentSubFolder'.",
+                                color = theme.lineNumberColor,
+                                fontSize = 12.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            items(displayedFiles) { file ->
+                val displayName = if (currentSubFolder != null) file.name.removePrefix("$currentSubFolder/") else file.name
                 Card(
                     shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
@@ -210,7 +360,7 @@ fun FilesScreen(
                             )
                             Column {
                                 Text(
-                                    text = file.name,
+                                    text = displayName,
                                     color = theme.onSurfaceColor,
                                     fontSize = 14.sp,
                                     fontFamily = FontFamily.Monospace,
@@ -235,6 +385,7 @@ fun FilesScreen(
             }
         }
     }
+}
 
     if (showNewFileDialog) {
         AlertDialog(
@@ -270,7 +421,8 @@ fun FilesScreen(
                     onClick = {
                         val trimmed = newFileName.trim()
                         if (trimmed.isNotEmpty()) {
-                            onNewFile(trimmed)
+                            val full = if (currentSubFolder != null && !trimmed.startsWith("$currentSubFolder/")) "$currentSubFolder/$trimmed" else trimmed
+                            onNewFile(full)
                             showNewFileDialog = false
                         }
                     },
@@ -300,23 +452,109 @@ fun FilesScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = theme.primaryColor)
-                    Text("Create New Folder", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    Text("Create Folder or Project", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Enter a name for the new folder:",
+                        text = "Choose template or create empty folder:",
                         color = theme.lineNumberColor,
                         fontSize = 12.sp
+                    )
+
+                    // Template Chips
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ProjectTemplateType.values().forEach { template ->
+                            val isSelected = selectedProjectTemplate == template
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) theme.primaryColor.copy(alpha = 0.2f) else theme.surfaceVariant,
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor) else null,
+                                modifier = Modifier.clickable {
+                                    selectedProjectTemplate = template
+                                    newFolderName = when (template) {
+                                        ProjectTemplateType.BLANK_FOLDER -> "my_folder"
+                                        ProjectTemplateType.BLANK_PROJECT -> "my_project"
+                                        ProjectTemplateType.PYTHON_PROJECT -> "python_app"
+                                        ProjectTemplateType.WEB_PROJECT -> "web_site"
+                                        ProjectTemplateType.JAVA_PROJECT -> "java_app"
+                                        ProjectTemplateType.NODE_PROJECT -> "node_service"
+                                    }
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = template.iconVector,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp),
+                                        tint = if (isSelected) theme.primaryColor else theme.onSurfaceColor.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = template.title,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) theme.primaryColor else theme.onSurfaceColor
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            modifier = Modifier.size(13.dp),
+                                            tint = theme.primaryColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Template Info Card
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = theme.editorBackground,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = selectedProjectTemplate.description,
+                                color = theme.onSurfaceColor,
+                                fontSize = 11.sp
+                            )
+                            val filesList = selectedProjectTemplate.defaultFiles.joinToString(", ") { it.first }
+                            Text(
+                                text = "Files created: $filesList",
+                                color = theme.primaryColor,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+                    }
+
+                    // Folder Name Input
+                    Text(
+                        text = "Folder Name:",
+                        color = theme.lineNumberColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     OutlinedTextField(
                         value = newFolderName,
                         onValueChange = { newFolderName = it },
-                        placeholder = { Text("e.g. components, utils, scripts", color = theme.lineNumberColor, fontSize = 13.sp) },
-                        textStyle = TextStyle(fontSize = 13.sp, color = theme.onSurfaceColor),
+                        placeholder = { Text("e.g. python_app, web_site, utils", color = theme.lineNumberColor, fontSize = 13.sp) },
+                        textStyle = TextStyle(fontSize = 13.sp, color = theme.onSurfaceColor, fontFamily = FontFamily.Monospace),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("new_folder_dialog_input"),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp).testTag("new_folder_dialog_input"),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = theme.onSurfaceColor,
                             unfocusedTextColor = theme.onSurfaceColor,
@@ -332,7 +570,7 @@ fun FilesScreen(
                     onClick = {
                         val trimmed = newFolderName.trim()
                         if (trimmed.isNotEmpty()) {
-                            onNewFolder(trimmed)
+                            onNewFolderWithTemplate(trimmed, selectedProjectTemplate)
                             showNewFolderDialog = false
                         }
                     },

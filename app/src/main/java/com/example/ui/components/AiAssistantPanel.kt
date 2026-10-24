@@ -26,10 +26,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Comment
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material3.CircularProgressIndicator
@@ -218,12 +223,12 @@ fun AiAssistantPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 listOf(
-                    Pair("⚡ Explain", "Explain how this code works step by step:\n```\n$currentEditorCode\n```"),
-                    Pair("🛠 Fix Code", "Review and fix any potential bugs or logic errors in this code:\n```\n$currentEditorCode\n```"),
-                    Pair("📝 Comments", "Add clear inline explanatory comments to this code:\n```\n$currentEditorCode\n```"),
-                    Pair("⌨️ Typewriter", "Write a Python script that prints text using a smooth typewriter effect in terminal."),
-                    Pair("🚀 Optimize", "Optimize the runtime performance and readability of this code:\n```\n$currentEditorCode\n```")
-                ).forEach { (label, prompt) ->
+                    Triple(Icons.Default.Psychology, "Explain", "Explain how this code works step by step:\n```\n$currentEditorCode\n```"),
+                    Triple(Icons.Default.Build, "Fix Code", "Review and fix any potential bugs or logic errors in this code:\n```\n$currentEditorCode\n```"),
+                    Triple(Icons.Default.Comment, "Comments", "Add clear inline explanatory comments to this code:\n```\n$currentEditorCode\n```"),
+                    Triple(Icons.Default.Keyboard, "Typewriter", "Write a Python script that prints text using a smooth typewriter effect in terminal."),
+                    Triple(Icons.Default.Speed, "Optimize", "Optimize the runtime performance and readability of this code:\n```\n$currentEditorCode\n```")
+                ).forEach { (icon, label, prompt) ->
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = theme.surfaceColor,
@@ -232,13 +237,24 @@ fun AiAssistantPanel(
                             .clickable { onSendMessage(prompt) }
                             .testTag("ai_quick_chip_$label")
                     ) {
-                        Text(
-                            text = label,
-                            color = theme.primaryColor,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = label,
+                                color = theme.primaryColor,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }

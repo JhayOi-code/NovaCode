@@ -64,8 +64,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.example.model.CodeFile
 import com.example.ui.components.AiSettingsDialog
+import com.example.ui.components.AppLoadingScreen
+import com.example.ui.components.UniqueWelcomeDialog
 import com.example.ui.components.WebPreviewDialog
 import com.example.ui.screens.AboutScreen
 import com.example.ui.screens.EditorScreen
@@ -92,10 +96,28 @@ class MainActivity : ComponentActivity() {
             val theme = uiState.currentTheme
 
             LinqStudioTheme {
+                val context = LocalContext.current
+                val prefs = remember { context.getSharedPreferences("linq_prefs", Context.MODE_PRIVATE) }
+                val hasSeenWelcome = remember { prefs.getBoolean("has_seen_welcome", false) }
+
+                var isAppLoaded by remember { mutableStateOf(false) }
+                var showWelcomeDialog by remember { mutableStateOf(false) }
+
                 var selectedLanguageGuide by remember { mutableStateOf<LanguageGuideData?>(null) }
                 var showAiSettingsDialog by remember { mutableStateOf(false) }
 
-                BackHandler(enabled = uiState.isFullScreen || uiState.isZenMode || selectedLanguageGuide != null || uiState.activeNavTab != 0) {
+                if (!isAppLoaded) {
+                    AppLoadingScreen(
+                        theme = theme,
+                        onLoadingComplete = {
+                            isAppLoaded = true
+                            if (!hasSeenWelcome) {
+                                showWelcomeDialog = true
+                            }
+                        }
+                    )
+                } else {
+                    BackHandler(enabled = uiState.isFullScreen || uiState.isZenMode || selectedLanguageGuide != null || uiState.activeNavTab != 0) {
                     if (uiState.isFullScreen || uiState.isZenMode) {
                         viewModel.exitFullScreen()
                     } else if (selectedLanguageGuide != null) {
@@ -295,7 +317,7 @@ class MainActivity : ComponentActivity() {
                                                     onStartDevServer = { viewModel.startDevServer() },
                                                     onStopDevServer = { viewModel.stopDevServer() },
                                                     onOpenWebPreview = { viewModel.openWebPreview(it) },
-                                                    onUpdateProfile = { u, t, b, a, c, s, id -> viewModel.updateUserProfile(u, t, b, a, c, s, id) },
+                                                    onUpdateProfile = { u, t, b, a, c, s, id, uri -> viewModel.updateUserProfile(u, t, b, a, c, s, id, uri) },
                                                     onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
                                                     onSignOut = { viewModel.signOut() },
                                                     onResetWorkspace = { viewModel.resetWorkspace() }
@@ -330,7 +352,7 @@ class MainActivity : ComponentActivity() {
                                             onCloseOtherTabs = { viewModel.closeOtherTabs(it) },
                                             onNewTab = { viewModel.newTab() },
                                             onContentChange = { viewModel.updateActiveFileContent(it) },
-                                            onSaveCurrent = { },
+                                            onSaveCurrent = { viewModel.saveActiveFile() },
                                             onRunCode = { viewModel.runActiveFile() },
                                             onFormatWithPrettier = { viewModel.formatActiveFileWithPrettier() },
                                             onToggleZenMode = { viewModel.toggleZenMode() },
@@ -351,7 +373,11 @@ class MainActivity : ComponentActivity() {
                                             onToggleExplorerSidebar = { viewModel.toggleExplorerSidebar() },
                                             onOpenFileFromSidebar = { viewModel.openFile(it) },
                                             onNewFileInSidebar = { viewModel.createNewFileInExplorer(it) },
+                                            trackedFolders = uiState.trackedFolders,
                                             onNewFolderInSidebar = { viewModel.createFolderInExplorer(it) },
+                                            onNewFolderInSidebarWithTemplate = { name, template -> viewModel.createProjectFolder(name, template) },
+                                            onNewFileInSidebarWithFolder = { folder, name -> viewModel.createNewFileInExplorer(name, folder) },
+                                            onDeleteFolderInSidebar = { viewModel.deleteFolderInExplorer(it) },
                                             onToggleSearchReplace = { viewModel.toggleSearchReplace() },
                                             onUndo = { viewModel.undo() },
                                             onRedo = { viewModel.redo() },
@@ -373,6 +399,7 @@ class MainActivity : ComponentActivity() {
                                             theme = theme,
                                             files = uiState.directoryFiles,
                                             currentDirectory = uiState.currentDirectory,
+                                            trackedFolders = uiState.trackedFolders,
                                             onOpenFile = { file ->
                                                 viewModel.openFile(file)
                                                 viewModel.setNavTab(1)
@@ -384,6 +411,11 @@ class MainActivity : ComponentActivity() {
                                                 viewModel.setNavTab(1)
                                             },
                                             onNewFolder = { viewModel.createFolderInExplorer(it) },
+                                            onNewFolderWithTemplate = { name, template ->
+                                                viewModel.createProjectFolder(name, template)
+                                                viewModel.setNavTab(1)
+                                            },
+                                            onDeleteFolder = { viewModel.deleteFolderInExplorer(it) },
                                             onDelete = { viewModel.deleteFileInExplorer(it) }
                                         )
 
@@ -407,13 +439,14 @@ class MainActivity : ComponentActivity() {
                                             activeFileName = uiState.openFiles.getOrNull(uiState.activeFileIndex)?.name ?: "",
                                             serverStatus = uiState.serverStatus,
                                             onSelectTheme = { viewModel.selectTheme(it) },
-                                            onUpdateProfile = { u, t, b, a, c, s, id -> viewModel.updateUserProfile(u, t, b, a, c, s, id) },
+                                            onUpdateProfile = { u, t, b, a, c, s, id, uri -> viewModel.updateUserProfile(u, t, b, a, c, s, id, uri) },
                                             onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
                                             onSignOut = { viewModel.signOut() },
                                             onResetWorkspace = { viewModel.resetWorkspace() },
                                             onToggleSuggestionsEnabled = { viewModel.toggleSuggestionsEnabled() },
                                             onToggleMinimap = { viewModel.toggleMinimap() },
-                                            onOpenAiSettings = { showAiSettingsDialog = true }
+                                            onOpenAiSettings = { showAiSettingsDialog = true },
+                                            onShowWelcomeGuide = { showWelcomeDialog = true }
                                         )
 
                                         5 -> AboutScreen(theme = theme)
@@ -494,8 +527,20 @@ class MainActivity : ComponentActivity() {
                             onClose = { viewModel.closeWebPreview() }
                         )
                     }
+
+                    if (showWelcomeDialog) {
+                        UniqueWelcomeDialog(
+                            theme = theme,
+                            userAccount = uiState.userAccount,
+                            onDismiss = {
+                                showWelcomeDialog = false
+                                prefs.edit().putBoolean("has_seen_welcome", true).apply()
+                            }
+                        )
+                    }
                 }
             }
         }
     }
+}
 }

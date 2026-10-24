@@ -1,5 +1,9 @@
 package com.example.ui.components
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +24,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Crop
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -34,6 +42,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -63,7 +72,7 @@ import com.example.model.UserAccount
 fun EditProfileDialog(
     theme: EditorTheme,
     userAccount: UserAccount,
-    onSave: (username: String, title: String, bio: String, avatarUrl: String?, colorHex: Long, stack: String, avatarId: String) -> Unit,
+    onSave: (username: String, title: String, bio: String, avatarUrl: String?, colorHex: Long, stack: String, avatarId: String, avatarCustomUri: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var username by remember { mutableStateOf(userAccount.username) }
@@ -72,6 +81,20 @@ fun EditProfileDialog(
     var primaryStack by remember { mutableStateOf(userAccount.primaryStack) }
     var selectedAvatarId by remember { mutableStateOf(userAccount.avatarId) }
     var selectedColorHex by remember { mutableStateOf(userAccount.avatarColorHex) }
+    var customAvatarUri by remember { mutableStateOf(userAccount.avatarCustomUri) }
+
+    var rawPickedUriForCrop by remember { mutableStateOf<Uri?>(null) }
+    var showCropDialog by remember { mutableStateOf(false) }
+
+    // Android Zero-permission Photo Picker
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            rawPickedUriForCrop = uri
+            showCropDialog = true
+        }
+    }
 
     val colorOptions = listOf(
         0xFF00E5FF, // Cyan
@@ -97,8 +120,15 @@ fun EditProfileDialog(
         }
     }
 
-    val selectedPreset = remember(selectedAvatarId) {
-        ProfileAvatarPresets.getById(selectedAvatarId)
+    val previewAccount = remember(username, title, bio, selectedColorHex, selectedAvatarId, customAvatarUri) {
+        userAccount.copy(
+            username = username,
+            title = title,
+            bio = bio,
+            avatarColorHex = selectedColorHex,
+            avatarId = selectedAvatarId,
+            avatarCustomUri = customAvatarUri
+        )
     }
 
     AlertDialog(
@@ -133,28 +163,17 @@ fun EditProfileDialog(
                 ) {
                     Column(
                         modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            val avatarColor = Color(selectedColorHex)
-                            Surface(
-                                shape = CircleShape,
-                                color = avatarColor.copy(alpha = 0.2f),
-                                border = androidx.compose.foundation.BorderStroke(2.dp, avatarColor),
-                                modifier = Modifier.size(52.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = getIconForPreset(selectedPreset.iconKey),
-                                        contentDescription = null,
-                                        tint = avatarColor,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                }
-                            }
+                            UserProfileAvatarView(
+                                account = previewAccount,
+                                size = 56.dp,
+                                borderColor = Color(selectedColorHex)
+                            )
 
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -165,7 +184,7 @@ fun EditProfileDialog(
                                 )
                                 Text(
                                     text = if (title.isNotBlank()) title else "Software Engineer",
-                                    color = avatarColor,
+                                    color = Color(selectedColorHex),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -192,6 +211,91 @@ fun EditProfileDialog(
                                     fontFamily = FontFamily.Monospace,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // CUSTOM PROFILE PHOTO PICKER & CROP ACTION
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = theme.surfaceColor,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(16.dp))
+                                Text(
+                                    text = "Custom Profile Photo",
+                                    color = theme.onSurfaceColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            if (customAvatarUri != null) {
+                                Text(
+                                    text = "Active Photo",
+                                    color = Color(0xFF10B981),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Select any photo from your gallery, then crop and align it to fit your circular profile avatar:",
+                            color = theme.lineNumberColor,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = theme.primaryColor,
+                                    contentColor = Color.Black
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .testTag("btn_choose_gallery_photo")
+                            ) {
+                                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Choose from Gallery", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            if (customAvatarUri != null) {
+                                OutlinedButton(
+                                    onClick = { customAvatarUri = null },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(38.dp).testTag("btn_remove_custom_photo")
+                                ) {
+                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Remove Photo", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
                     }
@@ -247,9 +351,9 @@ fun EditProfileDialog(
                     }
                 }
 
-                // Avatar Icon Selector
+                // Avatar Icon Selector (Fallback when no photo is used)
                 Text(
-                    text = "Choose Avatar Icon:",
+                    text = "Choose Preset Avatar Icon:",
                     color = theme.onSurfaceColor,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
@@ -261,7 +365,7 @@ fun EditProfileDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ProfileAvatarPresets.presets.forEach { preset ->
-                        val isSelected = selectedAvatarId == preset.id
+                        val isSelected = selectedAvatarId == preset.id && customAvatarUri == null
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = if (isSelected) Color(selectedColorHex).copy(alpha = 0.25f) else theme.surfaceColor,
@@ -271,7 +375,10 @@ fun EditProfileDialog(
                             ),
                             modifier = Modifier
                                 .size(44.dp)
-                                .clickable { selectedAvatarId = preset.id }
+                                .clickable {
+                                    selectedAvatarId = preset.id
+                                    customAvatarUri = null // Switching to vector preset clears custom photo
+                                }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -313,7 +420,12 @@ fun EditProfileDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = if (hex == 0xFF00E5FF || hex == 0xFFF59E0B) Color.Black else Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }
@@ -432,7 +544,8 @@ fun EditProfileDialog(
                         userAccount.avatarUrl,
                         selectedColorHex,
                         primaryStack.trim(),
-                        selectedAvatarId
+                        selectedAvatarId,
+                        customAvatarUri
                     )
                     onDismiss()
                 },
@@ -454,4 +567,17 @@ fun EditProfileDialog(
         containerColor = theme.surfaceColor,
         shape = RoundedCornerShape(20.dp)
     )
+
+    // Interactive Photo Crop Dialog
+    if (showCropDialog && rawPickedUriForCrop != null) {
+        PhotoCropDialog(
+            theme = theme,
+            imageUri = rawPickedUriForCrop!!,
+            onCropConfirmed = { croppedPath ->
+                customAvatarUri = croppedPath
+                showCropDialog = false
+            },
+            onDismiss = { showCropDialog = false }
+        )
+    }
 }

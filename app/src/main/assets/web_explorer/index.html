@@ -246,10 +246,21 @@
             </div>
           </div>
 
-          <!-- Folder Creation Inputs -->
+          <!-- Folder Creation Inputs with Real Project Templates -->
           <div id="folderCreationFields" style="display: none;">
+            <label class="modal-label">Project / Folder Template:</label>
+            <div class="template-pills-row" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+              <button type="button" class="template-pill active" data-tpl="blank" style="padding: 5px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card-bg); color: var(--text-main); cursor: pointer;">📁 Blank Folder</button>
+              <button type="button" class="template-pill" data-tpl="project" style="padding: 5px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card-bg); color: var(--text-main); cursor: pointer;">📦 Blank Project</button>
+              <button type="button" class="template-pill" data-tpl="python" style="padding: 5px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card-bg); color: var(--text-main); cursor: pointer;">🐍 Python Project</button>
+              <button type="button" class="template-pill" data-tpl="web" style="padding: 5px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card-bg); color: var(--text-main); cursor: pointer;">🌐 Web Project</button>
+              <button type="button" class="template-pill" data-tpl="java" style="padding: 5px 9px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card-bg); color: var(--text-main); cursor: pointer;">☕ Java Project</button>
+            </div>
+            <div id="templateInfoText" class="template-info-box" style="font-size: 11px; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px;">
+              Clean empty folder ready to organize code files and assets.
+            </div>
             <label class="modal-label" for="createFolderNameInput">Folder Name:</label>
-            <input type="text" id="createFolderNameInput" class="modal-input" placeholder="e.g. components, utils, scripts, assets, docs" />
+            <input type="text" id="createFolderNameInput" class="modal-input" placeholder="e.g. my_folder, python_app, web_site" />
           </div>
         </div>
 

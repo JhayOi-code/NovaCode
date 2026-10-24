@@ -1,8 +1,11 @@
 package com.example.ui.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -18,16 +21,20 @@ import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ProfileAvatarPresets
 import com.example.model.UserAccount
+import java.io.File
 
 @Composable
 fun UserProfileAvatarView(
@@ -36,6 +43,20 @@ fun UserProfileAvatarView(
     borderColor: Color = Color(0xFF6366F1),
     modifier: Modifier = Modifier
 ) {
+    val customUri = account?.avatarCustomUri
+    val customBitmap = remember(customUri) {
+        if (!customUri.isNullOrBlank()) {
+            val f = File(customUri)
+            if (f.exists() && f.length() > 0) {
+                try {
+                    BitmapFactory.decodeFile(f.absolutePath)
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+        } else null
+    }
+
     val preset = ProfileAvatarPresets.getById(account?.avatarId ?: "avatar_terminal")
     val initial = account?.username?.firstOrNull()?.uppercaseChar()?.toString() ?: "L"
 
@@ -47,19 +68,14 @@ fun UserProfileAvatarView(
             .background(Color(preset.secondaryColorHex)),
         contentAlignment = Alignment.Center
     ) {
-        val icon = when (preset.iconKey) {
-            "terminal" -> Icons.Default.Terminal
-            "security" -> Icons.Default.Security
-            "cloud" -> Icons.Default.Cloud
-            "palette" -> Icons.Default.Palette
-            "phone_android" -> Icons.Default.PhoneAndroid
-            "code" -> Icons.Default.Code
-            "storage" -> Icons.Default.Storage
-            "bug_report" -> Icons.Default.BugReport
-            else -> Icons.Default.Person
-        }
-
-        if (account?.isSignedIn == true && account.authProvider == "Google") {
+        if (customBitmap != null) {
+            Image(
+                bitmap = customBitmap.asImageBitmap(),
+                contentDescription = "Profile Photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (account?.isSignedIn == true && account.authProvider == "Google") {
             Text(
                 text = initial,
                 color = Color(preset.primaryColorHex),
@@ -67,6 +83,17 @@ fun UserProfileAvatarView(
                 fontSize = (size.value * 0.45f).sp
             )
         } else {
+            val icon = when (preset.iconKey) {
+                "terminal" -> Icons.Default.Terminal
+                "security" -> Icons.Default.Security
+                "cloud" -> Icons.Default.Cloud
+                "palette" -> Icons.Default.Palette
+                "phone_android" -> Icons.Default.PhoneAndroid
+                "code" -> Icons.Default.Code
+                "storage" -> Icons.Default.Storage
+                "bug_report" -> Icons.Default.BugReport
+                else -> Icons.Default.Person
+            }
             Icon(
                 imageVector = icon,
                 contentDescription = preset.name,

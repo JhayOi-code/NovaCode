@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -292,16 +293,24 @@ private fun GitFileItem(
             )
         }
 
-        IconButton(
-            onClick = onToggleStage,
-            modifier = Modifier.size(24.dp)
+        Surface(
+            shape = CircleShape,
+            color = if (isStaged) theme.primaryColor else Color.Transparent,
+            border = if (isStaged) null else androidx.compose.foundation.BorderStroke(1.5.dp, theme.lineNumberColor.copy(alpha = 0.5f)),
+            modifier = Modifier
+                .size(22.dp)
+                .clickable { onToggleStage() }
         ) {
-            Icon(
-                imageVector = if (isStaged) Icons.Default.Remove else Icons.Default.Add,
-                contentDescription = if (isStaged) "Unstage" else "Stage",
-                tint = theme.lineNumberColor,
-                modifier = Modifier.size(14.dp)
-            )
+            if (isStaged) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Staged",
+                        tint = Color.Black,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
         }
     }
 }

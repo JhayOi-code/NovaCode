@@ -838,11 +838,11 @@ object CodeExecutionEngine {
             when {
                 upper.startsWith("CREATE TABLE") -> {
                     val tableName = stmt.substringAfter("TABLE").trim().substringBefore(" ").substringBefore("(")
-                    stdout.append("✓ Table created: $tableName\n\n")
+                    stdout.append("Table created: $tableName\n\n")
                 }
                 upper.startsWith("INSERT INTO") -> {
                     val tableName = stmt.substringAfter("INTO").trim().substringBefore(" ").substringBefore("(")
-                    stdout.append("✓ 1 row inserted into $tableName\n\n")
+                    stdout.append("1 row inserted into $tableName\n\n")
                 }
                 upper.startsWith("SELECT") -> {
                     stdout.append("Query: $stmt;\n")
@@ -962,7 +962,7 @@ object CodeExecutionEngine {
         }
 
         val type = if (trimmed.startsWith("{")) "Object" else "Array"
-        return Triple("✓ JSON Valid! Structure: $type (Valid syntax, 0 errors)\nFormatted:\n${trimmed.lines().joinToString("\n") { "  $it" }}", "", 0)
+        return Triple("[OK] JSON Valid! Structure: $type (Valid syntax, 0 errors)\nFormatted:\n${trimmed.lines().joinToString("\n") { "  $it" }}", "", 0)
     }
 
     // ==========================================
@@ -980,7 +980,7 @@ object CodeExecutionEngine {
         out.append("• CSS Custom Properties (--vars): $varsCount\n")
         out.append("• Keyframe Animations: $keyframesCount\n")
         out.append("• Media Queries: $mediaCount\n\n")
-        out.append("✓ Valid CSS syntax. Tap 'Web Preview' to test styling inside live HTML DOM.")
+        out.append("Valid CSS syntax. Tap 'Web Preview' to test styling inside live HTML DOM.")
         return Triple(out.toString(), "", 0)
     }
 
@@ -994,7 +994,7 @@ object CodeExecutionEngine {
                 line.startsWith("# ") -> out.append("═ ${line.removePrefix("# ").uppercase()} ═\n\n")
                 line.startsWith("## ") -> out.append("▶ ${line.removePrefix("## ")}\n\n")
                 line.startsWith("### ") -> out.append("• ${line.removePrefix("### ")}\n")
-                line.startsWith("- ") || line.startsWith("* ") -> out.append("  ✔ ${line.substring(2)}\n")
+                line.startsWith("- ") || line.startsWith("* ") -> out.append("  • ${line.substring(2)}\n")
                 else -> out.append(line).append("\n")
             }
         }

@@ -61,7 +61,7 @@ object LanguageRunners {
                 val type = line.substringAfter("console.").substringBefore("(")
                 val inner = line.substringAfter("(").substringBeforeLast(");").removeSuffix(")").trim()
                 val args = splitArgs(inner).map { evalSimpleExpr(it, vars)?.toString() ?: "undefined" }
-                val prefix = if (type == "error") "❌ [ERROR] " else if (type == "warn") "⚠️ [WARN] " else ""
+                val prefix = if (type == "error") "[ERROR] " else if (type == "warn") "[WARN] " else ""
                 stdout.add("$prefix${args.joinToString(" ")}")
                 continue
             }
@@ -276,7 +276,7 @@ object LanguageRunners {
         return ExecutionResult(
             command = "serve $fileName",
             output = listOf(
-                "⚡ Live Web Page Preview Ready",
+                "Live Web Page Preview Ready",
                 "Rendering '$fileName' on local server...",
                 "Use the 'Web Preview' dialog to view rendered layout, CSS, and interactive JS."
             ),
@@ -296,9 +296,9 @@ object LanguageRunners {
         val isArr = trimmed.startsWith("[") && trimmed.endsWith("]")
 
         val lines = if (isObj || isArr) {
-            listOf("✅ JSON is syntactically valid.", "Size: ${code.length} characters, ${code.lines().size} lines.")
+            listOf("JSON is syntactically valid.", "Size: ${code.length} characters, ${code.lines().size} lines.")
         } else {
-            listOf("⚠️ JSON Syntax Notice: Expected root object {...} or array [...]")
+            listOf("JSON Syntax Notice: Expected root object {...} or array [...]")
         }
 
         return ExecutionResult("json-validator $fileName", lines, 10, 0, true)
@@ -309,7 +309,7 @@ object LanguageRunners {
     // ==========================================
     fun runMarkdown(code: String, fileName: String): ExecutionResult {
         val outputs = mutableListOf<String>()
-        outputs.add("📖 Markdown Document Render Summary:")
+        outputs.add("Markdown Document Render Summary:")
         outputs.add("------------------------------------")
         for (line in code.lines()) {
             val t = line.trim()

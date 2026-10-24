@@ -122,7 +122,7 @@ fun WebPreviewDialog(
                 </head>
                 <body>
                   <div class="card">
-                    <h1>⚡ Linq Dev Server</h1>
+                    <h1>Linq Dev Server</h1>
                     <p>Live local web environment running on port 8080. Serving folder: <code>/$currentHostFolder</code></p>
                     <div class="badge">HTTP SERVER ACTIVE</div>
                   </div>

@@ -553,6 +553,36 @@ greet("Ljhay")
   if (btnSelectTypeFile) btnSelectTypeFile.addEventListener('click', () => setTypeMode('file'));
   if (btnSelectTypeFolder) btnSelectTypeFolder.addEventListener('click', () => setTypeMode('folder'));
 
+  let selectedFolderTemplate = 'blank';
+  const templatePills = document.querySelectorAll('.template-pill');
+  const templateInfoText = document.getElementById('templateInfoText');
+  const templateDescriptions = {
+    blank: 'Clean empty folder ready to organize code files and assets.',
+    project: 'Generic blank project with README.md and .gitignore.',
+    python: 'Python application project with main.py, requirements.txt, and README.md.',
+    web: 'Full web project with index.html, style.css, and app.js configured for dev server hosting.',
+    java: 'Java project with Main.java entry point and README.md.'
+  };
+
+  if (templatePills) {
+    templatePills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        templatePills.forEach(p => {
+          p.classList.remove('active');
+          p.style.borderColor = 'var(--border-light)';
+          p.style.background = 'var(--card-bg)';
+        });
+        pill.classList.add('active');
+        pill.style.borderColor = 'var(--accent)';
+        pill.style.background = 'rgba(0, 229, 255, 0.15)';
+        selectedFolderTemplate = pill.getAttribute('data-tpl') || 'blank';
+        if (templateInfoText) {
+          templateInfoText.textContent = templateDescriptions[selectedFolderTemplate] || '';
+        }
+      });
+    });
+  }
+
   if (quickExtPills) {
     quickExtPills.forEach(pill => {
       pill.addEventListener('click', () => {
@@ -583,9 +613,45 @@ greet("Ljhay")
         if (!folders.includes(name)) {
           folders.push(name);
           folderExpanded[name] = true;
+
+          // Scaffold template files if template selected
+          let firstFileToOpen = null;
+          if (selectedFolderTemplate === 'python') {
+            const p1 = `${name}/main.py`;
+            const p2 = `${name}/requirements.txt`;
+            const p3 = `${name}/README.md`;
+            projectFiles[p1] = { path: p1, name: 'main.py', folder: name, syntax: 'python', content: 'def main():\n    print("Hello from ' + name + '!")\n\nif __name__ == "__main__":\n    main()\n', isModified: false };
+            projectFiles[p2] = { path: p2, name: 'requirements.txt', folder: name, syntax: 'text', content: '# Dependencies for ' + name + '\nrequests>=2.31.0\n', isModified: false };
+            projectFiles[p3] = { path: p3, name: 'README.md', folder: name, syntax: 'markdown', content: '# ' + name + '\n\nPython project created in Linq Studios.\n', isModified: false };
+            firstFileToOpen = p1;
+          } else if (selectedFolderTemplate === 'web') {
+            const p1 = `${name}/index.html`;
+            const p2 = `${name}/style.css`;
+            const p3 = `${name}/app.js`;
+            projectFiles[p1] = { path: p1, name: 'index.html', folder: name, syntax: 'markup', content: '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="UTF-8">\n  <title>' + name + '</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>🌐 Welcome to ' + name + '</h1>\n  <script src="app.js"></script>\n</body>\n</html>', isModified: false };
+            projectFiles[p2] = { path: p2, name: 'style.css', folder: name, syntax: 'css', content: 'body {\n  font-family: sans-serif;\n  background: #111;\n  color: #eee;\n  padding: 20px;\n}\n', isModified: false };
+            projectFiles[p3] = { path: p3, name: 'app.js', folder: name, syntax: 'javascript', content: 'console.log("' + name + ' loaded successfully!");\n', isModified: false };
+            firstFileToOpen = p1;
+          } else if (selectedFolderTemplate === 'java') {
+            const p1 = `${name}/Main.java`;
+            const p2 = `${name}/README.md`;
+            projectFiles[p1] = { path: p1, name: 'Main.java', folder: name, syntax: 'java', content: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from ' + name + '!");\n    }\n}\n', isModified: false };
+            projectFiles[p2] = { path: p2, name: 'README.md', folder: name, syntax: 'markdown', content: '# ' + name + '\n\nJava project created in Linq Studios.\n', isModified: false };
+            firstFileToOpen = p1;
+          } else if (selectedFolderTemplate === 'project') {
+            const p1 = `${name}/README.md`;
+            const p2 = `${name}/.gitignore`;
+            projectFiles[p1] = { path: p1, name: 'README.md', folder: name, syntax: 'markdown', content: '# ' + name + '\n\nNew project.\n', isModified: false };
+            projectFiles[p2] = { path: p2, name: '.gitignore', folder: name, syntax: 'text', content: '*.log\n.DS_Store\n', isModified: false };
+            firstFileToOpen = p1;
+          }
+
           renderSidebar();
           closeUnifiedCreateModal();
-          showToast(`📁 Created folder '${name}'`);
+          if (firstFileToOpen) {
+            switchActiveFile(firstFileToOpen);
+          }
+          showToast(`📁 Created project folder '${name}'`);
         } else {
           alert(`Folder '${name}' already exists.`);
         }
@@ -1034,6 +1100,22 @@ greet("Ljhay")
   // Handle window resizing to adjust drawer height property
   window.addEventListener('resize', () => {
     setDrawerState(drawerState);
+  });
+
+  // Hardware & Physical Keyboard Shortcuts (Ctrl+S, Ctrl+Enter, Ctrl+B)
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        if (btnSidebarSaveFile) btnSidebarSaveFile.click();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (btnRunActive) btnRunActive.click();
+      } else if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        if (btnToggleMobileSidebar) btnToggleMobileSidebar.click();
+      }
+    }
   });
 
   // Initialization

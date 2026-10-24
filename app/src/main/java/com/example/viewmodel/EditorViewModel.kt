@@ -21,6 +21,7 @@ import com.example.model.CodeFile
 import com.example.model.EditorTheme
 import com.example.model.GitRepositoryStatus
 import com.example.model.LintIssue
+import com.example.model.ProjectTemplateType
 import com.example.model.UserAccount
 import com.example.templates.NewFileTemplates
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,7 @@ data class EditorUiState(
     val activeFileIndex: Int = 0,
     val currentDirectory: String = "/workspace",
     val directoryFiles: List<CodeFile> = emptyList(),
+    val trackedFolders: List<String> = listOf("src", "scripts", "styles", "docs"),
     val isExplorerSidebarOpen: Boolean = false,
     val isSearchReplaceOpen: Boolean = false,
     val isMinimapVisible: Boolean = false,
@@ -53,6 +55,7 @@ data class EditorUiState(
     val lintIssues: List<LintIssue> = emptyList(),
     val autocompleteSuggestions: List<AutocompleteSuggestion> = emptyList(),
     val prettierFormatNotice: String? = null,
+    val saveNotice: String? = null,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
     val gitStatus: GitRepositoryStatus = GitRepositoryStatus(),
@@ -293,6 +296,7 @@ function testAction() {
         val userAvatarColor = prefs.getLong("user_avatar_color_hex", 0xFF00E5FF)
         val userPrimaryStack = prefs.getString("user_primary_stack", "Kotlin • Python • JavaScript") ?: "Kotlin • Python • JavaScript"
         val userAvatarId = prefs.getString("user_avatar_id", "avatar_terminal") ?: "avatar_terminal"
+        val userAvatarCustomUri = prefs.getString("user_avatar_custom_uri", null)
 
         val restoredAccount = UserAccount(
             username = userUsername,
@@ -304,7 +308,8 @@ function testAction() {
             authProvider = userAuthProvider,
             avatarColorHex = userAvatarColor,
             primaryStack = userPrimaryStack,
-            avatarId = userAvatarId
+            avatarId = userAvatarId,
+            avatarCustomUri = userAvatarCustomUri
         )
 
         _uiState.update {
@@ -404,13 +409,79 @@ function testAction() {
         createNewFileInExplorer("Untitled${_uiState.value.openFiles.size + 1}.java")
     }
 
-    // Part 1: Code template on new file creation
-    fun createNewFileInExplorer(fileName: String, customContent: String? = null) {
-        val defaultTemplate = NewFileTemplates.getTemplateForFile(fileName).first
+    // File & Project Creation with real folder accuracy
+    fun createProjectFolder(folderName: String, templateType: ProjectTemplateType = ProjectTemplateType.BLANK_FOLDER) {
+        val clean = folderName.trim().replace(Regex("[^a-zA-Z0-9_\\-\\.]"), "_").trim('_')
+        if (clean.isBlank()) return
+
+        val newFiles = templateType.defaultFiles.map { (fileName, content) ->
+            CodeFile(
+                name = "$clean/$fileName",
+                path = "/workspace/$clean/$fileName",
+                content = content
+            )
+        }
+
+        val updatedDir = _uiState.value.directoryFiles + newFiles
+        val updatedTracked = if (_uiState.value.trackedFolders.contains(clean)) _uiState.value.trackedFolders else _uiState.value.trackedFolders + clean
+
+        // Automatically register web project folder into available dev server host folders
+        val updatedHostFolders = if (templateType == ProjectTemplateType.WEB_PROJECT || clean.contains("web", ignoreCase = true) || clean.contains("site", ignoreCase = true)) {
+            if (_uiState.value.availableHostFolders.contains(clean)) _uiState.value.availableHostFolders else _uiState.value.availableHostFolders + clean
+        } else {
+            _uiState.value.availableHostFolders
+        }
+
+        // Open the primary entry file if available
+        val primaryFile = newFiles.firstOrNull { !it.name.endsWith(".gitkeep") && !it.name.endsWith(".md") } ?: newFiles.firstOrNull()
+        val updatedOpen = if (primaryFile != null) _uiState.value.openFiles + primaryFile else _uiState.value.openFiles
+        val newIndex = if (primaryFile != null) updatedOpen.size - 1 else _uiState.value.activeFileIndex
+
+        undoStack.clear()
+        redoStack.clear()
+
+        _uiState.update {
+            it.copy(
+                directoryFiles = updatedDir,
+                trackedFolders = updatedTracked,
+                availableHostFolders = updatedHostFolders,
+                openFiles = updatedOpen,
+                activeFileIndex = newIndex,
+                canUndo = false,
+                canRedo = false,
+                saveNotice = "Created folder '$clean' (${templateType.title})"
+            )
+        }
+
+        runLintForCurrentFile()
+        gitManager.updateFromFiles(updatedOpen)
+    }
+
+    fun createFolderInExplorer(folderName: String) {
+        createProjectFolder(folderName, ProjectTemplateType.BLANK_FOLDER)
+    }
+
+    fun createNewFileInExplorer(fileName: String, parentFolder: String? = null, customContent: String? = null) {
+        val cleanName = fileName.trim().removePrefix("/")
+        val resolvedName = if (!parentFolder.isNullOrBlank() && parentFolder != "/" && parentFolder != "root") {
+            val cleanFolder = parentFolder.trim().removePrefix("/").removeSuffix("/")
+            if (cleanName.startsWith("$cleanFolder/")) cleanName else "$cleanFolder/$cleanName"
+        } else {
+            cleanName
+        }
+
+        val folderPart = resolvedName.substringBeforeLast('/', "").ifEmpty { null }
+        val updatedTracked = if (folderPart != null && !_uiState.value.trackedFolders.contains(folderPart)) {
+            _uiState.value.trackedFolders + folderPart
+        } else {
+            _uiState.value.trackedFolders
+        }
+
+        val defaultTemplate = NewFileTemplates.getTemplateForFile(resolvedName).first
         val finalContent = customContent ?: defaultTemplate
         val newFile = CodeFile(
-            name = fileName,
-            path = "/workspace/$fileName",
+            name = resolvedName,
+            path = "/workspace/$resolvedName",
             content = finalContent
         )
         val updatedFiles = _uiState.value.openFiles + newFile
@@ -423,33 +494,51 @@ function testAction() {
             it.copy(
                 openFiles = updatedFiles,
                 directoryFiles = _uiState.value.directoryFiles + newFile,
+                trackedFolders = updatedTracked,
                 activeFileIndex = newIndex,
                 canUndo = false,
-                canRedo = false
+                canRedo = false,
+                saveNotice = "Created ${newFile.name}"
             )
         }
         runLintForCurrentFile()
         gitManager.updateFromFiles(updatedFiles)
     }
 
-    fun createFolderInExplorer(folderName: String) {
-        val clean = folderName.trim().removePrefix("/").removeSuffix("/")
-        if (clean.isBlank()) return
-        val placeholder = CodeFile(
-            name = "$clean/README.md",
-            path = "/workspace/$clean/README.md",
-            content = "# $clean\n\nFolder created in Linq Studios workspace.\n"
+    // Save Active File (Ctrl+S developer shortcut support)
+    fun saveActiveFile(): String {
+        val currentFile = _uiState.value.openFiles.getOrNull(_uiState.value.activeFileIndex) ?: return "No active file"
+        val updatedFiles = _uiState.value.openFiles.toMutableList()
+        val savedFile = currentFile.copy(
+            originalContent = currentFile.content,
+            isModified = false
         )
-        val updatedDir = _uiState.value.directoryFiles + placeholder
-        val updatedOpen = _uiState.value.openFiles + placeholder
+        updatedFiles[_uiState.value.activeFileIndex] = savedFile
+
+        val updatedDir = _uiState.value.directoryFiles.map {
+            if (it.path == savedFile.path) savedFile else it
+        }
+
+        try {
+            val context = getApplication<Application>()
+            val targetDir = File(context.cacheDir, _uiState.value.hostedFolder).apply { mkdirs() }
+            val localName = savedFile.name.substringAfterLast('/')
+            File(targetDir, localName).writeText(savedFile.content)
+        } catch (_: Exception) {}
+
         _uiState.update {
             it.copy(
+                openFiles = updatedFiles,
                 directoryFiles = updatedDir,
-                openFiles = updatedOpen,
-                activeFileIndex = updatedOpen.size - 1
+                saveNotice = "Saved ${savedFile.name} (Ctrl+S)"
             )
         }
-        gitManager.updateFromFiles(updatedOpen)
+        gitManager.updateFromFiles(updatedFiles)
+        return "Saved ${savedFile.name}"
+    }
+
+    fun clearSaveNotice() {
+        _uiState.update { it.copy(saveNotice = null) }
     }
 
     // Content modification & Undo/Redo
@@ -867,6 +956,23 @@ function testAction() {
         _uiState.update { it.copy(userAccount = reset) }
     }
 
+    fun deleteFolderInExplorer(folderName: String) {
+        val clean = folderName.trim().removePrefix("/").removeSuffix("/")
+        val updatedTracked = _uiState.value.trackedFolders.filter { it != clean }
+        val updatedDir = _uiState.value.directoryFiles.filter { !it.name.startsWith("$clean/") }
+        val updatedOpen = _uiState.value.openFiles.filter { !it.name.startsWith("$clean/") }
+        val newIndex = if (updatedOpen.isEmpty()) 0 else _uiState.value.activeFileIndex.coerceIn(0, updatedOpen.size - 1)
+        _uiState.update {
+            it.copy(
+                trackedFolders = updatedTracked,
+                directoryFiles = updatedDir,
+                openFiles = if (updatedOpen.isEmpty() && updatedDir.isNotEmpty()) listOf(updatedDir.first()) else updatedOpen,
+                activeFileIndex = newIndex,
+                saveNotice = "Deleted folder '$clean'"
+            )
+        }
+    }
+
     fun updateUserProfile(
         username: String,
         title: String,
@@ -874,7 +980,8 @@ function testAction() {
         avatar: String?,
         colorHex: Long = 0xFF00E5FF,
         stack: String = "Kotlin • Python • JavaScript",
-        avatarId: String = "avatar_terminal"
+        avatarId: String = "avatar_terminal",
+        avatarCustomUri: String? = null
     ) {
         val updated = _uiState.value.userAccount.copy(
             username = username.ifBlank { "linq_dev" },
@@ -883,7 +990,8 @@ function testAction() {
             avatarUrl = avatar,
             avatarColorHex = colorHex,
             primaryStack = stack.ifBlank { "Kotlin • Python • JavaScript" },
-            avatarId = avatarId
+            avatarId = avatarId,
+            avatarCustomUri = avatarCustomUri ?: _uiState.value.userAccount.avatarCustomUri
         )
         saveUserAccountToPrefs(updated)
         _uiState.update { it.copy(userAccount = updated) }
@@ -927,6 +1035,7 @@ function testAction() {
             .putLong("user_avatar_color_hex", account.avatarColorHex)
             .putString("user_primary_stack", account.primaryStack)
             .putString("user_avatar_id", account.avatarId)
+            .putString("user_avatar_custom_uri", account.avatarCustomUri)
             .apply()
     }
 }

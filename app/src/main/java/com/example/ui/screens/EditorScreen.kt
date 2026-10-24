@@ -22,6 +22,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
@@ -29,18 +34,31 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import com.example.model.ProjectTemplateType
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -139,9 +157,13 @@ fun EditorScreen(
     onCommitGit: (String) -> Unit,
     onPushGit: () -> Unit,
     onToggleExplorerSidebar: () -> Unit,
+    trackedFolders: List<String> = emptyList(),
     onOpenFileFromSidebar: (CodeFile) -> Unit,
     onNewFileInSidebar: (String) -> Unit,
     onNewFolderInSidebar: (String) -> Unit = {},
+    onNewFolderInSidebarWithTemplate: (String, ProjectTemplateType) -> Unit = { name, _ -> onNewFolderInSidebar(name) },
+    onNewFileInSidebarWithFolder: (String?, String) -> Unit = { _, name -> onNewFileInSidebar(name) },
+    onDeleteFolderInSidebar: (String) -> Unit = {},
     onToggleSearchReplace: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
@@ -189,6 +211,78 @@ fun EditorScreen(
     var executionResult by remember { mutableStateOf<ExecutionResult?>(null) }
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var createFileNameInput by remember { mutableStateOf("") }
+    var showSaveToast by remember { mutableStateOf<String?>(null) }
+    var showShortcutsHelpDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showSaveToast) {
+        if (showSaveToast != null) {
+            kotlinx.coroutines.delay(2200)
+            showSaveToast = null
+        }
+    }
+
+    // Physical, Bluetooth, and Virtual Keyboard Shortcut Handler (Ctrl+S, Ctrl+F, Ctrl+Enter, etc.)
+    val handleEditorKeyEvent: (KeyEvent) -> Boolean = { event ->
+        if (event.type == KeyEventType.KeyDown) {
+            val isCtrlOrMeta = event.isCtrlPressed || event.isMetaPressed
+            if (isCtrlOrMeta) {
+                when (event.key) {
+                    Key.S -> {
+                        onSaveCurrent()
+                        val fileName = activeFile?.name ?: "file"
+                        showSaveToast = "💾 Saved $fileName (Ctrl+S)"
+                        true
+                    }
+                    Key.F -> {
+                        onToggleSearchReplace()
+                        true
+                    }
+                    Key.Enter, Key.NumPadEnter -> {
+                        val current = activeFile ?: openFiles.firstOrNull()
+                        if (current != null) {
+                            executionResult = CodeExecutionEngine.execute(current, openFiles)
+                            onRunCode()
+                        }
+                        true
+                    }
+                    Key.Z -> {
+                        if (event.isShiftPressed) {
+                            if (canRedo) onRedo()
+                        } else {
+                            if (canUndo) onUndo()
+                        }
+                        true
+                    }
+                    Key.Y -> {
+                        if (canRedo) onRedo()
+                        true
+                    }
+                    Key.B -> {
+                        onToggleExplorerSidebar()
+                        true
+                    }
+                    Key.W -> {
+                        if (openFiles.size > 1) {
+                            onCloseTab(activeFileIndex)
+                        }
+                        true
+                    }
+                    Key.N -> {
+                        onNewTab()
+                        true
+                    }
+                    Key.Slash -> {
+                        showShortcutsHelpDialog = true
+                        true
+                    }
+                    else -> false
+                }
+            } else if (event.key == Key.F1) {
+                showShortcutsHelpDialog = true
+                true
+            } else false
+        } else false
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val editorScrollState = rememberScrollState()
@@ -201,6 +295,7 @@ fun EditorScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(theme.editorBackground)
+            .onPreviewKeyEvent(handleEditorKeyEvent)
             .testTag("editor_screen")
     ) {
         // TOP TOOLBAR
@@ -262,8 +357,25 @@ fun EditorScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Find & Replace",
+                                contentDescription = "Find & Replace (Ctrl+F)",
                                 tint = if (isSearchReplaceOpen) theme.primaryColor else theme.lineNumberColor,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        // Dedicated Save Button (Ctrl+S)
+                        IconButton(
+                            onClick = {
+                                onSaveCurrent()
+                                val fileName = activeFile?.name ?: "file"
+                                showSaveToast = "💾 Saved $fileName (Ctrl+S)"
+                            },
+                            modifier = Modifier.size(34.dp).testTag("toolbar_save_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = "Save (Ctrl+S)",
+                                tint = if (activeFile?.isModified == true) Color(0xFFF59E0B) else theme.primaryColor,
                                 modifier = Modifier.size(19.dp)
                             )
                         }
@@ -345,7 +457,7 @@ fun EditorScreen(
                         }
                     }
 
-                    // Right action icons: Minimap, Zen Mode, Ask AI, and REAL RUN BUTTON
+                    // Right action icons: Minimap, Zen Mode, Ask AI, Shortcuts Help, and REAL RUN BUTTON
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -393,6 +505,23 @@ fun EditorScreen(
                             )
                         }
 
+                        // Keyboard Shortcuts Cheat Sheet Quick Button
+                        IconButton(
+                            onClick = { showShortcutsHelpDialog = true },
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(theme.surfaceVariant.copy(alpha = 0.6f))
+                                .testTag("toolbar_shortcuts_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Keyboard,
+                                contentDescription = "Keyboard Shortcuts",
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
                         // Open Terminal quick button
                         IconButton(
                             onClick = onOpenTerminal,
@@ -427,7 +556,7 @@ fun EditorScreen(
                                 .height(32.dp)
                                 .testTag("run_code_button")
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Run Active Code", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Run Active Code (Ctrl+Enter)", modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Run", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             val ext = activeFile?.name?.substringAfterLast('.', "")?.uppercase() ?: ""
@@ -579,15 +708,19 @@ fun EditorScreen(
         // MAIN WORKSPACE BODY (Sidebar + Editor + Minimap)
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxSize()) {
-                // File Explorer Sidebar
+                // File Explorer Sidebar with Project Templates
                 if (isExplorerSidebarOpen && !isZenMode) {
                     FileExplorerSidebar(
                         theme = theme,
                         files = openFiles,
                         gitStatus = gitStatus,
+                        trackedFolders = trackedFolders,
                         onOpenFile = onOpenFileFromSidebar,
                         onNewFile = onNewFileInSidebar,
                         onNewFolder = onNewFolderInSidebar,
+                        onNewFolderWithTemplate = onNewFolderInSidebarWithTemplate,
+                        onNewFileInFolder = onNewFileInSidebarWithFolder,
+                        onDeleteFolder = onDeleteFolderInSidebar,
                         onStageFile = onStageGitFile,
                         onUnstageFile = onUnstageGitFile,
                         onStageAll = onStageAllGitFiles,
@@ -689,6 +822,7 @@ fun EditorScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(top = 12.dp, bottom = 12.dp, start = 8.dp, end = 12.dp)
+                                .onPreviewKeyEvent(handleEditorKeyEvent)
                                 .testTag("code_editor_textarea")
                         )
                     }
@@ -810,6 +944,32 @@ fun EditorScreen(
                     }
                 }
             }
+
+            // Floating Save Confirmation Toast Banner
+            showSaveToast?.let { toastText ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF10B981),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                        Text(
+                            text = toastText,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
         }
 
         // BOTTOM TOOLBARS (Strictly ordered):
@@ -831,14 +991,32 @@ fun EditorScreen(
             onDismiss = onDismissAutocomplete
         )
 
-        // 2. Special-character toolbar row
+        // 2. Special-character toolbar row with Quick Developer Shortcuts
         SpecialCharactersToolbar(
             theme = theme,
             onInsertSymbol = { symbol ->
                 val transformed = SmartCodeInputHandler.insertToolbarSymbol(textFieldValue, symbol)
                 textFieldValue = transformed
                 onContentChange(transformed.text)
-            }
+            },
+            onSave = {
+                onSaveCurrent()
+                val fileName = activeFile?.name ?: "file"
+                showSaveToast = "💾 Saved $fileName"
+            },
+            onToggleSearch = onToggleSearchReplace,
+            onRunCode = {
+                val current = activeFile ?: openFiles.firstOrNull()
+                if (current != null) {
+                    executionResult = CodeExecutionEngine.execute(current, openFiles)
+                    onRunCode()
+                }
+            },
+            onUndo = onUndo,
+            onRedo = onRedo,
+            canUndo = canUndo,
+            canRedo = canRedo,
+            onShowShortcutsHelp = { showShortcutsHelpDialog = true }
         )
     }
 
@@ -955,4 +1133,103 @@ fun EditorScreen(
             shape = RoundedCornerShape(12.dp)
         )
     }
+
+    // Keyboard Shortcuts Cheat Sheet Dialog
+    if (showShortcutsHelpDialog) {
+        KeyboardShortcutsHelpDialog(
+            theme = theme,
+            onDismiss = { showShortcutsHelpDialog = false }
+        )
+    }
+}
+
+@Composable
+fun KeyboardShortcutsHelpDialog(
+    theme: EditorTheme,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Keyboard, contentDescription = null, tint = theme.primaryColor)
+                Text("Keyboard Shortcuts", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+            }
+        },
+        text = {
+            val shortcuts = listOf(
+                Pair("Save active file", listOf("Ctrl", "S")),
+                Pair("Find & Replace in file", listOf("Ctrl", "F")),
+                Pair("Run code immediately", listOf("Ctrl", "↵ Enter")),
+                Pair("Toggle Explorer sidebar", listOf("Ctrl", "B")),
+                Pair("Undo last edit", listOf("Ctrl", "Z")),
+                Pair("Redo edit", listOf("Ctrl", "Y")),
+                Pair("Close active tab", listOf("Ctrl", "W")),
+                Pair("Create new file", listOf("Ctrl", "N")),
+                Pair("Shortcuts cheat sheet", listOf("Ctrl", "/"))
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Hardware, Bluetooth, and emulator keyboard shortcuts configured for Linq Studios:",
+                    color = theme.lineNumberColor,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+
+                shortcuts.forEach { (action, keys) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(theme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = action,
+                            color = theme.onSurfaceColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            keys.forEach { key ->
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = theme.editorBackground,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+                                ) {
+                                    Text(
+                                        text = key,
+                                        color = theme.primaryColor,
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Got it", fontWeight = FontWeight.Bold)
+            }
+        },
+        containerColor = theme.surfaceColor,
+        shape = RoundedCornerShape(12.dp)
+    )
 }

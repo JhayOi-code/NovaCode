@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,27 +77,34 @@ fun SettingsScreen(
     activeFileName: String = "",
     serverStatus: String = "Stopped",
     onSelectTheme: (EditorTheme) -> Unit,
-    onUpdateProfile: (String, String, String, String?, Long, String, String) -> Unit,
+    onUpdateProfile: (String, String, String, String?, Long, String, String, String?) -> Unit,
     onSignInWithGoogle: (String, String) -> Unit = { _, _ -> },
     onSignOut: () -> Unit = {},
     onResetWorkspace: () -> Unit = {},
     onToggleSuggestionsEnabled: () -> Unit = {},
     onToggleMinimap: () -> Unit = {},
-    onOpenAiSettings: () -> Unit
+    onOpenAiSettings: () -> Unit,
+    onShowWelcomeGuide: () -> Unit = {}
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showGoogleAuthDialog by remember { mutableStateOf(false) }
     var showDebugInspector by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(currentTheme.editorBackground)
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .testTag("settings_screen"),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(currentTheme.editorBackground),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 840.dp)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .testTag("settings_screen"),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Screen Title
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -335,12 +343,13 @@ fun SettingsScreen(
                             }
                         }
 
-                        if (isSelected) {
-                            Surface(
-                                shape = CircleShape,
-                                color = currentTheme.primaryColor,
-                                modifier = Modifier.size(24.dp)
-                            ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (isSelected) currentTheme.primaryColor else Color.Transparent,
+                            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.5.dp, currentTheme.borderColor),
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            if (isSelected) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
@@ -554,9 +563,37 @@ fun SettingsScreen(
                         Text("Open Inspector", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = currentTheme.primaryColor, modifier = Modifier.size(18.dp))
+                        Text(
+                            text = "Welcome Tour & Highlights",
+                            color = currentTheme.onSurfaceColor,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onShowWelcomeGuide,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(34.dp).testTag("replay_welcome_tour_button")
+                    ) {
+                        Text("Show Tour", color = currentTheme.primaryColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
+}
 
     if (showEditProfileDialog) {
         EditProfileDialog(

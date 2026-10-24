@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.example.util.rememberHardwareFps
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -61,6 +62,7 @@ fun DebugInspectorDialog(
     onResetWorkspace: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val fpsState = rememberHardwareFps()
     var totalMem by remember { mutableLongStateOf(Runtime.getRuntime().totalMemory() / (1024 * 1024)) }
     var freeMem by remember { mutableLongStateOf(Runtime.getRuntime().freeMemory() / (1024 * 1024)) }
     var maxMem by remember { mutableLongStateOf(Runtime.getRuntime().maxMemory() / (1024 * 1024)) }
@@ -232,7 +234,9 @@ fun DebugInspectorDialog(
                         DebugMetricRow("Open Tab Buffers", "$openFilesCount files", theme)
                         DebugMetricRow("Linter Status", "$lintErrorsCount errors, $lintWarningsCount warnings", theme)
                         DebugMetricRow("Dev Server", serverStatus, theme)
-                        DebugMetricRow("Compose Frame Rate", "60 FPS Target", theme)
+                        DebugMetricRow("Display Refresh Rate", "${fpsState.targetRefreshRate} Hz (Hardware)", theme)
+                        DebugMetricRow("Live Compose FPS", "${fpsState.currentFps} FPS (~${String.format(java.util.Locale.US, "%.1f", fpsState.frameTimeMs)} ms/frame)", theme)
+                        DebugMetricRow("Render Pacing", if (fpsState.isRunningSmooth) "Smooth / Optimal" else "Active throttle", theme)
                         DebugMetricRow("Threads Active", "${Thread.activeCount()} threads", theme)
                     }
                 }
