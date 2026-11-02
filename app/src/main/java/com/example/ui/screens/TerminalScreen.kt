@@ -84,57 +84,66 @@ fun TerminalScreen(
             .padding(8.dp)
             .testTag("terminal_screen")
     ) {
-        // Termux Title Bar with Fullscreen Toggle
+        // Terminal Header with Fullscreen Toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(theme.surfaceColor, RoundedCornerShape(10.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .heightIn(min = 56.dp)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .testTag("terminal-drawer-header"),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
             ) {
                 Icon(
                     imageVector = Icons.Default.Terminal,
                     contentDescription = null,
                     tint = Color(0xFF10B981),
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Text(
                     text = "linq@android:~/workspace",
                     color = Color(0xFF10B981),
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Fullscreen Toggle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Fullscreen Toggle (48x48 touch target)
                 IconButton(
                     onClick = onToggleFullScreen,
-                    modifier = Modifier.size(30.dp).testTag("terminal_fullscreen_button")
+                    modifier = Modifier.size(48.dp).testTag("terminal_fullscreen_button")
                 ) {
                     Icon(
                         imageVector = if (isFullScreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                         contentDescription = if (isFullScreen) "Exit Full Screen" else "Full Screen",
                         tint = if (isFullScreen) theme.primaryColor else theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
+                // Clear Terminal (48x48 touch target)
                 IconButton(
                     onClick = onClearTerminal,
-                    modifier = Modifier.size(30.dp).testTag("clear_terminal_button")
+                    modifier = Modifier.size(48.dp).testTag("clear_terminal_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.ClearAll,
                         contentDescription = "Clear",
                         tint = theme.lineNumberColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

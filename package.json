@@ -1,0 +1,18 @@
+{
+  "name": "linq-studio",
+  "version": "1.0.0",
+  "description": "Linq Studio Web IDE & Authentication Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^13.1.0",
+    "helmet": "^8.0.0",
+    "nodemailer": "^6.9.16"
+  }
+}

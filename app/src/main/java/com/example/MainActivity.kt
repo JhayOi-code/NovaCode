@@ -67,10 +67,12 @@ import androidx.compose.ui.unit.sp
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import com.example.model.CodeFile
+import com.example.auth.OwnerAuthService
 import com.example.ui.components.AiSettingsDialog
-import com.example.ui.components.AppLoadingScreen
-import com.example.ui.components.UniqueWelcomeDialog
+import com.example.ui.components.OwnerWelcomeCelebration
+import com.example.ui.components.WelcomeScreen
 import com.example.ui.components.WebPreviewDialog
+import com.example.ui.tours.BeginnerGuidedTourOverlay
 import com.example.ui.screens.AboutScreen
 import com.example.ui.screens.EditorScreen
 import com.example.ui.screens.FilesScreen
@@ -95,25 +97,21 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsState()
             val theme = uiState.currentTheme
 
-            LinqStudioTheme {
+            LinqStudioTheme(theme = theme) {
                 val context = LocalContext.current
                 val prefs = remember { context.getSharedPreferences("linq_prefs", Context.MODE_PRIVATE) }
-                val hasSeenWelcome = remember { prefs.getBoolean("has_seen_welcome", false) }
+                var hasSeenWelcome by remember { mutableStateOf(prefs.getBoolean("has_seen_welcome", false)) }
 
-                var isAppLoaded by remember { mutableStateOf(false) }
-                var showWelcomeDialog by remember { mutableStateOf(false) }
-
+                var showGuidedTour by remember { mutableStateOf(false) }
                 var selectedLanguageGuide by remember { mutableStateOf<LanguageGuideData?>(null) }
                 var showAiSettingsDialog by remember { mutableStateOf(false) }
 
-                if (!isAppLoaded) {
-                    AppLoadingScreen(
+                if (!hasSeenWelcome) {
+                    WelcomeScreen(
                         theme = theme,
-                        onLoadingComplete = {
-                            isAppLoaded = true
-                            if (!hasSeenWelcome) {
-                                showWelcomeDialog = true
-                            }
+                        onDismiss = {
+                            hasSeenWelcome = true
+                            prefs.edit().putBoolean("has_seen_welcome", true).apply()
                         }
                     )
                 } else {
@@ -216,6 +214,7 @@ class MainActivity : ComponentActivity() {
                                                     Image(
                                                         painter = painterResource(id = R.drawable.ic_linq_user_logo),
                                                         contentDescription = "Linq Studios",
+                                                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (theme.isDark) Color.White else Color.Black),
                                                         modifier = Modifier.size(26.dp)
                                                     )
                                                 }
@@ -320,7 +319,18 @@ class MainActivity : ComponentActivity() {
                                                     onUpdateProfile = { u, t, b, a, c, s, id, uri -> viewModel.updateUserProfile(u, t, b, a, c, s, id, uri) },
                                                     onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
                                                     onSignOut = { viewModel.signOut() },
-                                                    onResetWorkspace = { viewModel.resetWorkspace() }
+                                                    onResetWorkspace = { viewModel.resetWorkspace() },
+                                                    activeUsersCount = uiState.activeUsersCount,
+                                                    isOnline = uiState.isOnline,
+                                                    activeWebFolder = uiState.hostedFolder,
+                                                    availableHostFolders = uiState.availableHostFolders,
+                                                    onChooseFolderWithParam = { folder -> viewModel.setDevServerHostFolder(folder) },
+                                                    onImportDeviceDirectory = { dir, name -> viewModel.serveCustomDirectory(dir, name) },
+                                                    onImportZipArchive = { dir, name -> viewModel.serveCustomDirectory(dir, name) },
+                                                    onImportMultipleFiles = { dir, name -> viewModel.serveCustomDirectory(dir, name) },
+                                                    onChooseFolder = {},
+                                                    onChooseFiles = {},
+                                                    openFiles = uiState.openFiles
                                                 )
                                             }
                                         }
@@ -392,7 +402,22 @@ class MainActivity : ComponentActivity() {
                                             onRejectDiff = { viewModel.dismissDiffPreview() },
                                             onToggleSuggestionsEnabled = { viewModel.toggleSuggestionsEnabled() },
                                             onOpenAiSettings = { showAiSettingsDialog = true },
-                                            onOpenTerminal = { viewModel.setNavTab(3) }
+                                            onOpenTerminal = { viewModel.setNavTab(3) },
+                                            onOpenGuidedTour = { showGuidedTour = true },
+                                            liveExecutionState = uiState.liveExecutionState,
+                                            isExecutionOutputOpen = uiState.isExecutionOutputOpen,
+                                            onStopExecution = { viewModel.stopExecution() },
+                                            onSendStdin = { viewModel.sendStdin(it) },
+                                            onClearExecutionOutput = { viewModel.clearExecutionOutput() },
+                                            onCloseExecutionOutput = { viewModel.closeExecutionOutput() },
+                                            onOpenActiveFileInTermux = { viewModel.openActiveFileInTermux() },
+                                            onOpenSettings = { viewModel.setNavTab(4) },
+                                            floatingWindows = uiState.floatingWindows,
+                                            onCloseFloatingWindow = { viewModel.closeFloatingWindow(it) },
+                                            onMoveFloatingWindow = { id, x, y -> viewModel.moveFloatingWindow(id, x, y) },
+                                            onResizeFloatingWindow = { id, w, h -> viewModel.resizeFloatingWindow(id, w, h) },
+                                            onFocusFloatingWindow = { viewModel.focusFloatingWindow(it) },
+                                            onClearFloatingWindows = { viewModel.clearFloatingWindows() }
                                         )
 
                                         2 -> FilesScreen(
@@ -438,6 +463,16 @@ class MainActivity : ComponentActivity() {
                                             openFilesCount = uiState.openFiles.size,
                                             activeFileName = uiState.openFiles.getOrNull(uiState.activeFileIndex)?.name ?: "",
                                             serverStatus = uiState.serverStatus,
+                                            runnerPreference = uiState.runnerPreference,
+                                            remoteApiUrl = uiState.remoteApiUrl,
+                                            remoteApiKey = uiState.remoteApiKey,
+                                            executionTimeoutSeconds = uiState.executionTimeoutSeconds,
+                                            maxOutputLines = uiState.maxOutputLines,
+                                            isTermuxInstalled = uiState.isTermuxInstalled,
+                                            hasTermuxPermission = uiState.hasTermuxPermission,
+                                            termuxTools = uiState.termuxTools,
+                                            testRunnersResults = uiState.testRunnersResults,
+                                            isTestingRunners = uiState.isTestingRunners,
                                             onSelectTheme = { viewModel.selectTheme(it) },
                                             onUpdateProfile = { u, t, b, a, c, s, id, uri -> viewModel.updateUserProfile(u, t, b, a, c, s, id, uri) },
                                             onSignInWithGoogle = { name, email -> viewModel.signInWithGoogle(name, email) },
@@ -446,7 +481,22 @@ class MainActivity : ComponentActivity() {
                                             onToggleSuggestionsEnabled = { viewModel.toggleSuggestionsEnabled() },
                                             onToggleMinimap = { viewModel.toggleMinimap() },
                                             onOpenAiSettings = { showAiSettingsDialog = true },
-                                            onShowWelcomeGuide = { showWelcomeDialog = true }
+                                            onShowWelcomeGuide = {
+                                                prefs.edit().putBoolean("has_seen_welcome", false).apply()
+                                                hasSeenWelcome = false
+                                            },
+                                            onShowWelcomeScreenAgain = {
+                                                prefs.edit().putBoolean("has_seen_welcome", false).apply()
+                                                hasSeenWelcome = false
+                                            },
+                                            onStartGuidedTour = { showGuidedTour = true },
+                                            onSelectRunnerPreference = { viewModel.setRunnerPreference(it) },
+                                            onUpdateRemoteApiUrl = { viewModel.setRemoteApiUrl(it) },
+                                            onUpdateRemoteApiKey = { viewModel.setRemoteApiKey(it) },
+                                            onUpdateExecutionTimeout = { viewModel.setExecutionTimeout(it) },
+                                            onUpdateMaxOutputLines = { viewModel.setMaxOutputLines(it) },
+                                            onCheckTermux = { viewModel.checkTermuxEnvironment() },
+                                            onTestAllRunners = { viewModel.testAllRunners() }
                                         )
 
                                         5 -> AboutScreen(theme = theme)
@@ -528,14 +578,19 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    if (showWelcomeDialog) {
-                        UniqueWelcomeDialog(
+                    // Beginner Guided Tour Overlay
+                    if (showGuidedTour) {
+                        BeginnerGuidedTourOverlay(
                             theme = theme,
-                            userAccount = uiState.userAccount,
-                            onDismiss = {
-                                showWelcomeDialog = false
-                                prefs.edit().putBoolean("has_seen_welcome", true).apply()
-                            }
+                            onDismiss = { showGuidedTour = false }
+                        )
+                    }
+
+
+                    // Part 7A: Owner Welcome Celebration Screen (60fps particles, golden badge)
+                    if (uiState.showOwnerCelebration) {
+                        OwnerWelcomeCelebration(
+                            onDismiss = { viewModel.dismissOwnerCelebration() }
                         )
                     }
                 }

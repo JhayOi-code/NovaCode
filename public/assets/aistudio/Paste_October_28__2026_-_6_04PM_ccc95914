@@ -1,0 +1,286 @@
+Attach the full source. Complete ALL parts below. Every one must work for real. Do not answer "not possible"; if one method fails, use another until it works.
+
+GLOBAL RULES
+- Output must come from ACTUALLY EXECUTING the user's code. Never fake, hardcode, or simulate results.
+- No API key required for running code anywhere, and no 401 errors.
+- Don't show execution time (ms) anywhere.
+- No API keys or secrets in client code.
+- No fake, demo, dummy, or example accounts or data anywhere in the app.
+- Smallest changes needed for each fix. Don't redesign or remove existing features.
+- Return complete, working code for every changed file (client and server), with the file name.
+- List all new dependencies, config, build, and manifest changes, plus a step-by-step setup guide for anything I must configure (Google, Firebase, email sender).
+
+PART 1: REMOVE THE API KEY REQUIREMENT
+Run currently shows: "Remote Sandbox Authentication Required: Add your API key in Settings, or run locally with Termux. [Process failed with exit code 401]". Remove the cloud sandbox dependency and the API key requirement completely.
+
+PART 2: MAKE EVERY LANGUAGE BUILT IN (NO TERMUX)
+Settings shows "Setup Required in Termux" and marks Python 3, Node.js/npm, TypeScript, C/C++ (Clang), Java (OpenJDK), Kotlin, Rust, and Go as MISSING. Remove all Termux text, MISSING badges, and "Copy pkg" buttons. Every language must work inside the app with no external setup.
+Use in-app runtimes (if the app runs in a browser/WebView, run them as WASM in Web Workers):
+- Python: Pyodide (or Chaquopy on native Android)
+- JavaScript: Worker or QuickJS
+- TypeScript: in-app TypeScript compiler, then run the JS
+- C / C++: clang or TinyCC compiled to WebAssembly
+- Java: ECJ/TeaVM/CheerpJ or another in-app JVM
+- Kotlin: in-app Kotlin compiler
+- Rust and Go: in-app WASM toolchains; if a full compiler can't run in-app, use a free public execution service that needs NO API key (verify it works and handles CORS)
+- HTML/CSS: render in a floating WebView window
+- Load runtimes on first use with a progress bar, then cache them for offline use.
+- Settings > Languages shows each language as Ready / Downloading (%) / Failed (Retry), with its version.
+- Support stdout, stderr, compile errors with line numbers, and stdin input.
+- When done, list the exact method used for each language.
+
+PART 3: FIX THE TYPEWRITER (OUTPUT NEVER ANIMATES)
+This script runs in the editor:
+
+import sys, time
+def typewriter(text, delay=0.03):
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    sys.stdout.write("\n")
+print("=== Typewriter Engine ===")
+typewriter("Welcome to Linq Studio!")
+typewriter("Running python scripts directly on Android.")
+
+Actual result: only the first line shows, then "Process finished." The typing lines never appear. Likely cause: output is buffered until the program ends, and/or code runs on the UI thread so time.sleep blocks the screen.
+- Run every program in a Web Worker / background thread / separate process, never on the UI thread.
+- Replace sys.stdout/sys.stderr with a custom writer that sends EVERY write() to the UI immediately (character-level, no line buffering or batching).
+- The UI appends each chunk as it arrives and auto-scrolls.
+- flush(), "\r", "\n", emoji, UTF-8, and basic ANSI colors work.
+- Same live streaming for every other language.
+- The Stop button actually kills the running program.
+
+PART 4: REMOVE THE EXECUTION TIME
+Remove the ms timing from the output header (e.g. "Failed (5922ms)") and from the output text (e.g. "exit code 0 (5922ms)"). Keep the success/fail status.
+
+PART 5: FIX CLIPPED BUTTONS AND LABELS
+5A. Chip row under the output panel (Copy, Share, Terminal, Dismiss): "Dismiss" is clipped and the last chip is purple. Show each chip's full icon and label, with proper height and padding, and make the row scroll horizontally if it doesn't fit. Keep the purple style.
+5B. Terminal drawer header, CSS selector `.terminal-drawer-header`: on small screens the button labels get cut off. Adjust its internal padding and display properties so buttons keep their required touch targets while labels are never cut off:
+- Header: display flex, align-items center, flex-wrap wrap, gap 8px, padding 8px 12px, min-height 56px, height auto (remove any fixed height), overflow visible, box-sizing border-box.
+- Title: flex 1 1 120px, min-width 0, single line with ellipsis. The title shrinks, never the buttons.
+- Buttons: inline-flex, centered, gap 6px, flex 0 0 auto (never shrink), min-width and min-height 48px, padding 0 14px, white-space nowrap, overflow visible. Icons fixed at 20px and never shrink.
+- Small screens (max-width 380px): padding 6px 8px, gap 6px, title takes its own full-width row, buttons share the next row (wrap, don't clip), button padding 0 10px and font-size 13px.
+- Find any fixed height or overflow:hidden on the header or its parents that causes the clipping and remove it.
+- Verify at widths 320, 360, 380, and 412px, and in landscape, that no label is cut off and every button is at least 48x48.
+
+5C. LOCAL DEV SERVER CARD (HOME SCREEN): FIX THE UI AND SWITCH TO "TEST FOLDER"
+The Home screen has a "Local Dev Server" card: a globe icon, the title, a status line (e.g. "Stopped" or "Running on http://localhost:8080 (/www)"), a "Start" button (a red "Stop" button while running), a blue "Preview Web" button, and a row labeled "Test file:" with links (index.html, about.html, style.css, app.js).
+UI problems to fix:
+- The red Stop button is too narrow and its label breaks into "Sto / p". Give it white-space nowrap, flex 0 0 auto, min-width 72px, min-height 48px, and padding 0 16px, with the label on one line. Start and Preview Web get the same treatment: labels never wrap or clip, each at least 48px tall.
+- The file row is cut off at the right edge ("app.j..."). Make it a horizontally scrollable row (overflow-x auto, nowrap, gap 8px, scrollbar hidden), each item a tappable chip with min-height 40px, padding 0 12px, and its full name visible. Add a fade at the right edge so users know it scrolls.
+- Card layout: a flex row with the globe icon, then the title/status block (flex 1 1 auto, min-width 0; the status line truncates with ellipsis or wraps, never overlapping the buttons), then the action buttons. If the buttons don't fit beside the title on small screens, wrap them to a second row. Fix any overlap, uneven spacing, or misaligned text. Keep the existing colors and style.
+- Rename the "Test file:" label to "Test folder:".
+Feature change: users can test BOTH a whole web app folder AND single files.
+- Replace "Choose file" with a picker that offers "Choose folder" and "Choose file(s)". The label next to the row shows what is being served (for example "Test folder: my-site").
+- Choose folder: opens a folder picker (Android: Storage Access Framework ACTION_OPEN_DOCUMENT_TREE with persisted permission; web: showDirectoryPicker(), with an <input webkitdirectory> fallback). The whole folder is served, so multi-page web apps with CSS, JS, images, and subfolders work.
+- Choose file(s): lets the user pick one or more files (html, css, js, etc.). They are served together from a temporary virtual folder, so a single HTML file with its linked CSS/JS also works.
+- Serve it on localhost (native Android: NanoHTTPD or Ktor bound to 127.0.0.1 only; in a browser where real ports can't be opened, use a Service Worker "virtual localhost"). Tell me which method you used.
+- The status line shows the name and URL, e.g. "Running on http://localhost:8080 (/my-site)". If the port is busy, try 8081, 8082, and so on.
+- Serve index.html by default; if missing, show a clean directory listing. Correct MIME types (html, css, js, json, images, fonts, wasm), a friendly 404 page, and working relative links, subfolders, and query strings.
+- The chips list the REAL files found (HTML files first, then others), not a hardcoded list. Tapping a chip opens it in a floating browser window from the Window Manager.
+- Live reload: when a file is saved or changed, the open page refreshes automatically.
+- Remember the last folder across restarts and re-ask for permission if it was revoked. Show a clear message if the folder is empty or unreadable.
+- Security: never serve files outside the chosen folder (block ../ path traversal) and don't expose the server to the network.
+- Start, Stop, and Restart work; Stop fully shuts the server down and the card returns to its idle state.
+- Verify at widths 320, 360, 380, and 412px and in landscape: nothing clips or overlaps.
+
+5D. PROFILE CARD (HOME SCREEN): MAKE IT ACCURATE AND THEME-CORRECT
+The Home screen has a profile card: an avatar, a name (e.g. "linq_student"), a subtitle ("Student & Learner"), a status line ("Guest Mode • Tap Edit to customize"), a lock icon, a Google "G" icon, and a "Tap to Sign In with Google permanently" row. The header also shows "Student Code Studio • 44 FPS (60Hz)".
+- Make every color in this card come from the app's active theme tokens (background, surface, border, text, subtext, icon, avatar ring, accent), with no hardcoded colors. It must look correct and readable in EVERY theme the app offers, including light, dark, and any custom themes. Check contrast (at least 4.5:1 for text) in each theme. Switching themes updates the card instantly with no reload.
+- The avatar's ring/border and glow follow the theme accent color, with no stray colored boxes or misaligned outlines.
+- Make the card reflect the real state, accurately, in each case:
+  * Not signed in: "Guest Mode" with the lock icon and the "Sign In with Google" row. Profile customization is locked.
+  * Signed in: the user's real Google name, photo, and email (no placeholder text), the Google icon, no lock, and no "Tap to Sign In" row. Customization is unlocked, and the subtitle and avatar the user saved are shown.
+  * Owner (only after the email code in Part 7A is verified): name "Ljhay" with the verified Owner badge from Part 7.
+- The FPS/Hz text in the header must show the real measured frame rate and display refresh rate, not hardcoded text.
+- Name, subtitle, and status lines truncate with ellipsis, never overlap the lock/G icons, and never push the layout. Touch targets are at least 48x48.
+- Verify at widths 320, 360, 380, and 412px, in light and dark mode, and in every theme.
+
+5E. LOCAL DEV SERVER "PREVIEW WEB": WORKS OFFLINE AND ONLINE
+The blue "Preview Web" button must open a working preview of the served project in both situations: with NO internet (offline) and WITH internet (online).
+- One tap always works: if the server is stopped, Preview Web starts it automatically, then opens the preview. If nothing has been chosen yet, it opens the "Choose folder / Choose file(s)" picker first. It never shows a blank or broken page.
+- The preview opens in a floating browser window from the Window Manager, with a small toolbar: back, forward, reload, an address bar showing the localhost URL, an "Open in browser" button, device size presets (phone, tablet, desktop), and a toggle for a console panel.
+- OFFLINE works fully: the preview, the local server, the service worker, and every runtime must work in airplane mode. Pages that only use local files load completely with no network. The app's own preview code must never depend on a CDN or any external resource. Cache everything the preview needs (including the Window Manager and console panel) so a cold start offline still works.
+- ONLINE works fully: pages can load external resources (CDN scripts, Google Fonts, images, APIs, iframes/embeds) and make fetch/XHR/WebSocket requests. Handle CORS, mixed-content, and content-security-policy so the preview does not block legitimate external requests. HTTPS pages must work from the http://localhost preview.
+- Add a network mode control in the preview toolbar with three options: "Auto" (default, follows the device's real connection), "Online", and "Offline (simulate)". "Offline (simulate)" blocks all non-localhost requests so I can test how my web app behaves without internet, even when the device is online. Show a small status badge ("Online" or "Offline") that updates live when the connection changes, and show a friendly banner when the connection drops or returns.
+- When a page tries to load something external while offline, don't break the preview. Show it in the console panel as a clear message like "Blocked while offline: https://..." and list failed requests, so I can see what to fix. The page itself keeps running.
+- Service workers and PWAs: the preview supports a user's own service worker, manifest, and cache for testing offline-first web apps, with the app's own virtual-localhost worker not interfering with it.
+- The console panel captures the page's console.log/warn/error, uncaught errors, and failed network requests, and shows them live. Errors also appear in the main output panel.
+- Native Android: use a WebView with shouldInterceptRequest and a connectivity callback (ConnectivityManager NetworkCallback) for the online/offline logic. In a browser/PWA: use navigator.onLine plus the online/offline events and a Service Worker fetch handler. Tell me which method you used.
+- Live reload keeps working in both modes. It never requires the internet.
+- Verify at widths 320, 360, 380, and 412px and in landscape: the preview window and toolbar never clip, and every button is at least 48x48.
+
+PART 6: FIX GOOGLE SIGN-UP / LOGIN AND PERMANENT SESSION
+Problem: the "Sign In with Google" dialog (opened from "Tap to Sign In with Google permanently") shows a DUMMY account ("Alex Rivers / alex.rivers@gmail.com") with an "Or enter a different Google account" link. Users can log in as this fake account. The app also logs in with fake example accounts automatically.
+- Search the ENTIRE codebase and remove every fake/demo/mock/dummy account: "Alex Rivers", "alex.rivers@gmail.com", any hardcoded users, sample accounts, auto-login, and "skip sign-in" shortcuts. Also remove the fake account row and the fake "Or enter a different Google account" link from the dialog.
+- The dialog must show ONLY the sign-up/log-in action: the title, one short line of text, a close button, and a single "Continue with Google" button. Nothing else.
+- "Continue with Google" starts REAL Google authentication (Firebase Auth with the Google provider, or Google Identity Services / Credential Manager on native Android). Always force Google's own account chooser (prompt: select_account) so it never silently picks an account. Users add or switch accounts inside Google's real chooser.
+- Handle the full flow and all errors with friendly messages and Retry: popup blocked or closed, cancelled, no internet, wrong OAuth client ID, unauthorized domain, token expired. If popups are blocked (embedded preview/WebView), fall back to a redirect flow.
+- Tell me exactly what to configure and where (OAuth client ID, authorized domains/redirect URIs, SHA-1 fingerprint for Android, Firebase project settings), step by step.
+- Sign-up and login are the same Google flow: a first-time user gets an account created automatically (and counts as "sign up"), a returning user is logged in.
+- Users must sign in before they can customize their profile. Keep profile customization locked until signed in.
+- Keep the session permanent across app restarts, phone reboots, and app updates. Save it locally (DataStore / EncryptedSharedPreferences, or secure storage for web) and check it on app start; skip the sign-in screen if it's valid.
+- Clear the session only when the user uninstalls the app or uses an in-app "Sign out" / "Reset". Sign out must really clear it.
+- For Android, set android:allowBackup="false" so a reinstall doesn't restore the old session.
+- Use each user's real Google name, email, and photo.
+
+PART 7: OWNER ACCOUNT (ME, THE CREATOR)
+I own the app. These two emails are the owner:
+- ljhayoi609@gmail.com
+- jacklangsakalam5@gmail.com
+IMPORTANT: signing in with one of these emails is NOT enough to become the owner. Owner status is granted only AFTER the email verification code in Part 7A is confirmed. Until then, the account behaves exactly like a normal public account: no owner badge, no owner animation, no locked name, no owner monitor.
+- Security: verify owner status on a SERVER (Cloud Function / backend) using the verified Google ID token and email_verified = true, AND a confirmed Part 7A code. Never trust an email string typed or stored on the client. Store the owner flag server-side (for example a Firebase custom claim or a protected database field) and only read it on the client. The owner email list lives on the server only.
+- After verification, automatically set the display name to "Ljhay" (locked, so the profile name field can't change it).
+- After verification, show an original owner welcome animation: a full-screen celebratory sequence welcoming the creator (for example "Welcome back, Ljhay" with a typewriter effect, particles/glow, and a short "Creator of Linq Studio" line). It plays once per verified login (not on every app open), can be skipped by tap, lasts 4 to 6 seconds, runs smoothly at 60 FPS, and respects the system "reduce motion" setting.
+- After verification, add a custom verified-owner badge: an original designed badge (gold/purple verified shield with a crown or star) labeled "Owner". Show it next to the name on the profile, Settings, and anywhere the user's name appears. Tapping it shows "Verified Owner of Linq Studio."
+- Other users never get these features and can't get the badge by changing their email or name.
+
+PART 7A: OWNER EMAIL VERIFICATION CODE
+Goal: confirm the person signing in is the real owner of the account before granting owner status.
+Flow:
+1. The user signs in with Google (Part 6). The server checks the verified email against the server-side owner list.
+2. If it matches an owner email, the server sends a 6-digit verification code to that same email address, from the sender "LinqStudiosLLC" (reuse the Part 8 email setup). The client is only told "verification required"; it never receives the owner list or the code. Nothing reveals to anyone else that an email is an owner email.
+3. The app shows a "Verify it's you" screen. Until the code is confirmed, the account has NO owner powers.
+4. When the correct code is entered, the server grants the owner claim (Part 7), the client refreshes its token, and the owner features unlock.
+Code rules (all enforced on the server):
+- 6 digits generated with a cryptographically secure random generator (for example crypto.randomInt), never Math.random.
+- Stored only as a salted hash or HMAC, never in plain text. Compare with a constant-time comparison.
+- Expires after 10 minutes. Single use. Bound to the user ID, the device ID, and the session that requested it. Requesting a new code invalidates the old one.
+- Maximum 5 wrong attempts per code, then the code is dead and a new one must be requested. After 3 failed attempts, send me a security email: "Someone tried to verify your owner account."
+- Resend: a 60-second cooldown, and at most 5 codes per hour per account. Also rate limit by IP.
+- The code is sent ONLY to the email of the signed-in Google account, never to any other address, and never shown in the app, logs, or analytics.
+Trusted devices and re-verification:
+- After a successful verification, mark that device as verified on the server (store a hash of the device ID). The verified state stays with the permanent session from Part 6, so the code is not asked again on every app open.
+- Ask for a new code when: the user signs in on a new device or browser, signs out and signs in again, the session is revoked, or 30 days have passed. Make the 30 days a single config value.
+- Sign out removes the owner claim from that session and revokes its refresh tokens.
+Verification screen UI:
+- Title "Verify it's you", a short line, and the masked email (for example lj*****@gmail.com).
+- 6 separate digit boxes with auto-focus, auto-advance, backspace support, paste support, and one-time-code autofill (autocomplete="one-time-code" on web). The numeric keyboard opens automatically.
+- A countdown showing when the code expires, a "Resend code" button that is disabled during the 60-second cooldown, and a "Use a different account" button that signs out.
+- Clear messages: wrong code (with attempts left), expired code, too many attempts (locked), no internet (with Retry), and email sent confirmation. Never reveal whether other accounts exist.
+- Follows the active theme, touch targets at least 48x48, readable in light and dark mode, and works at 320 to 412px widths and in landscape.
+- If the user closes the screen without verifying, they stay signed in as a normal public user with no owner features.
+Security requirements:
+- The server must reject any owner action (the Part 7B monitor, owner badge data, owner-only database reads) unless the verified owner claim is present and current. Security rules check the claim.
+- Tampering with local storage, the client code, or API requests must not be able to grant owner status.
+- Log verification events (sent, success, failure, lockout) on the server for auditing, without storing the codes.
+- If the email fails to send, show a friendly error with Retry, and never grant access.
+
+PART 7B: OWNER-ONLY LIVE "ACTIVE USERS" MONITOR
+Add a real-time monitor that shows how many people are using the app right now. It is visible ONLY to the two owner emails from Part 7, and only after Part 7A verification. Public users must never see it, and must never be able to read its data.
+- Display: an "Active users" card with a large live number, a pulsing green "Live" dot, and a "Last updated" indicator. Put it on the Home screen under the owner's profile card (or in a dedicated owner section in Settings). The number animates smoothly when it changes. If the owner's own device is offline, show "Offline, reconnecting..." instead of a stale number.
+- The number must be REAL, not fake. Never hardcode, randomize, simulate, or estimate it. It counts devices/users who currently have the app open AND are connected to the internet (Wi-Fi or mobile data). Anyone offline, in airplane mode, or with the app closed is not counted. That is expected and correct.
+- Implementation: use a real-time presence system. Recommended: Firebase Realtime Database presence (the .info/connected listener plus onDisconnect() to remove the entry), or an equivalent WebSocket/backend service.
+  * Each running app instance writes a small presence entry containing ONLY an anonymous session ID, the user ID (or "guest" if not signed in), a last-seen timestamp, and the platform. Do not store names, emails, locations, or any personal data in it.
+  * The client updates last-seen on a heartbeat every 30 seconds while the app is in the foreground. It removes its entry when the app closes, goes to the background, or loses the connection. The server side also treats any entry older than 90 seconds as stale and ignores it, so crashed or killed apps don't inflate the count.
+  * The count de-duplicates sensibly: the same signed-in user on 2 devices counts as one active user. Guests are counted by anonymous session/device ID. Also keep the raw session count so I can optionally see "X users on Y devices".
+  * A Cloud Function (or backend job) keeps one aggregate value, for example /stats/activeUsers, updated in real time. The owner's client reads only this single number, so it never downloads the list of all users.
+- Security (critical): enforce owner-only access on the SERVER, not just by hiding the UI.
+  * Use database security rules so only users whose verified token carries the verified owner claim from Parts 7 and 7A can read /stats and /presence. Non-owners can only write their own presence entry and cannot read anyone else's.
+  * The owner card is not rendered, and its code path is never executed, for non-owner accounts, unverified owner-email accounts, and guests. A public user who opens the browser console or inspects network requests must not be able to read the number or the data. A direct read attempt returns permission denied.
+  * No owner emails and no secrets in the client code.
+- Privacy: only aggregate counts are shown to me. Add one line to the app's Settings > About/Privacy: "Linq Studio counts how many people are online so the owner can see live usage. No personal information is shared." Presence tracking must not slow the app or drain battery: heartbeat only in the foreground, and batch/throttle writes.
+- Cost and reliability: handle reconnects, token refresh, and clock differences between devices (use server timestamps). Retry quietly on failure, and never crash the app or block sign-in if presence fails.
+- Works on both Wi-Fi and mobile data. If the user has data saver on, the heartbeat still works (tiny payloads).
+
+PART 8: TRIGGER EMAILS FROM LinqStudiosLLC
+Send emails automatically from a backend when users sign up, log in, or log in from a different device, and when an owner verification code is needed. The sender name is "LinqStudiosLLC".
+- Use the Firebase "Trigger Email from Firestore" extension (or an equivalent backend trigger with Resend, SendGrid, or SMTP). A Cloud Function (Auth/Firestore trigger or a callable function called right after verified sign-in) writes the email request. The email service key stays on the server and is NEVER in the app code. Tell me exactly how to set up the sender and verify the domain (SPF/DKIM) so emails don't land in spam.
+- Sign up (first-time account creation): send a welcome email: "Welcome to Linq Studio, [name]!" with a short friendly intro and a button to open the app.
+- Login (an existing user signs in again): send a welcome-back email: "Welcome back to Linq Studio, [name]!" with the date/time. Send it only for real logins, never when the app just reopens with a saved session, and at most once per 30 minutes per user so nobody gets spammed.
+- Login from a different device: create a stable anonymous device ID on each install (stored locally) and keep a server-side list of each user's known devices (device ID, device/browser name, platform, last seen). If a login comes from a device ID not in the list, send a security email: "New device login to your Linq Studio account" with the device/browser, platform, date/time, and approximate location if available from the request (city/country only). Then add the device to the list. Include a "Wasn't you? Secure your account" link that leads to a page where the user can sign out of all devices. This email is sent immediately and is NOT blocked by the 30-minute limit.
+- Owner verification code email (Part 7A): subject "Your Linq Studio verification code", the 6-digit code in large text, the expiry time (10 minutes), the device/browser that requested it, and a line "If this wasn't you, don't share this code and secure your account." The code is plain text only, with no link that grants access automatically. The "3 failed attempts" security email from Part 7A uses the same template style.
+- Send ONLY to the email of the person who just signed in, never to anyone else.
+- Use clean, mobile-friendly HTML templates for all emails with the Linq Studio name, the LinqStudiosLLC sender, a clear message, and a footer.
+- Add a "Login alert emails" toggle in Settings (on by default) for the welcome-back emails. The new-device security email and the verification code emails cannot be turned off.
+- If sending fails, the user must still be able to sign in (as a normal user); log the error and retry quietly.
+
+PART 9: BUILD A WINDOW MANAGER FOR ANIMATION POP-UPS
+When a program opens a GUI/animation window, show it as a floating window over the editor. Original design; don't copy anyone's lyrics, branding, or visuals.
+- Title bar, close button, drag to move, resize handle, tap to bring to front.
+- Many windows at once (10+), each animating independently at about 60 FPS. Closing one doesn't stop the others.
+- Windows can be opened with a position, size, colors, font, and text.
+- Python: a tkinter-compatible layer (Tk, Toplevel, Label, Canvas, after(), geometry(), mainloop()) plus turtle. Also pygame and matplotlib if possible.
+- HTML/JS: each page/canvas in its own floating window.
+- Java (Swing), C/C++ (SDL), Kotlin, and others: bridge their window/graphics calls to the same windows, or provide a built-in graphics API (open_window, draw_text, draw_shape, set_timer).
+- A "Windows" button in the output toolbar lists windows and can minimize, close, or close all.
+- Windows close when the program ends or Stop is pressed.
+
+TEST: run this and confirm 5 floating windows appear at random positions, each typing its own sentence one letter at a time:
+
+import tkinter as tk, random
+root = tk.Tk(); root.withdraw()
+msgs = ["Hello", "Built on Android", "Pop-up window 3", "Typing effect", "Done!"]
+def spawn(i):
+    w = tk.Toplevel(root); w.geometry(f"260x160+{random.randint(0,300)}+{random.randint(0,500)}")
+    l = tk.Label(w, text="", font=("Helvetica", 18, "bold")); l.pack(expand=True)
+    def type_(n=0):
+        if n <= len(msgs[i]):
+            l.config(text=msgs[i][:n]); w.after(60, type_, n+1)
+    type_()
+for i in range(5): root.after(i*700, spawn, i)
+root.mainloop()
+
+PART 10: FULL BUG-FIX AND RELEASE POLISH (DO THIS LAST)
+Goal: zero crashes and zero visible errors across the WHOLE app.
+A. Audit first: read all the code and list every bug, crash risk, and UI problem (file + line, marked Crash / Error / UI / Performance / Polish). Then fix them all.
+B. Crashes and errors:
+- Fix every runtime error, null/undefined access, unhandled promise, and infinite loop.
+- Wrap code execution, file I/O, runtime loading, network, auth, verification codes, storage, email triggers, presence tracking, the local server, and the preview in error handling. Failures show a friendly message with Retry, never a crash or blank screen.
+- Add a global error boundary so one bad component or runaway program can't take down the app.
+- Handle edge cases: empty/huge files, very long output lines, infinite loops (timeout + working Stop), invalid UTF-8, no internet during first runtime download, low storage, screen rotation.
+- Clean up workers, windows, servers, presence listeners, and other listeners when a program stops or the app closes (no leaks). Fix warnings and deprecated code.
+C. Polish every screen (Home, Editor, Files, Terminal, Settings, Info, Profile, Sign-in, Verification):
+- Fix clipped text, overlaps, misaligned buttons, bad spacing, and unreadable colors without changing the overall design. Every screen must follow the active theme.
+- Support small/large phones, tablets, portrait/landscape, light/dark mode. The keyboard must never cover the editor or inputs.
+- Add loading, empty, and success/error states for Save, Run, Share, Copy, Delete.
+- Touch targets at least 48dp, readable fonts, good contrast, smooth scrolling with no jank on large files or fast output.
+D. Test each feature end to end: create/open/edit/save/rename/delete files, unsaved-changes warning, undo/redo, find, Run and Stop in EVERY language with real output, live typewriter output, floating windows, local dev server and preview (offline and online), profile themes, sign-in, owner verification, emails, the owner monitor, Settings, Share, Copy.
+E. Release readiness: remove debug logs, test data, placeholders, and TODOs; no secrets or API keys in code; enable production optimizations (minify/shrink) and verify the release build works; correct app name, icon, version, and only the permissions truly needed; fast startup.
+
+FINAL REPORT (required)
+1. List of every bug fixed.
+2. Anything you could not fix and why.
+3. The method used for each language, for the local dev server, for the offline/online preview, for the active-users presence system, and for the verification code system.
+4. Test results: typewriter script, pop-up test, and Hello World + an input program in EVERY language, each with real output and zero errors.
+5. Auth and email test results, with real results for each:
+   a. Fresh install: no auto-login, no dummy account anywhere (search confirms "Alex Rivers" no longer exists), the dialog shows only "Continue with Google", and Google's real account chooser appears.
+   b. New Google account: account created, welcome email received from LinqStudiosLLC.
+   c. Same account signs out and logs in again: welcome-back email received (and not sent again within 30 minutes).
+   d. Same account logs in from a second device or browser: the new-device security email is received with device and time.
+   e. Sign in with ljhayoi609@gmail.com and with jacklangsakalam5@gmail.com: a 6-digit code arrives from LinqStudiosLLC. Before the code is entered there is NO owner badge, NO animation, NO owner monitor, and the name is not locked. After the correct code: name "Ljhay", owner badge, welcome animation plays once, and the monitor appears.
+   f. Close and reopen: still signed in and still verified, no animation replay, no new code requested, no email sent.
+   g. Sign out: session cleared, owner claim removed, back at the Guest Mode profile.
+   h. Faking owner status by editing local storage or the client does NOT work.
+6. Verification code tests, with real results for each:
+   a. Wrong code: rejected, shows attempts left.
+   b. 5 wrong attempts: code is dead and locked, a new code is required, and the "Someone tried to verify your owner account" email is sent after 3 failed attempts.
+   c. Expired code (after 10 minutes): rejected.
+   d. Reusing an already-used code: rejected.
+   e. Resend: disabled for 60 seconds, a new code invalidates the old one, and more than 5 per hour is blocked.
+   f. Code is stored only as a hash in the database (point to the code and show a database entry).
+   g. A new device or browser asks for a new code. After 30 days (test with the config value lowered) it asks again.
+   h. Closing the verification screen leaves the user as a normal public user with no owner access, and the owner-only database reads are denied by the security rules.
+   i. A normal (non-owner) Google account never receives or is asked for a code.
+7. Local server and preview test:
+   a. Choose a folder with index.html, about.html, style.css, and app.js: the page loads with its CSS and JS, the "Test folder:" chips list the real files, live reload works, Stop fully shuts it down, and ../ path traversal is blocked.
+   b. Choose a single HTML file: it loads and works.
+   c. Offline: turn on airplane mode, force-close and reopen the app, tap Preview Web: the server starts, the page loads fully from local files, and the badge shows "Offline".
+   d. Online: use a test page that loads a CDN script, a Google Font, an image, and a fetch() to a public API: everything loads and works from the preview.
+   e. "Offline (simulate)" while the device is online: external requests are blocked, the console lists "Blocked while offline: ..." entries, and the page keeps running.
+   f. Toggle airplane mode while the preview is open: the badge and banner update live without a reload or crash.
+   g. Preview Web tapped while the server is stopped: it starts the server and opens the preview.
+8. Profile card test: screenshots or confirmation in every theme (light, dark, custom), for the guest, signed-in, and owner states, with good contrast and no overlaps.
+9. Active users monitor test, with real results for each:
+   a. Signed in as a VERIFIED owner: the "Active users" card shows a live number with the Live dot.
+   b. Open the app on a second device (or browser) with a normal account: the number goes up within a few seconds. Close it: the number goes down.
+   c. The same user on two devices counts as one active user.
+   d. Put a device in airplane mode: it drops out of the count within 90 seconds. Turn the connection back on: it rejoins.
+   e. Sign in as a normal (non-owner) account, as a guest, and as an owner email that has NOT entered the code: the card does NOT appear anywhere.
+   f. As a non-owner, try to read /stats and /presence directly (console or a REST call): the request is denied by the security rules.
+   g. Kill the app (don't close it normally): the count corrects itself within 90 seconds.
+   h. Confirm that no numbers in the card are hardcoded or random (point to the code).
+10. A manual test checklist I can run on a real phone before release.
+
+My stack is: [React/Vite + Firebase, Kotlin/Compose, Flutter, etc.]

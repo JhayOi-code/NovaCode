@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isOwner() {
+      return isAuthenticated() && request.auth.token.owner == true;
+    }
+
+    // User profile documents:
+    // Clients can never modify privileged fields (owner, ownerVerifiedAt, isOwnerVerified, role, admin)
+    match /users/{userId} {
+      allow read: if isUser(userId) || isOwner();
+      allow create: if isUser(userId)
+                    && request.resource.data.uid == userId
+                    && request.resource.data.email == request.auth.token.email
+                    && !request.resource.data.keys().hasAny(['owner', 'ownerVerifiedAt', 'isOwnerVerified', 'role', 'admin']);
+      allow update: if isUser(userId)
+                    && request.resource.data.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['owner', 'ownerVerifiedAt', 'isOwnerVerified', 'role', 'admin']);
+      allow delete: if isUser(userId) || isOwner();
+
+      // User workspace files & private settings
+      match /settings/{settingId} {
+        allow read, write: if isUser(userId);
+      }
+
+      match /files/{fileId} {
+        allow read, write: if isUser(userId);
+      }
+    }
+
+    // System owner workspace & metrics
+    match /system_owner/{documentId} {
+      allow read, write: if isOwner();
+    }
+
+    match /owner_heartbeats/{heartbeatId} {
+      allow read, write: if isOwner();
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

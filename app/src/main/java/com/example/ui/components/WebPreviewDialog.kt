@@ -3,6 +3,8 @@ package com.example.ui.components
 import android.annotation.SuppressLint
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
@@ -42,6 +44,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tablet
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,6 +86,12 @@ enum class DeviceFrame(val label: String, val maxWidthDp: Int) {
     MOBILE("Mobile", 380),
     TABLET("Tablet", 620),
     FIT_DEVICE("Fit Screen", Int.MAX_VALUE)
+}
+
+enum class WebNetworkMode(val label: String) {
+    AUTO("Auto"),
+    ONLINE("Online"),
+    OFFLINE("Offline (simulate)")
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -138,6 +148,7 @@ fun WebPreviewDialog(
     }
 
     var activeFrame by remember { mutableStateOf(DeviceFrame.FIT_DEVICE) }
+    var networkMode by remember { mutableStateOf(WebNetworkMode.AUTO) }
     var isSourceViewMode by remember { mutableStateOf(false) }
     var isFullScreenPreview by remember { mutableStateOf(false) }
     var refreshKey by remember { mutableStateOf(0) }
@@ -407,6 +418,81 @@ fun WebPreviewDialog(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Part 5E: Network mode control ("Auto", "Online", "Offline (simulate)")
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = theme.surfaceColor,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            WebNetworkMode.values().forEach { mode ->
+                                val isModeActive = networkMode == mode
+                                val modeColor = when (mode) {
+                                    WebNetworkMode.AUTO -> Color(0xFF38BDF8)
+                                    WebNetworkMode.ONLINE -> Color(0xFF10B981)
+                                    WebNetworkMode.OFFLINE -> Color(0xFFF59E0B)
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isModeActive) modeColor.copy(alpha = 0.25f) else Color.Transparent,
+                                    border = if (isModeActive) androidx.compose.foundation.BorderStroke(1.dp, modeColor) else null,
+                                    modifier = Modifier
+                                        .clickable {
+                                            networkMode = mode
+                                            refreshKey++
+                                        }
+                                        .testTag("net_mode_${mode.name.lowercase()}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (mode == WebNetworkMode.OFFLINE) Icons.Default.WifiOff else Icons.Default.Wifi,
+                                            contentDescription = null,
+                                            tint = if (isModeActive) modeColor else theme.lineNumberColor,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Text(
+                                            text = mode.label,
+                                            fontSize = 10.sp,
+                                            fontWeight = if (isModeActive) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isModeActive) modeColor else theme.lineNumberColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Part 5E: Offline warning banner
+                if (networkMode == WebNetworkMode.OFFLINE) {
+                    Surface(
+                        color = Color(0xFF451A03),
+                        modifier = Modifier.fillMaxWidth().testTag("offline_warning_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(15.dp))
+                            Text(
+                                text = "Offline Mode (simulate): External CDNs and APIs are intercepted and blocked. Local Dev Server files serve normally.",
+                                color = Color(0xFFFDE68A),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
 
                 HorizontalDivider(color = theme.borderColor)
@@ -435,7 +521,7 @@ fun WebPreviewDialog(
                             .background(Color.White)
                     ) {
                         if (!isSourceViewMode) {
-                            key(selectedFile.name, currentHostFolder, refreshKey) {
+                            key(selectedFile.name, currentHostFolder, refreshKey, networkMode) {
                                 AndroidView(
                                     factory = { ctx ->
                                         try {
@@ -452,6 +538,32 @@ fun WebPreviewDialog(
 
                                             webViewClient = object : WebViewClient() {
                                                 override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean = true
+
+                                                override fun shouldInterceptRequest(
+                                                    view: WebView?,
+                                                    request: WebResourceRequest?
+                                                ): WebResourceResponse? {
+                                                    val reqUrl = request?.url?.toString() ?: ""
+                                                    val isSimulatedOffline = networkMode == WebNetworkMode.OFFLINE
+                                                    if (isSimulatedOffline) {
+                                                        val isLocal = reqUrl.startsWith("http://localhost") ||
+                                                                      reqUrl.startsWith("http://127.0.0.1") ||
+                                                                      reqUrl.startsWith("data:") ||
+                                                                      reqUrl.startsWith("file:")
+                                                        if (!isLocal) {
+                                                            android.util.Log.i("WebPreview", "Blocked while offline: $reqUrl")
+                                                            return WebResourceResponse(
+                                                                "text/plain",
+                                                                "UTF-8",
+                                                                404,
+                                                                "Blocked Offline",
+                                                                mapOf("Access-Control-Allow-Origin" to "*"),
+                                                                java.io.ByteArrayInputStream("Blocked while offline: $reqUrl".toByteArray())
+                                                            )
+                                                        }
+                                                    }
+                                                    return super.shouldInterceptRequest(view, request)
+                                                }
                                             }
 
                                             webChromeClient = object : WebChromeClient() {

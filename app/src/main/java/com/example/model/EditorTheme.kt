@@ -6,6 +6,7 @@ data class EditorTheme(
     val id: String,
     val name: String,
     val category: String = "Dark",
+    val isLight: Boolean = false,
     val editorBackground: Color,
     val surfaceColor: Color,
     val surfaceVariant: Color,
@@ -26,11 +27,40 @@ data class EditorTheme(
     val warningColor: Color = Color(0xFFF59E0B),
     val infoColor: Color = Color(0xFF3B82F6)
 ) {
+    val isDark: Boolean get() = !isLight
+
     companion object {
+        val LinqLight = EditorTheme(
+            id = "linq-light",
+            name = "Linq Light (Default)",
+            category = "Light",
+            isLight = true,
+            editorBackground = Color(0xFFFFFFFF),
+            surfaceColor = Color(0xFFF8FAFC),
+            surfaceVariant = Color(0xFFF1F5F9),
+            onSurfaceColor = Color(0xFF0F172A),
+            primaryColor = Color(0xFF2563EB),
+            secondaryColor = Color(0xFF7C3AED),
+            borderColor = Color(0xFFE2E8F0),
+            lineNumberColor = Color(0xFF94A3B8),
+            activeLineNumberColor = Color(0xFF2563EB),
+            selectionColor = Color(0x332563EB),
+            keywordColor = Color(0xFF7C3AED),
+            stringColor = Color(0xFF0D9488),
+            commentColor = Color(0xFF94A3B8),
+            numberColor = Color(0xFFD97706),
+            functionColor = Color(0xFF2563EB),
+            variableColor = Color(0xFF1E293B),
+            errorColor = Color(0xFFDC2626),
+            warningColor = Color(0xFFD97706),
+            infoColor = Color(0xFF2563EB)
+        )
+
         val LinqDark = EditorTheme(
             id = "linq-dark",
-            name = "Linq Dark (Default)",
+            name = "Linq Dark",
             category = "Cyber",
+            isLight = false,
             editorBackground = Color(0xFF0B132B),
             surfaceColor = Color(0xFF1C2541),
             surfaceVariant = Color(0xFF2E3B5E),
@@ -226,6 +256,7 @@ data class EditorTheme(
         )
 
         val allThemes: List<EditorTheme> = listOf(
+            LinqLight,
             LinqDark,
             CyberpunkNeon,
             TokyoNight,
@@ -238,7 +269,7 @@ data class EditorTheme(
         )
 
         fun findById(id: String?): EditorTheme {
-            return allThemes.find { it.id == id } ?: LinqDark
+            return allThemes.find { it.id == id } ?: LinqLight
         }
     }
 }

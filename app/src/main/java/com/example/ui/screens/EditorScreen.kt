@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,11 +46,12 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.ZoomOutMap
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -97,13 +100,17 @@ import androidx.compose.ui.window.Popup
 import com.example.ai.AiChatMessage
 import com.example.ai.ProposedDiff
 import com.example.autocomplete.AutocompleteSuggestion
-import com.example.engine.CodeExecutionEngine
-import com.example.engine.ExecutionResult
 import com.example.model.CodeFile
+import com.example.model.FloatingWindow
 import com.example.model.EditorTheme
 import com.example.model.GitRepositoryStatus
 import com.example.model.LintIssue
 import com.example.model.LintSeverity
+import com.example.ui.components.FloatingWindowHost
+import com.example.runner.ExecutionStatus
+import com.example.runner.LiveExecutionState
+import com.example.runner.OutputLine
+import com.example.runner.OutputLineType
 import com.example.ui.components.AiAssistantPanel
 import com.example.ui.components.AutocompleteBar
 import com.example.ui.components.CodeMinimap
@@ -178,13 +185,48 @@ fun EditorScreen(
     onRejectDiff: () -> Unit,
     onToggleSuggestionsEnabled: () -> Unit,
     onOpenAiSettings: () -> Unit,
-    onOpenTerminal: () -> Unit = {}
+    onOpenTerminal: () -> Unit = {},
+    onOpenGuidedTour: () -> Unit = {},
+    liveExecutionState: LiveExecutionState = LiveExecutionState(),
+    isExecutionOutputOpen: Boolean = false,
+    onStopExecution: () -> Unit = {},
+    onSendStdin: (String) -> Unit = {},
+    onClearExecutionOutput: () -> Unit = {},
+    onCloseExecutionOutput: () -> Unit = {},
+    onOpenActiveFileInTermux: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onJumpToLine: (String, Int) -> Unit = { _, _ -> },
+    floatingWindows: List<FloatingWindow> = emptyList(),
+    onCloseFloatingWindow: (String) -> Unit = {},
+    onMoveFloatingWindow: (String, Float, Float) -> Unit = { _, _, _ -> },
+    onResizeFloatingWindow: (String, Float, Float) -> Unit = { _, _, _ -> },
+    onFocusFloatingWindow: (String) -> Unit = {},
+    onClearFloatingWindows: () -> Unit = {}
 ) {
     val activeFile = openFiles.getOrNull(activeFileIndex)
+
+    var isOutputCollapsed by remember { mutableStateOf(false) }
+    var outputSplitWeight by remember { mutableStateOf(0.42f) }
 
     var textFieldValue by remember(activeFile?.id) {
         val initialContent = activeFile?.content ?: ""
         mutableStateOf(TextFieldValue(initialContent, TextRange(initialContent.length)))
+    }
+
+    // Jump to line and highlight in editor
+    val jumpToLineInEditor: (Int) -> Unit = { targetLine ->
+        val text = textFieldValue.text
+        val lines = text.split('\n')
+        val clampedLine = targetLine.coerceIn(1, maxOf(1, lines.size))
+        var charOffset = 0
+        for (i in 0 until clampedLine - 1) {
+            charOffset += lines[i].length + 1
+        }
+        val lineLength = lines.getOrNull(clampedLine - 1)?.length ?: 0
+        textFieldValue = TextFieldValue(
+            text = text,
+            selection = TextRange(charOffset, (charOffset + lineLength).coerceAtMost(text.length))
+        )
     }
 
     // Keep text in sync when external change happens
@@ -208,7 +250,6 @@ fun EditorScreen(
     val infoCount = remember(lintIssues) { lintIssues.count { it.severity == LintSeverity.INFO } }
 
     var selectedLintIssue by remember { mutableStateOf<LintIssue?>(null) }
-    var executionResult by remember { mutableStateOf<ExecutionResult?>(null) }
     var showCreateFileDialog by remember { mutableStateOf(false) }
     var createFileNameInput by remember { mutableStateOf("") }
     var showSaveToast by remember { mutableStateOf<String?>(null) }
@@ -238,11 +279,7 @@ fun EditorScreen(
                         true
                     }
                     Key.Enter, Key.NumPadEnter -> {
-                        val current = activeFile ?: openFiles.firstOrNull()
-                        if (current != null) {
-                            executionResult = CodeExecutionEngine.execute(current, openFiles)
-                            onRunCode()
-                        }
+                        onRunCode()
                         true
                     }
                     Key.Z -> {
@@ -288,13 +325,14 @@ fun EditorScreen(
     val editorScrollState = rememberScrollState()
     val lines = remember(textFieldValue.text) { textFieldValue.text.lines() }
     val totalLines = maxOf(1, lines.size)
-    val digitsCount = remember(totalLines) { totalLines.toString().length }
-    val gutterWidthDp = (digitsCount * 8 + 24).dp
+    val lineNumLength = remember(totalLines) { totalLines.toString().length }
+    val gutterWidthDp = (lineNumLength * 8 + 24).dp
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(theme.editorBackground)
+            .imePadding()
             .onPreviewKeyEvent(handleEditorKeyEvent)
             .testTag("editor_screen")
     ) {
@@ -343,7 +381,7 @@ fun EditorScreen(
                             modifier = Modifier.size(34.dp).testTag("toolbar_create_file_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.NoteAdd,
+                                imageVector = Icons.AutoMirrored.Filled.NoteAdd,
                                 contentDescription = "Create File",
                                 tint = theme.primaryColor,
                                 modifier = Modifier.size(19.dp)
@@ -522,6 +560,23 @@ fun EditorScreen(
                             )
                         }
 
+                        // Beginner Guided Tour Button
+                        IconButton(
+                            onClick = onOpenGuidedTour,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(theme.primaryColor.copy(alpha = 0.15f))
+                                .testTag("toolbar_guided_tour_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = "Beginner Guided Tour",
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
                         // Open Terminal quick button
                         IconButton(
                             onClick = onOpenTerminal,
@@ -541,14 +596,7 @@ fun EditorScreen(
 
                         // REAL RUN BUTTON (Runs active code & opens live execution output)
                         Button(
-                            onClick = {
-                                val current = activeFile ?: openFiles.firstOrNull()
-                                if (current != null) {
-                                    val result = CodeExecutionEngine.execute(current, openFiles)
-                                    executionResult = result
-                                    onRunCode()
-                                }
-                            },
+                            onClick = onRunCode,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 0.dp),
@@ -705,8 +753,13 @@ fun EditorScreen(
             )
         }
 
-        // MAIN WORKSPACE BODY (Sidebar + Editor + Minimap)
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        // MAIN WORKSPACE BODY (Editor + Resizable Split Output Panel)
+        Column(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .weight(if (isExecutionOutputOpen && !isOutputCollapsed) (1f - outputSplitWeight) else 1f)
+                    .fillMaxWidth()
+            ) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // File Explorer Sidebar with Project Templates
                 if (isExplorerSidebarOpen && !isZenMode) {
@@ -972,6 +1025,45 @@ fun EditorScreen(
             }
         }
 
+        // LIVE EXECUTION OUTPUT PANEL (Split-pane layout: pushes editor up, never covers code lines)
+        if (isExecutionOutputOpen) {
+            val panelModifier = if (isOutputCollapsed) {
+                Modifier.fillMaxWidth().wrapContentHeight()
+            } else {
+                Modifier.weight(outputSplitWeight).fillMaxWidth()
+            }
+            ExecutionOutputSheet(
+                theme = theme,
+                state = liveExecutionState,
+                isCollapsed = isOutputCollapsed,
+                onToggleCollapse = { isOutputCollapsed = !isOutputCollapsed },
+                onRerun = onRunCode,
+                onStop = onStopExecution,
+                onClear = onClearExecutionOutput,
+                onSendStdin = onSendStdin,
+                onJumpToLine = { fileName, line ->
+                    jumpToLineInEditor(line)
+                    onJumpToLine(fileName, line)
+                },
+                onOpenInTerminal = onOpenActiveFileInTermux,
+                onOpenSettings = onOpenSettings,
+                floatingWindowsCount = floatingWindows.size,
+                onClearWindows = onClearFloatingWindows,
+                onDismiss = onCloseExecutionOutput,
+                modifier = panelModifier
+            )
+        }
+
+        // FLOATING MULTI-WINDOW MANAGER (Tkinter popups, 10+ windows, draggable, resizable)
+        FloatingWindowHost(
+            windows = floatingWindows,
+            onCloseWindow = onCloseFloatingWindow,
+            onMoveWindow = onMoveFloatingWindow,
+            onResizeWindow = onResizeFloatingWindow,
+            onFocusWindow = onFocusFloatingWindow
+        )
+    }
+
         // BOTTOM TOOLBARS (Strictly ordered):
         // 1. Suggestion bar row
         AutocompleteBar(
@@ -1005,37 +1097,12 @@ fun EditorScreen(
                 showSaveToast = "💾 Saved $fileName"
             },
             onToggleSearch = onToggleSearchReplace,
-            onRunCode = {
-                val current = activeFile ?: openFiles.firstOrNull()
-                if (current != null) {
-                    executionResult = CodeExecutionEngine.execute(current, openFiles)
-                    onRunCode()
-                }
-            },
+            onRunCode = onRunCode,
             onUndo = onUndo,
             onRedo = onRedo,
             canUndo = canUndo,
             canRedo = canRedo,
             onShowShortcutsHelp = { showShortcutsHelpDialog = true }
-        )
-    }
-
-    // LIVE EXECUTION OUTPUT SHEET (Appears immediately when code is run!)
-    executionResult?.let { result ->
-        ExecutionOutputSheet(
-            theme = theme,
-            result = result,
-            onRerun = {
-                val current = activeFile ?: openFiles.firstOrNull()
-                if (current != null) {
-                    executionResult = CodeExecutionEngine.execute(current, openFiles)
-                }
-            },
-            onOpenInTerminal = {
-                onOpenTerminal()
-                executionResult = null
-            },
-            onDismiss = { executionResult = null }
         )
     }
 

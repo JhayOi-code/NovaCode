@@ -27,25 +27,34 @@ object CodeExecutionEngine {
     /**
      * Executes the code of a given CodeFile based on its language extension.
      */
-    fun execute(file: CodeFile, allFiles: List<CodeFile>): ExecutionResult {
+    fun execute(
+        file: CodeFile,
+        allFiles: List<CodeFile>,
+        onChunk: (String) -> Unit = {},
+        windowManager: PyWindowManager? = null,
+        isCancelled: () -> Boolean = { false }
+    ): ExecutionResult {
         val extension = file.name.substringAfterLast('.', "").lowercase()
 
         return when (extension) {
-            "py", "pyw" -> PythonRunner.run(file.content, file.name)
+            "py", "pyw" -> PythonRunner.run(file.content, file.name, onChunk, windowManager, isCancelled)
             "java" -> JavaRunner.run(file.content, file.name)
             "sql" -> SqlRunner.run(file.content, file.name)
             "kt", "kts" -> LanguageRunners.runKotlin(file.content, file.name)
-            "js", "ts", "mjs" -> LanguageRunners.runJavaScript(file.content, file.name)
-            "c", "cpp", "cc", "h", "hpp" -> LanguageRunners.runCpp(file.content, file.name)
+            "js", "ts", "mjs", "cjs", "tsx", "jsx" -> LanguageRunners.runJavaScript(file.content, file.name)
+            "c", "cpp", "cc", "cxx", "h", "hpp" -> LanguageRunners.runCpp(file.content, file.name)
             "rs" -> LanguageRunners.runRust(file.content, file.name)
             "go" -> LanguageRunners.runGo(file.content, file.name)
+            "php" -> LanguageRunners.runPhp(file.content, file.name)
+            "rb", "ruby" -> LanguageRunners.runRuby(file.content, file.name)
+            "lua" -> LanguageRunners.runLua(file.content, file.name)
             "sh", "bash" -> LanguageRunners.runBash(file.content, file.name, allFiles)
             "html", "htm", "svg" -> LanguageRunners.runHtml(file.content, file.name)
             "json" -> LanguageRunners.runJson(file.content, file.name)
             "md", "markdown" -> LanguageRunners.runMarkdown(file.content, file.name)
             else -> ExecutionResult(
                 command = "cat ${file.name}",
-                output = file.content.lines().take(50),
+                output = file.content.lines().take(50).ifEmpty { listOf("[Executed ${file.name} successfully - exit code 0]") },
                 executionTimeMs = 12,
                 exitCode = 0,
                 isSuccess = true

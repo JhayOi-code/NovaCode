@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -75,16 +76,24 @@ fun UserProfileAvatarView(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else if (account?.isSignedIn == true && account.authProvider == "Google") {
+        } else if (account?.isSignedIn == true) {
             Text(
                 text = initial,
                 color = Color(preset.primaryColorHex),
                 fontWeight = FontWeight.Bold,
                 fontSize = (size.value * 0.45f).sp
             )
+        } else if (preset.iconKey == "terminal" || account?.isSignedIn != true) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_linq_user_logo),
+                contentDescription = "Linq Studio Logo",
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(preset.primaryColorHex)),
+                modifier = Modifier
+                    .size(size * 0.58f)
+                    .padding(2.dp)
+            )
         } else {
             val icon = when (preset.iconKey) {
-                "terminal" -> Icons.Default.Terminal
                 "security" -> Icons.Default.Security
                 "cloud" -> Icons.Default.Cloud
                 "palette" -> Icons.Default.Palette

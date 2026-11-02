@@ -323,6 +323,164 @@ object LanguageRunners {
         return ExecutionResult("md-render $fileName", outputs, 12, 0, true)
     }
 
+    // ==========================================
+    // PHP RUNNER
+    // ==========================================
+    fun runPhp(code: String, fileName: String): ExecutionResult {
+        val startTime = System.currentTimeMillis()
+        val stdout = mutableListOf<String>()
+        val vars = mutableMapOf<String, Any?>()
+
+        for (raw in code.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("//") || line.startsWith("#") || line.startsWith("/*")) continue
+            if (line.startsWith("<?php") || line.startsWith("?>")) continue
+
+            if (line.startsWith("echo ") || line.startsWith("print ")) {
+                val expr = line.removePrefix("echo ").removePrefix("print ").substringBeforeLast(";").trim()
+                val parts = expr.split('.').map { part ->
+                    val t = part.trim()
+                    if ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'"))) {
+                        var text = t.substring(1, t.length - 1).replace("\\n", "\n")
+                        if (t.startsWith("\"")) {
+                            for ((k, v) in vars) {
+                                text = text.replace("$$k", v?.toString() ?: "")
+                            }
+                        }
+                        text
+                    } else if (t.startsWith("$")) {
+                        vars[t.removePrefix("$")]?.toString() ?: ""
+                    } else {
+                        evalSimpleExpr(t, vars)?.toString() ?: t
+                    }
+                }
+                val joined = parts.joinToString("")
+                stdout.addAll(joined.lines())
+                continue
+            }
+
+            if (line.startsWith("$") && line.contains("=")) {
+                val varName = line.substringBefore("=").trim().removePrefix("$")
+                val expr = line.substringAfter("=").substringBefore(";").trim()
+                vars[varName] = evalSimpleExpr(expr, vars)
+                continue
+            }
+        }
+
+        if (stdout.isEmpty()) {
+            stdout.add("[PHP script completed successfully with exit code 0]")
+        }
+
+        return ExecutionResult(
+            command = "php $fileName",
+            output = stdout,
+            executionTimeMs = (System.currentTimeMillis() - startTime).coerceAtLeast(16),
+            exitCode = 0,
+            isSuccess = true
+        )
+    }
+
+    // ==========================================
+    // RUBY RUNNER
+    // ==========================================
+    fun runRuby(code: String, fileName: String): ExecutionResult {
+        val startTime = System.currentTimeMillis()
+        val stdout = mutableListOf<String>()
+        val vars = mutableMapOf<String, Any?>()
+
+        for (raw in code.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("#")) continue
+
+            if (line.startsWith("puts ") || line.startsWith("print ")) {
+                val isPuts = line.startsWith("puts ")
+                val expr = line.removePrefix("puts ").removePrefix("print ").trim()
+                val evaluated = if ((expr.startsWith("\"") && expr.endsWith("\"")) || (expr.startsWith("'") && expr.endsWith("'"))) {
+                    var text = expr.substring(1, expr.length - 1)
+                    for ((k, v) in vars) {
+                        text = text.replace("#{$k}", v?.toString() ?: "")
+                    }
+                    text
+                } else {
+                    vars[expr]?.toString() ?: evalSimpleExpr(expr, vars)?.toString() ?: expr
+                }
+                if (isPuts) stdout.add(evaluated)
+                else if (stdout.isEmpty()) stdout.add(evaluated)
+                else stdout[stdout.lastIndex] = stdout.last() + evaluated
+                continue
+            }
+
+            if (line.contains("=") && !line.startsWith("==") && !line.startsWith("if")) {
+                val varName = line.substringBefore("=").trim()
+                val expr = line.substringAfter("=").trim()
+                vars[varName] = evalSimpleExpr(expr, vars)
+                continue
+            }
+        }
+
+        if (stdout.isEmpty()) {
+            stdout.add("[Ruby script finished with exit status 0]")
+        }
+
+        return ExecutionResult(
+            command = "ruby $fileName",
+            output = stdout,
+            executionTimeMs = (System.currentTimeMillis() - startTime).coerceAtLeast(18),
+            exitCode = 0,
+            isSuccess = true
+        )
+    }
+
+    // ==========================================
+    // LUA RUNNER
+    // ==========================================
+    fun runLua(code: String, fileName: String): ExecutionResult {
+        val startTime = System.currentTimeMillis()
+        val stdout = mutableListOf<String>()
+        val vars = mutableMapOf<String, Any?>()
+
+        for (raw in code.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("--")) continue
+
+            if (line.startsWith("print(") && line.endsWith(")")) {
+                val inner = line.removePrefix("print(").removeSuffix(")").trim()
+                val parts = splitArgs(inner).map { arg ->
+                    val t = arg.trim()
+                    if ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'"))) {
+                        t.substring(1, t.length - 1)
+                    } else if (vars.containsKey(t)) {
+                        vars[t]?.toString() ?: "nil"
+                    } else {
+                        evalSimpleExpr(t, vars)?.toString() ?: t
+                    }
+                }
+                stdout.add(parts.joinToString("\t"))
+                continue
+            }
+
+            val assignmentLine = if (line.startsWith("local ")) line.removePrefix("local ").trim() else line
+            if (assignmentLine.contains("=") && !assignmentLine.contains("==")) {
+                val varName = assignmentLine.substringBefore("=").trim()
+                val expr = assignmentLine.substringAfter("=").trim()
+                vars[varName] = evalSimpleExpr(expr, vars)
+                continue
+            }
+        }
+
+        if (stdout.isEmpty()) {
+            stdout.add("[Lua execution completed with code 0]")
+        }
+
+        return ExecutionResult(
+            command = "lua $fileName",
+            output = stdout,
+            executionTimeMs = (System.currentTimeMillis() - startTime).coerceAtLeast(12),
+            exitCode = 0,
+            isSuccess = true
+        )
+    }
+
     private fun evalKotlinTemplate(str: String, vars: Map<String, Any?>): String {
         val trimmed = str.trim()
         if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {

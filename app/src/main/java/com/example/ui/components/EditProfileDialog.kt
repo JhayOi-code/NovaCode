@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -75,6 +76,37 @@ fun EditProfileDialog(
     onSave: (username: String, title: String, bio: String, avatarUrl: String?, colorHex: Long, stack: String, avatarId: String, avatarCustomUri: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    if (!userAccount.isSignedIn) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(20.dp))
+                    Text("Profile Customization Locked", color = theme.onSurfaceColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Text(
+                    text = "You must sign in with your developer account before customizing your profile, avatars, and badges.",
+                    color = theme.lineNumberColor,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black)
+                ) {
+                    Text("Got It")
+                }
+            }
+        )
+        return
+    }
+
     var username by remember { mutableStateOf(userAccount.username) }
     var title by remember { mutableStateOf(userAccount.title) }
     var bio by remember { mutableStateOf(userAccount.bio) }

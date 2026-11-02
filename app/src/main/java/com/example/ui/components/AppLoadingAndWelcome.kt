@@ -189,24 +189,21 @@ fun AppLoadingScreen(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(32.dp)
             ) {
-                // Glowing Linq Emblem
+                // Glowing Linq Emblem (New Black and White Logo)
                 Box(
                     modifier = Modifier
                         .scale(pulseScale)
                         .size(92.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(
-                            Brush.radialGradient(
-                                colors = listOf(Color(0xFF00E5FF).copy(alpha = 0.25f), Color(0xFF0F172A))
-                            )
-                        )
-                        .border(2.dp, Color(0xFF00E5FF), RoundedCornerShape(24.dp)),
+                        .background(Color(0xFF1E293B))
+                        .border(1.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground_asset),
+                        painter = painterResource(id = R.drawable.ic_linq_user_logo),
                         contentDescription = "Linq Logo",
-                        modifier = Modifier.size(64.dp)
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White),
+                        modifier = Modifier.size(54.dp)
                     )
                 }
 

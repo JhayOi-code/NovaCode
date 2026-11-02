@@ -1,0 +1,3822 @@
+[
+  {
+    "quote": "Every expert coder was once a beginner who refused to quit.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The secret to getting ahead is getting started.",
+    "author": "Mark Twain"
+  },
+  {
+    "quote": "Start where you are. Use what you have. Do what you can.",
+    "author": "Arthur Ashe"
+  },
+  {
+    "quote": "You don't have to be great to start, but you have to start to be great.",
+    "author": "Zig Ziglar"
+  },
+  {
+    "quote": "A journey of a thousand miles begins with a single step.",
+    "author": "Lao Tzu"
+  },
+  {
+    "quote": "Little by little, a little becomes a lot.",
+    "author": "Tanzanian Proverb"
+  },
+  {
+    "quote": "The scariest moment is always just before you start.",
+    "author": "Stephen King"
+  },
+  {
+    "quote": "Small daily improvements over time lead to stunning results.",
+    "author": "Robin Sharma"
+  },
+  {
+    "quote": "Write your first line of code today; build the world tomorrow.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't fear starting small; fear standing still.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A single line of working code is better than a million unwritten ideas.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every master was once a disaster.",
+    "author": "T. Harv Eker"
+  },
+  {
+    "quote": "It does not matter how slowly you go as long as you do not stop.",
+    "author": "Confucius"
+  },
+  {
+    "quote": "Learning to code is learning how to think clearly.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on progress, not perfection.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Small steps every day build giant skills.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to learn is by building things with your own hands.",
+    "author": "Linq"
+  },
+  {
+    "quote": "One function at a time. One bug at a time. Keep going.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Curiosity is the engine of achievement.",
+    "author": "Ken Robinson"
+  },
+  {
+    "quote": "The mind is not a vessel to be filled, but a fire to be kindled.",
+    "author": "Plutarch"
+  },
+  {
+    "quote": "Tell me and I forget. Teach me and I remember. Involve me and I learn.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "quote": "Live as if you were to die tomorrow. Learn as if you were to live forever.",
+    "author": "Mahatma Gandhi"
+  },
+  {
+    "quote": "Study hard what interests you the most in the most undisciplined way.",
+    "author": "Richard Feynman"
+  },
+  {
+    "quote": "The important thing is not to stop questioning.",
+    "author": "Albert Einstein"
+  },
+  {
+    "quote": "I have no special talent. I am only passionately curious.",
+    "author": "Albert Einstein"
+  },
+  {
+    "quote": "Curiosity will conquer fear even more than bravery will.",
+    "author": "James Stephens"
+  },
+  {
+    "quote": "Ask 'why' until you truly understand the machine.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Always be curious about how things work underneath the hood.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Wonder is the beginning of wisdom.",
+    "author": "Socrates"
+  },
+  {
+    "quote": "Never lose your beginner's mind: open, eager, and without prejudice.",
+    "author": "Shunryu Suzuki"
+  },
+  {
+    "quote": "Mistakes are proof that you are trying.",
+    "author": "Linq"
+  },
+  {
+    "quote": "An error message is just your computer asking for your help.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Debugging is like being the detective in a crime movie where you are the murderer.",
+    "author": "Filipe Fortes"
+  },
+  {
+    "quote": "Don't worry about bugs; every fix makes you a better programmer.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The only real mistake is the one from which we learn nothing.",
+    "author": "Henry Ford"
+  },
+  {
+    "quote": "Errors are not failures; they are signposts pointing toward understanding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "If you haven't failed, you haven't pushed your limits.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate every bug you solve—it means you grew smarter.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Failure is simply the opportunity to begin again, this time more intelligently.",
+    "author": "Henry Ford"
+  },
+  {
+    "quote": "A bug fixed is a lesson learned forever.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Read your error logs closely: the computer is telling you exactly what went wrong.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The hardest bugs teach the deepest lessons.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't let a red error line ruin your day; it's just a puzzle waiting for you.",
+    "author": "Linq"
+  },
+  {
+    "quote": "It's not a bug; it's an undocumented feature in training.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Treat every bug as an invitation to understand your program deeper.",
+    "author": "Linq"
+  },
+  {
+    "quote": "First do it, then do it right, then do it better.",
+    "author": "Addy Osmani"
+  },
+  {
+    "quote": "Experience is what you get when you didn't get what you wanted.",
+    "author": "Randy Pausch"
+  },
+  {
+    "quote": "Success consists of going from failure to failure without loss of enthusiasm.",
+    "author": "Winston Churchill"
+  },
+  {
+    "quote": "You learn more from failure than from success. Don't let it stop you.",
+    "author": "Unknown"
+  },
+  {
+    "quote": "Mistakes are the portals of discovery.",
+    "author": "James Joyce"
+  },
+  {
+    "quote": "Consistency is more powerful than brilliance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice does not make perfect. Only perfect practice makes perfect.",
+    "author": "Vince Lombardi"
+  },
+  {
+    "quote": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    "author": "Aristotle"
+  },
+  {
+    "quote": "Coding for twenty minutes every day beats cramming ten hours once a month.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Action is the foundational key to all success.",
+    "author": "Pablo Picasso"
+  },
+  {
+    "quote": "Patience and persistence can solve even the trickiest algorithm.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep typing, keep experimenting, keep building.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You don't need a computer science degree to create something amazing.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best code is the code you write today, not the code you planned tomorrow.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Energy and persistence conquer all things.",
+    "author": "Benjamin Franklin"
+  },
+  {
+    "quote": "Rivers know this: there is no hurry. We shall get there someday.",
+    "author": "A.A. Milne"
+  },
+  {
+    "quote": "Patience is a key element of success.",
+    "author": "Bill Gates"
+  },
+  {
+    "quote": "Never give up on a problem that just needs a fresh perspective.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Step away from the screen, take a walk, and the solution will appear.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great things are done by a series of small things brought together.",
+    "author": "Vincent van Gogh"
+  },
+  {
+    "quote": "Doubt kills more dreams than failure ever will.",
+    "author": "Suzy Kassem"
+  },
+  {
+    "quote": "Continuous effort—not strength or intelligence—is the key to unlocking our potential.",
+    "author": "Winston Churchill"
+  },
+  {
+    "quote": "It always seems impossible until it's done.",
+    "author": "Nelson Mandela"
+  },
+  {
+    "quote": "Perseverance is failing 19 times and succeeding the 20th.",
+    "author": "Julie Andrews"
+  },
+  {
+    "quote": "Never let a tough problem convince you that you aren't smart enough.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Think before you code; sketch before you build.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Simplicity is prerequisite for reliability.",
+    "author": "Edsger Dijkstra"
+  },
+  {
+    "quote": "Make it work, make it right, make it fast.",
+    "author": "Kent Beck"
+  },
+  {
+    "quote": "Break a big problem into tiny pieces, and solve them one by one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Programming is not about typing; it's about thinking.",
+    "author": "Rich Hickey"
+  },
+  {
+    "quote": "If you can't explain it simply, you don't understand it well enough.",
+    "author": "Albert Einstein"
+  },
+  {
+    "quote": "The function of good software is to make the complex appear simple.",
+    "author": "Grady Booch"
+  },
+  {
+    "quote": "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+    "author": "Martin Fowler"
+  },
+  {
+    "quote": "Simplicity is the ultimate sophistication.",
+    "author": "Leonardo da Vinci"
+  },
+  {
+    "quote": "Write clean, readable code; your future self will thank you.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Logic will get you from A to B. Imagination will take you everywhere.",
+    "author": "Albert Einstein"
+  },
+  {
+    "quote": "A good algorithm is like a good recipe: clear, predictable, and delightful.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code should read like clear prose, not an obscure puzzle.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When stuck, write down what you know and what you need on a sheet of paper.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Talk to your rubber duck: explaining your code out loud reveals the bug.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Divide and conquer is the superpower of computer science.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code is like humor. When you have to explain it, it's bad.",
+    "author": "Cory House"
+  },
+  {
+    "quote": "Clean code always looks like it was written by someone who cares.",
+    "author": "Robert C. Martin"
+  },
+  {
+    "quote": "Good code is its own best documentation.",
+    "author": "Steve McConnell"
+  },
+  {
+    "quote": "First, solve the problem. Then, write the code.",
+    "author": "John Johnson"
+  },
+  {
+    "quote": "Computers are bicycles for our minds.",
+    "author": "Steve Jobs"
+  },
+  {
+    "quote": "Software is a great combination between artistry and engineering.",
+    "author": "Bill Gates"
+  },
+  {
+    "quote": "Creativity is intelligence having fun.",
+    "author": "Albert Einstein"
+  },
+  {
+    "quote": "You can create worlds out of thin air using only logic and text.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code is your modern paintbrush; the screen is your canvas.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The computer is incredibly fast, accurate, and stupid; humans are slow, inaccurate, and brilliant.",
+    "author": "Leo Cherne"
+  },
+  {
+    "quote": "The most exciting phrase in science is not 'Eureka!' but 'That's funny...'",
+    "author": "Isaac Asimov"
+  },
+  {
+    "quote": "To invent, you need a good imagination and a pile of junk.",
+    "author": "Thomas Edison"
+  },
+  {
+    "quote": "Coding lets you build things that never existed before.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every app in your pocket started as a blank file and an idea.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You are not just a consumer of technology; you are a creator.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Let your curiosity lead your code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "There is no limit to what you can build once you know the basics.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Dare to create what you wish existed.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Your imagination is your only constraint.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Programming is the closest thing we have to magic.",
+    "author": "Drew Houston"
+  },
+  {
+    "quote": "Technology is best when it brings people together.",
+    "author": "Matt Mullenweg"
+  },
+  {
+    "quote": "The power of software is giving anyone the ability to create tools for everyone.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers are not born; they are made through curiosity and practice.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Always build things you would love to use yourself.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Believe you can and you're halfway there.",
+    "author": "Theodore Roosevelt"
+  },
+  {
+    "quote": "You are capable of learning anything you set your mind to.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Do not compare your Chapter 1 to someone else's Chapter 20.",
+    "author": "Unknown"
+  },
+  {
+    "quote": "The expert was once where you are standing right now.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Your brain is like a muscle: coding exercises make it stronger.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace the challenge; that's where the growth happens.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Be kind to yourself when learning something new.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Progress is quiet, gradual, and unstoppable when you show up every day.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never measure your worth by how fast you solve a coding problem.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate small victories: a printed message, a loop that works, an error resolved.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You belong in the world of technology.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't worry about being fast; worry about being curious.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Learning to program changes how you see the world.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Everything you see around you was built by people no smarter than you.",
+    "author": "Steve Jobs"
+  },
+  {
+    "quote": "There are no dumb questions when you are learning.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Be patient with yourself. Complex ideas take time to settle.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Each line of code you understand is a permanent victory.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Coding teaches you how to think, analyze, and persevere.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every bug you solve builds confidence for the next one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep going. You are closer to understanding than you think.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Loops teach us that repetitive tasks can be automated with pure logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master loops, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding loops opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of loops.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of loops.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering loops is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush loops. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand loops is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice loops until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, loops turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of loops will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on loops today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does loops make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to loops is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace loops; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of loops.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of loops comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for loops.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat loops with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to loops simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when loops finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Variables are boxes where we store ideas for later use.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master variables, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding variables opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of variables.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of variables.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering variables is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush variables. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand variables is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice variables until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, variables turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of variables will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on variables today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does variables make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to variables is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace variables; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of variables.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of variables comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for variables.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat variables with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to variables simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when variables finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Functions are recipes: give them ingredients and get results.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master functions, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding functions opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of functions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of functions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering functions is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush functions. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand functions is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice functions until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, functions turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of functions will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on functions today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does functions make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to functions is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace functions; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of functions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of functions comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for functions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat functions with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to functions simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when functions finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lists and arrays help us keep our digital worlds organized.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master arrays, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding arrays opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of arrays.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of arrays.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering arrays is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush arrays. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand arrays is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice arrays until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, arrays turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of arrays will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on arrays today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does arrays make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to arrays is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace arrays; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of arrays.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of arrays comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for arrays.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat arrays with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to arrays simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when arrays finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Boolean logic is simple: true or false, but from it worlds are built.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master logic, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding logic opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering logic is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush logic. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand logic is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice logic until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, logic turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of logic will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on logic today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does logic make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to logic is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace logic; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of logic comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat logic with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to logic simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when logic finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Syntax is just the language grammar; the real magic is your logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master syntax, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding syntax opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering syntax is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush syntax. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand syntax is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice syntax until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, syntax turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of syntax will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on syntax today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does syntax make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to syntax is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace syntax; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of syntax comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat syntax with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to syntax simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when syntax finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "An algorithm is just a clear set of steps to reach a goal.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master algorithms, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding algorithms opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of algorithms.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of algorithms.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering algorithms is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush algorithms. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand algorithms is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice algorithms until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, algorithms turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of algorithms will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on algorithms today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does algorithms make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to algorithms is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace algorithms; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of algorithms.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of algorithms comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for algorithms.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat algorithms with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to algorithms simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when algorithms finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Test early, test often, and let tests give you confidence.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master testing, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding testing opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of testing.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of testing.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering testing is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush testing. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand testing is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice testing until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, testing turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of testing will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on testing today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does testing make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to testing is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace testing; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of testing.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of testing comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for testing.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat testing with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to testing simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when testing finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Write comments that explain why, not just what.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master comments, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding comments opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of comments.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of comments.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering comments is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush comments. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand comments is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice comments until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, comments turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of comments will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on comments today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does comments make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to comments is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace comments; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of comments.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of comments comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for comments.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat comments with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to comments simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when comments finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Refactoring is polishing your code until it shines with clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master refactoring, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding refactoring opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of refactoring.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of refactoring.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering refactoring is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush refactoring. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand refactoring is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice refactoring until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, refactoring turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of refactoring will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on refactoring today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does refactoring make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to refactoring is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace refactoring; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of refactoring.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of refactoring comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for refactoring.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat refactoring with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to refactoring simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when refactoring finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The terminal is your command center: direct, fast, and powerful.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master terminal, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding terminal opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of terminal.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of terminal.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering terminal is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush terminal. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand terminal is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice terminal until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, terminal turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of terminal will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on terminal today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does terminal make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to terminal is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace terminal; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of terminal.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of terminal comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for terminal.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat terminal with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to terminal simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when terminal finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Your editor is your studio; customize it so it inspires you.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master editor, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding editor opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of editor.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of editor.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering editor is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush editor. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand editor is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice editor until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, editor turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of editor will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on editor today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does editor make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to editor is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace editor; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of editor.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of editor comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for editor.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat editor with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to editor simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when editor finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Version control means you can experiment boldly without fear.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master git, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding git opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of git.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of git.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering git is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush git. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand git is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice git until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, git turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of git will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on git today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does git make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to git is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace git; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of git.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of git comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for git.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat git with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to git simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when git finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Open source proves that sharing knowledge makes everyone richer.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master open source, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding open source opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of open source.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of open source.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering open source is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush open source. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand open source is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice open source until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, open source turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of open source will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on open source today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does open source make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to open source is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace open source; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of open source.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of open source comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for open source.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat open source with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to open source simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when open source finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Asking great questions is half of the problem solved.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master questions, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding questions opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of questions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of questions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering questions is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush questions. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand questions is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice questions until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, questions turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of questions will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on questions today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does questions make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to questions is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace questions; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of questions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of questions comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for questions.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat questions with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to questions simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when questions finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Read other people's code; it's the fastest way to learn new idioms.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master reading code, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding reading code opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of reading code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of reading code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering reading code is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush reading code. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand reading code is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice reading code until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, reading code turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of reading code will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on reading code today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does reading code make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to reading code is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace reading code; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of reading code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of reading code comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for reading code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat reading code with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to reading code simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when reading code finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Eliminate distractions and watch your coding speed multiply.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master focus, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding focus opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of focus.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of focus.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering focus is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush focus. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand focus is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice focus until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, focus turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of focus will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on focus today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does focus make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to focus is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace focus; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of focus.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of focus comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for focus.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat focus with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to focus simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when focus finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Clean code is like clean thinking: crisp, direct, and kind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master clean code, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding clean code opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of clean code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of clean code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering clean code is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush clean code. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand clean code is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice clean code until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, clean code turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of clean code will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on clean code today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does clean code make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to clean code is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace clean code; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of clean code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of clean code comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for clean code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat clean code with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to clean code simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when clean code finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never discount small wins; they compound into mastery.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master small wins, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding small wins opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of small wins.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of small wins.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering small wins is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush small wins. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand small wins is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice small wins until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, small wins turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of small wins will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on small wins today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does small wins make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to small wins is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace small wins; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of small wins.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of small wins comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for small wins.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat small wins with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to small wins simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when small wins finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Learn your shortcuts; speed follows familiarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master keyboard, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding keyboard opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of keyboard.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of keyboard.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering keyboard is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush keyboard. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand keyboard is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice keyboard until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, keyboard turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of keyboard will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on keyboard today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does keyboard make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to keyboard is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace keyboard; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of keyboard.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of keyboard comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for keyboard.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat keyboard with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to keyboard simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when keyboard finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't guess what the code does; read it line by line.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master debugging mindset, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding debugging mindset opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of debugging mindset.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of debugging mindset.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering debugging mindset is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush debugging mindset. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand debugging mindset is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice debugging mindset until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, debugging mindset turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of debugging mindset will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on debugging mindset today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does debugging mindset make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to debugging mindset is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace debugging mindset; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of debugging mindset.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of debugging mindset comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for debugging mindset.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat debugging mindset with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to debugging mindset simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when debugging mindset finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Follow your curiosity; it will teach you what textbooks miss.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master curiosity first, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding curiosity first opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of curiosity first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of curiosity first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering curiosity first is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush curiosity first. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand curiosity first is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice curiosity first until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, curiosity first turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of curiosity first will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on curiosity first today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does curiosity first make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to curiosity first is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace curiosity first; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of curiosity first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of curiosity first comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for curiosity first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat curiosity first with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to curiosity first simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when curiosity first finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Give difficult concepts time to marinate in your mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master patience, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding patience opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of patience.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of patience.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering patience is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush patience. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand patience is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice patience until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, patience turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of patience will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on patience today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does patience make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to patience is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace patience; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of patience.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of patience comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for patience.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat patience with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to patience simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when patience finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Be kind to beginners; we were all there once.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master kindness, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding kindness opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of kindness.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of kindness.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering kindness is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush kindness. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand kindness is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice kindness until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, kindness turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of kindness will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on kindness today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does kindness make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to kindness is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace kindness; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of kindness.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of kindness comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for kindness.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat kindness with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to kindness simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when kindness finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Try breaking things on purpose to see how they fail.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you master experimentation, you gain a superpower.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding experimentation opens up a whole new world of coding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take time to appreciate the beauty of experimentation.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every great software project starts with a firm grasp of experimentation.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Mastering experimentation is a milestone on your learning journey.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't rush experimentation. Take it step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best way to understand experimentation is to build a small experiment.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice experimentation until it feels like second nature.",
+    "author": "Linq"
+  },
+  {
+    "quote": "In programming, experimentation turns chaos into elegance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A deep understanding of experimentation will serve you for decades.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Focus on experimentation today and your future code will be cleaner.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Ask yourself: how does experimentation make this solution simpler?",
+    "author": "Linq"
+  },
+  {
+    "quote": "The key to experimentation is breaking it down into basic parts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Embrace experimentation; it is one of the most rewarding concepts to learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring the possibilities of experimentation.",
+    "author": "Linq"
+  },
+  {
+    "quote": "True mastery of experimentation comes from debugging real examples.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When in doubt, write a tiny test program for experimentation.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Great programmers treat experimentation with respect and clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Keep your approach to experimentation simple and straightforward.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Celebrate the moment when experimentation finally clicks.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #1: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #2: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #3: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #4: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #5: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #6: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #7: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #8: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #9: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #10: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #11: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #12: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #13: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #14: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #15: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #16: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #17: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #18: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #19: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #20: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #21: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #22: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #23: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Always test your code with simple examples first.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Read the documentation before guessing the syntax.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: A clean layout makes logic errors easy to spot.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Take notes on tricky bugs so you remember the fix.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Make small, frequent commits so you can track your steps.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Don't fear refactoring; it's the sign of a maturing mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: The simplest solution is almost always the right one.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Good programmers ask questions until they truly understand.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Every line you write is an investment in your future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Lesson #24: Keep your functions short and focused on one task.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code is poetry written with logic and intention.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Build things that help your family, your school, or your community.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Computers do what you tell them to do, not what you want them to do.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A computer is a machine that runs your thoughts.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The best tool in programming is a curious mind.",
+    "author": "Linq"
+  },
+  {
+    "quote": "If code feels too hard, you just need a smaller step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never be ashamed of writing simple code. Simple code is best.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Complexity is the enemy of understanding.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Write code as if the next person to read it is your friend.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You don't need expensive gear to become a great coder.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A phone in your hands holds more power than the Apollo computers.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Learn one concept deeply rather than twenty on the surface.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Understanding why code works is better than getting lucky.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't copy and paste without reading every single line.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Type it out by hand: muscle memory helps you learn.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every error solved is a new mental tool in your toolkit.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Programming is creative problem solving in disguise.",
+    "author": "Linq"
+  },
+  {
+    "quote": "There is no magic in computers, only layers of simple rules.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Learn how memory works, and you'll understand why things crash.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Take pride in formatting your code neatly.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Indentation is not just style; it is thought structure made visible.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Naming things well is half of writing good code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A good variable name tells a story in one glance.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Write code that explains itself without needing a manual.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The terminal is not scary; it's a patient conversation.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Errors are the compass that guides you to the solution.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Always question your assumptions when code acts unexpectedly.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Check your inputs, check your outputs, check your edge cases.",
+    "author": "Linq"
+  },
+  {
+    "quote": "What happens when the input is zero, empty, or huge?",
+    "author": "Linq"
+  },
+  {
+    "quote": "Edge cases are where interesting bugs hide.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Learn to love the process, not just the finished project.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The thrill of fixing a tough bug is hard to match.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never lose the joy of making pixels move on a screen.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Hello World is the universal greeting of all software.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every programmer in history started with Hello World.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Your journey starts with print('Hello, World!').",
+    "author": "Linq"
+  },
+  {
+    "quote": "A computer never judges your speed; it only executes your commands.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Computers are infinitely patient students of your logic.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You are teaching a machine how to think step by step.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Algorithms are human ideas translated into digital action.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code connects human thought with machine action.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Practice explaining your logic to someone who doesn't code.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Clear writing and clear coding come from the same mental discipline.",
+    "author": "Linq"
+  },
+  {
+    "quote": "When you learn to code, you unlock the ability to invent tools.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Software is proof that ideas can change the world.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The greatest inventions started with an curious student.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Never stop exploring, learning, and sharing what you discover.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The coding community thrives when we help each other grow.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Share your code, ask questions, and lift others up.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Together we build the digital future.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Code with integrity, empathy, and care.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Build technology that helps make the world a better place.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Your code has the potential to help someone thousands of miles away.",
+    "author": "Linq"
+  },
+  {
+    "quote": "The world needs your unique perspective in technology.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Don't wait for permission to build something useful.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Build for yourself first, then share it with the world.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Every coding problem has a solution if you keep looking.",
+    "author": "Linq"
+  },
+  {
+    "quote": "Be relentless in your search for clarity.",
+    "author": "Linq"
+  },
+  {
+    "quote": "A good coder is a good thinker who refuses to give up.",
+    "author": "Linq"
+  },
+  {
+    "quote": "You have the power to create. Start today.",
+    "author": "Linq"
+  }
+]

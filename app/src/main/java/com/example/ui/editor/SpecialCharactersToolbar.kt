@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,13 +56,13 @@ fun SpecialCharactersToolbar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .heightIn(min = 46.dp)
             .background(theme.surfaceColor)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
             .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 5.dp)
             .testTag("special_characters_toolbar"),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Quick Developer Shortcut Buttons
         if (onSave != null) {
@@ -216,27 +217,27 @@ fun SpecialCharactersToolbar(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(theme.surfaceVariant)
+                    .background(Color(0xFF8B5CF6))
                     .clickable { onShowShortcutsHelp() }
-                    .padding(horizontal = 7.dp, vertical = 6.dp)
+                    .padding(horizontal = 9.dp, vertical = 6.dp)
                     .testTag("shortcut_help_chip"),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Keyboard,
                         contentDescription = "Keyboard Shortcuts",
-                        tint = theme.lineNumberColor,
+                        tint = Color.White,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = "Keys",
-                        color = theme.lineNumberColor,
+                        color = Color.White,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

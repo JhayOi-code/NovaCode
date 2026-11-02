@@ -1,6 +1,6 @@
 {
   "name": "Linq Studios",
-  "description": "Professional mobile code editor & IDE with high performance syntax highlighting, full device file access, dev server preview, and terminal.",
+  "description": "A friendly native Android code editor and IDE built for students learning to program, featuring syntax highlighting, multi-language execution, live preview, and beginner guided tours.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

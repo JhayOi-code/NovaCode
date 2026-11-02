@@ -1,0 +1,23 @@
+# Secrets & Environment
+.env
+.env.*
+*.secret
+*.pem
+*.key
+serviceAccountKey.json
+firebase-service-account.json
+
+# Dependencies & Logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android & Gradle
+.gradle/
+build/
+app/build/
+.kotlin/
+.build-outputs/
+*.iml
+.idea/

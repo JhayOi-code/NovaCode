@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,10 +43,15 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.FolderOpen
+import com.example.ui.components.ActiveUsersMonitorCard
+import com.example.ui.components.VerifiedOwnerBadge
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -79,8 +85,10 @@ import com.example.model.EditorTheme
 import com.example.model.UserAccount
 import com.example.ui.components.DebugInspectorDialog
 import com.example.ui.components.EditProfileDialog
-import com.example.ui.components.GoogleAuthDialog
+import com.example.ui.components.FolderPickerBottomSheet
+import com.example.ui.components.LoginSignupWindow
 import com.example.ui.components.UserProfileAvatarView
+import java.io.File
 
 data class LanguageGuideData(
     val language: String,
@@ -201,11 +209,23 @@ fun HomeScreen(
     onUpdateProfile: (String, String, String, String?, Long, String, String, String?) -> Unit,
     onSignInWithGoogle: (String, String) -> Unit = { _, _ -> },
     onSignOut: () -> Unit = {},
-    onResetWorkspace: () -> Unit = {}
+    onResetWorkspace: () -> Unit = {},
+    activeUsersCount: Int = 1,
+    isOnline: Boolean = true,
+    activeWebFolder: String = "www",
+    availableHostFolders: List<String> = listOf("src", "www", "public", "scripts", "styles", "docs", "data", "site"),
+    onChooseFolderWithParam: (String) -> Unit = {},
+    onImportDeviceDirectory: (File, String) -> Unit = { _, _ -> },
+    onImportZipArchive: (File, String) -> Unit = { _, _ -> },
+    onImportMultipleFiles: (File, String) -> Unit = { _, _ -> },
+    onChooseFolder: () -> Unit = {},
+    onChooseFiles: () -> Unit = {},
+    openFiles: List<CodeFile> = emptyList()
 ) {
     var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showGoogleAuthDialog by remember { mutableStateOf(false) }
+    var showLoginSignupSheet by remember { mutableStateOf(false) }
     var showDebugDialog by remember { mutableStateOf(false) }
+    var showFolderPickerSheet by remember { mutableStateOf(false) }
 
     val fpsState = rememberHardwareFps()
 
@@ -257,6 +277,7 @@ fun HomeScreen(
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_linq_user_logo),
                                     contentDescription = "Linq Studios",
+                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (theme.isDark) Color.White else Color.Black),
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
@@ -271,7 +292,7 @@ fun HomeScreen(
                                 letterSpacing = 0.5.sp
                             )
                             Text(
-                                text = "Pro Mobile IDE • ${fpsState.currentFps} FPS (${fpsState.targetRefreshRate}Hz)",
+                                text = "Student Code Studio • ${fpsState.currentFps} FPS (${fpsState.targetRefreshRate}Hz)",
                                 color = theme.lineNumberColor,
                                 fontSize = 11.sp
                             )
@@ -297,12 +318,12 @@ fun HomeScreen(
             }
         }
 
-        // Hero / Profile Banner with Google Sign-In & Permanent Status
+        // Hero / Profile Banner with In-App Account & Permanent Status
         item {
             Card(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
-                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (userAccount.isOwnerVerified) Color(0xFFF59E0B).copy(alpha = 0.6f) else theme.borderColor),
                 modifier = Modifier.fillMaxWidth().testTag("home_profile_banner")
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -316,11 +337,15 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            val avatarColor = Color(userAccount.avatarColorHex)
+                            val avatarRingColor = when {
+                                userAccount.isOwnerVerified -> Color(0xFFF59E0B)
+                                userAccount.isSignedIn -> theme.primaryColor
+                                else -> theme.primaryColor.copy(alpha = 0.5f)
+                            }
                             UserProfileAvatarView(
-                                account = userAccount,
+                                account = if (userAccount.isOwnerVerified) userAccount.copy(username = "Ljhay") else userAccount,
                                 size = 52.dp,
-                                borderColor = avatarColor,
+                                borderColor = avatarRingColor,
                                 modifier = Modifier
                                     .scale(avatarPulse)
                                     .clickable { showEditProfileDialog = true }
@@ -328,99 +353,105 @@ fun HomeScreen(
                             )
 
                             Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Text(
-                                        text = userAccount.username,
+                                        text = if (userAccount.isOwnerVerified) "Ljhay" else userAccount.username,
                                         color = theme.onSurfaceColor,
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.Bold
                                     )
-                                    if (userAccount.isSignedIn) {
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                    if (userAccount.isOwnerVerified) {
+                                        VerifiedOwnerBadge()
+                                    } else if (userAccount.isSignedIn) {
                                         Icon(
                                             imageVector = Icons.Default.VerifiedUser,
-                                            contentDescription = "Verified",
+                                            contentDescription = "Verified Account",
                                             tint = Color(0xFF10B981),
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
                                 }
                                 Text(
-                                    text = userAccount.title,
-                                    color = theme.lineNumberColor,
-                                    fontSize = 12.sp
+                                    text = if (userAccount.isOwnerVerified) "Linq Studios LLC • System Owner" else userAccount.title,
+                                    color = if (userAccount.isOwnerVerified) Color(0xFFD97706) else theme.lineNumberColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (userAccount.isOwnerVerified) FontWeight.Medium else FontWeight.Normal
                                 )
                                 Text(
-                                    text = if (userAccount.isSignedIn) "Signed In (${userAccount.authProvider})" else "Guest Mode • Tap Edit to customize",
-                                    color = if (userAccount.isSignedIn) Color(0xFF10B981) else theme.lineNumberColor.copy(alpha = 0.8f),
+                                    text = when {
+                                        userAccount.isOwnerVerified -> "Owner Verified • Full Dev Access"
+                                        userAccount.isSignedIn -> "Signed In (${userAccount.authProvider})"
+                                        else -> "Guest Mode • Tap to Sign In"
+                                    },
+                                    color = when {
+                                        userAccount.isOwnerVerified -> Color(0xFFF59E0B)
+                                        userAccount.isSignedIn -> Color(0xFF10B981)
+                                        else -> theme.lineNumberColor.copy(alpha = 0.8f)
+                                    },
                                     fontSize = 11.sp,
                                     fontWeight = if (userAccount.isSignedIn) FontWeight.SemiBold else FontWeight.Normal
                                 )
                             }
                         }
 
-                        // Edit / Sign In Actions
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Edit / Sign In Actions with 48x48 min touch targets
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { showEditProfileDialog = true },
+                                onClick = {
+                                    if (userAccount.isSignedIn) {
+                                        showEditProfileDialog = true
+                                    } else {
+                                        showLoginSignupSheet = true
+                                    }
+                                },
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(theme.surfaceVariant)
                                     .testTag("home_edit_profile_button")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Profile",
-                                    tint = theme.primaryColor,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-
-                            IconButton(
-                                onClick = { showGoogleAuthDialog = true },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(theme.surfaceVariant)
-                                    .testTag("home_google_auth_button")
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_google_logo),
-                                    contentDescription = "Google Sign In",
+                                    imageVector = if (userAccount.isSignedIn) Icons.Default.Edit else Icons.Default.Lock,
+                                    contentDescription = if (userAccount.isSignedIn) "Edit Profile" else "Log in to customize profile",
+                                    tint = if (userAccount.isSignedIn) theme.primaryColor else theme.lineNumberColor,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
                     }
 
-                    // Direct Google Sign In Prompt if not signed in
+                    // Direct In-App Log In / Sign Up Prompt if not signed in
                     if (!userAccount.isSignedIn) {
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = theme.surfaceVariant,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { showGoogleAuthDialog = true }
+                                .clickable { showLoginSignupSheet = true }
+                                .testTag("home_auth_trigger_row")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = R.drawable.ic_google_logo),
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = theme.primaryColor,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "Tap to Sign In with Google permanently",
+                                        text = "Tap to log in or sign up",
                                         color = theme.onSurfaceColor,
-                                        fontSize = 12.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -428,12 +459,23 @@ fun HomeScreen(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
                                     tint = theme.lineNumberColor,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
                 }
+            }
+        }
+
+        // Part 7B: Owner-Only Live Active Users Monitor Card
+        if (userAccount.isOwnerVerified) {
+            item {
+                ActiveUsersMonitorCard(
+                    theme = theme,
+                    activeUsersCount = activeUsersCount,
+                    isOnline = isOnline
+                )
             }
         }
 
@@ -644,6 +686,7 @@ fun HomeScreen(
 
         // Dev Server Status Card
         // Dev Server Status Card
+        // Dev Server Status Card with unclipped Stop button, Test folder label, and real files
         item {
             Card(
                 shape = RoundedCornerShape(14.dp),
@@ -651,7 +694,7 @@ fun HomeScreen(
                 border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
                 modifier = Modifier.fillMaxWidth().testTag("home_dev_server_card")
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -659,7 +702,8 @@ fun HomeScreen(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Public,
@@ -683,58 +727,195 @@ fun HomeScreen(
                             }
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // Part 5C: Start / Stop & Preview Web buttons with minHeight = 48dp, Stop minWidth = 72dp, softWrap = false
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val isRunning = serverStatus.startsWith("Running")
                             Button(
                                 onClick = {
-                                    if (serverStatus.startsWith("Running")) onStopDevServer() else onStartDevServer()
+                                    if (isRunning) onStopDevServer() else onStartDevServer()
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (serverStatus.startsWith("Running")) Color(0xFFEF4444) else theme.surfaceVariant,
-                                    contentColor = if (serverStatus.startsWith("Running")) Color.White else theme.onSurfaceColor
+                                    containerColor = if (isRunning) Color(0xFFEF4444) else theme.surfaceVariant,
+                                    contentColor = if (isRunning) Color.White else theme.onSurfaceColor
                                 ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp).testTag("toggle_dev_server_button")
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                modifier = Modifier
+                                    .defaultMinSize(minWidth = 72.dp, minHeight = 48.dp)
+                                    .testTag("toggle_dev_server_button")
                             ) {
-                                Text(if (serverStatus.startsWith("Running")) "Stop" else "Start", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = if (isRunning) "Stop" else "Start",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
 
                             Button(
                                 onClick = { onOpenWebPreview(null) },
                                 colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor, contentColor = Color.Black),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp).testTag("home_open_web_preview_button")
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                modifier = Modifier
+                                    .defaultMinSize(minWidth = 88.dp, minHeight = 48.dp)
+                                    .testTag("home_open_web_preview_button")
                             ) {
-                                Text("Preview Web", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Preview Web",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                             }
                         }
                     }
 
-                    // Website Files quick testing row
+                    // Part 5C: Test folder row & Folder/Files chooser chips
                     Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Test file:", fontSize = 10.sp, color = theme.lineNumberColor, fontWeight = FontWeight.Bold)
-                        listOf("index.html", "about.html", "style.css", "app.js").forEach { fileName ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Test folder:",
+                                fontSize = 11.sp,
+                                color = theme.lineNumberColor,
+                                fontWeight = FontWeight.Bold
+                            )
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = theme.editorBackground,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
-                                modifier = Modifier.clickable { onOpenWebPreview(fileName) }.testTag("quick_test_$fileName")
+                                border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor)
                             ) {
                                 Text(
-                                    text = fileName,
-                                    color = if (fileName.endsWith(".html")) theme.primaryColor else theme.secondaryColor,
-                                    fontSize = 10.sp,
+                                    text = activeWebFolder.ifBlank { "www" },
+                                    color = theme.primaryColor,
+                                    fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = theme.surfaceVariant,
+                                modifier = Modifier
+                                    .clickable {
+                                        showFolderPickerSheet = true
+                                        onChooseFolder()
+                                    }
+                                    .testTag("choose_folder_button")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.FolderOpen, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(14.dp))
+                                    Text("Choose folder", fontSize = 11.sp, color = theme.onSurfaceColor, fontWeight = FontWeight.Medium)
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = theme.surfaceVariant,
+                                modifier = Modifier
+                                    .clickable {
+                                        showFolderPickerSheet = true
+                                        onChooseFiles()
+                                    }
+                                    .testTag("choose_files_button")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.Description, contentDescription = null, tint = theme.secondaryColor, modifier = Modifier.size(14.dp))
+                                    Text("Choose file(s)", fontSize = 11.sp, color = theme.onSurfaceColor, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+
+                    // Real project files horizontally scrollable chip row (HTML files first)
+                    val displayWebFiles = openFiles.ifEmpty { recentFiles }.filter {
+                        it.name.endsWith(".html", ignoreCase = true) || it.name.endsWith(".css", ignoreCase = true) || it.name.endsWith(".js", ignoreCase = true) || it.name.endsWith(".svg", ignoreCase = true)
+                    }.map { it.name }.distinct().sortedWith(compareBy({ !it.endsWith(".html", ignoreCase = true) }, { it })).ifEmpty {
+                        listOf("index.html", "about.html", "style.css", "app.js")
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(end = 32.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            displayWebFiles.forEach { fileName ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = theme.editorBackground,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                                    modifier = Modifier
+                                        .clickable { onOpenWebPreview(fileName) }
+                                        .testTag("quick_test_$fileName")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = when {
+                                                fileName.endsWith(".html") -> Icons.Default.Language
+                                                fileName.endsWith(".css") -> Icons.Default.Bolt
+                                                fileName.endsWith(".js") -> Icons.Default.DataObject
+                                                else -> Icons.Default.Description
+                                            },
+                                            contentDescription = null,
+                                            tint = if (fileName.endsWith(".html")) theme.primaryColor else theme.secondaryColor,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Text(
+                                            text = fileName,
+                                            color = theme.onSurfaceColor,
+                                            fontSize = 11.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Right fade gradient indicating horizontal scrollability
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .width(32.dp)
+                                .height(34.dp)
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Color.Transparent, theme.surfaceColor)
+                                    )
+                                )
+                        )
                     }
                 }
             }
@@ -751,13 +932,15 @@ fun HomeScreen(
         )
     }
 
-    if (showGoogleAuthDialog) {
-        GoogleAuthDialog(
+    if (showLoginSignupSheet) {
+        LoginSignupWindow(
             theme = theme,
-            userAccount = userAccount,
-            onSignInSuccess = onSignInWithGoogle,
-            onSignOut = onSignOut,
-            onDismiss = { showGoogleAuthDialog = false }
+            onSignInSuccess = { name, email ->
+                onSignInWithGoogle(name, email)
+                showLoginSignupSheet = false
+            },
+            onBack = { showLoginSignupSheet = false },
+            onDismiss = { showLoginSignupSheet = false }
         )
     }
 
@@ -772,6 +955,32 @@ fun HomeScreen(
             onTriggerGc = { System.gc() },
             onResetWorkspace = onResetWorkspace,
             onDismiss = { showDebugDialog = false }
+        )
+    }
+
+    if (showFolderPickerSheet) {
+        FolderPickerBottomSheet(
+            theme = theme,
+            activeFolder = activeWebFolder,
+            workspaceFiles = openFiles.ifEmpty { recentFiles },
+            availableFolders = availableHostFolders,
+            onSelectWorkspaceFolder = { folder ->
+                onChooseFolderWithParam(folder)
+                showFolderPickerSheet = false
+            },
+            onImportDeviceDirectory = { dir, name ->
+                onImportDeviceDirectory(dir, name)
+                showFolderPickerSheet = false
+            },
+            onImportZipArchive = { dir, name ->
+                onImportZipArchive(dir, name)
+                showFolderPickerSheet = false
+            },
+            onImportMultipleFiles = { dir, name ->
+                onImportMultipleFiles(dir, name)
+                showFolderPickerSheet = false
+            },
+            onDismiss = { showFolderPickerSheet = false }
         )
     }
 }

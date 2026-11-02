@@ -97,5 +97,8 @@ data class UserAccount(
     val avatarColorHex: Long = 0xFF00E5FF,
     val memberSince: String = "October 2026",
     val projectsCount: Int = 12,
-    val commitsCount: Int = 84
+    val commitsCount: Int = 84,
+    val isOwnerVerified: Boolean = false,
+    val isOwnerPendingCode: Boolean = false,
+    val loginAlertEmailsEnabled: Boolean = true
 )
