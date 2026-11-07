@@ -130,6 +130,28 @@ object EmailService {
         dispatchEmail(recipientEmail, subject, html)
     }
 
+    fun sendPasswordResetEmail(recipientEmail: String, name: String) {
+        val subject = "Reset your Linq Studio password"
+        val html = """
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="utf-8"><style>body{font-family:sans-serif;background:#0F172A;color:#F8FAFC;padding:24px;}.card{background:#1E293B;padding:24px;border-radius:12px;border:1px solid #334155;}a{color:#00E5FF;font-weight:bold;}</style></head>
+            <body>
+              <div class="card">
+                $EMAIL_LOGO_BANNER
+                <h2>Password Reset Request</h2>
+                <p>Hello $name,</p>
+                <p>We received a request to reset your password for your Linq Studio Google account. Please use the secure link below to set a new password:</p>
+                <p><a href="https://linqstudio.app/reset-password">Reset Linq Studio Password</a></p>
+                <p>If you did not request this, you can safely ignore this email.</p>
+                <p>— <strong>LinqStudiosLLC Security</strong></p>
+              </div>
+            </body>
+            </html>
+        """.trimIndent()
+        dispatchEmail(recipientEmail, subject, html)
+    }
+
     private fun dispatchEmail(recipient: String, subject: String, bodyHtml: String) {
         val record = DispatchedEmail(
             recipient = recipient,

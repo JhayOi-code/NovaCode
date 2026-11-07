@@ -248,14 +248,52 @@ const apiBurstLimiter = rateLimit({
 });
 app.use('/api/', apiBurstLimiter);
 
-// --- Authentication Middleware ---
+function parseCookies(input) {
+  const list = {};
+  const rc = (input && input.headers) ? input.headers.cookie : (typeof input === 'string' ? input : '');
+  if (rc) {
+    rc.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      const name = parts.shift().trim();
+      const val = decodeURIComponent(parts.join('='));
+      if (name) list[name] = val;
+    });
+  }
+  return list;
+}
+
+// User-isolated workspace store (In-memory fallback for container/standalone mode)
+const userWorkspaces = new Map();
+
+// Cryptographic password hashing utility (PBKDF2 with unique salts)
+function hashPassword(password, salt) {
+  const usedSalt = salt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, usedSalt, 100000, 64, 'sha512').toString('hex');
+  return { hash, salt: usedSalt };
+}
+
+function verifyPassword(password, hash, salt) {
+  const testHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+  return testHash === hash;
+}
+
+// --- Authentication Middleware (Bearer Header OR Secure HttpOnly Session Cookie) ---
 async function requireAuth(req, res, next) {
+  let idToken = '';
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'unauthorized', message: 'Missing or invalid Authorization header.' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    idToken = authHeader.split('Bearer ')[1].trim();
+  } else {
+    // Check secure session cookie
+    const cookies = parseCookies(req);
+    if (cookies.linq_session) {
+      idToken = cookies.linq_session.trim();
+    }
   }
 
-  const idToken = authHeader.split('Bearer ')[1].trim();
+  if (!idToken) {
+    return res.status(401).json({ error: 'unauthorized', message: 'Missing or invalid authentication credentials.' });
+  }
 
   // Test token handling for test suites (mock-token-user@example.com or mock-token-verified-user@example.com)
   if (idToken.startsWith('mock-token-')) {
@@ -365,6 +403,46 @@ app.post('/api/auth/owner/sync', requireAuth, async (req, res) => {
   return res.json({ owner: false, needsEmailLink: false });
 });
 
+// --- Secure Session Cookie Issuer: POST /api/auth/session ---
+app.post('/api/auth/session', (req, res) => {
+  let uid, email, token;
+  const authHeader = req.headers.authorization;
+  const cookies = parseCookies(req.headers.cookie);
+  const sessionCookie = cookies.linq_session;
+
+  if (req.body && (req.body.uid || req.body.email)) {
+    uid = req.body.uid || req.body.email;
+    email = req.body.email || `${uid}@gmail.com`;
+    token = req.body.idToken || (authHeader && authHeader.startsWith('Bearer ') ? authHeader.split('Bearer ')[1].trim() : ('sess_' + Buffer.from(uid).toString('base64url')));
+  } else if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split('Bearer ')[1].trim();
+    uid = 'user_' + token.slice(-8);
+    email = `${uid}@gmail.com`;
+  } else if (sessionCookie) {
+    token = sessionCookie;
+    uid = 'user_' + sessionCookie.slice(-8);
+    email = `${uid}@gmail.com`;
+  } else {
+    return res.status(400).json({ error: 'missing_credentials', message: 'Email or UID required to establish session' });
+  }
+
+  // Set secure HTTP-only session cookie
+  res.setHeader(
+    'Set-Cookie',
+    `linq_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=604800`
+  );
+
+  return res.json({
+    success: true,
+    message: 'Secure session established.',
+    user: { uid, email },
+    cookieName: 'linq_session',
+    secure: true,
+    httpOnly: true,
+    sameSite: 'Strict'
+  });
+});
+
 // --- Sign Out of All Devices: POST /api/auth/signout-all ---
 app.post('/api/auth/signout-all', requireAuth, async (req, res) => {
   const { uid } = req.user;
@@ -375,7 +453,42 @@ app.post('/api/auth/signout-all', requireAuth, async (req, res) => {
       console.error('[Auth] Error revoking refresh tokens:', err.message);
     }
   }
-  return res.json({ success: true, message: 'All sessions revoked.' });
+
+  // Clear secure session cookie
+  res.setHeader(
+    'Set-Cookie',
+    'linq_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'
+  );
+
+  return res.json({ success: true, message: 'All sessions revoked and session cookie cleared.' });
+});
+
+// --- User-Isolated Workspace Endpoints (Strict Data Locking) ---
+app.post('/api/user/workspace/save', requireAuth, (req, res) => {
+  const { uid } = req.user;
+  const { files } = req.body;
+  if (!files || typeof files !== 'object') {
+    return res.status(400).json({ error: 'invalid_data', message: 'Workspace files object required.' });
+  }
+
+  // Save isolated strictly by authenticated user's uid
+  userWorkspaces.set(uid, {
+    files,
+    updatedAt: Date.now()
+  });
+
+  return res.json({ success: true, message: 'Workspace securely saved to isolated user vault.' });
+});
+
+app.get('/api/user/workspace/load', requireAuth, (req, res) => {
+  const { uid } = req.user;
+  // Load isolated strictly by authenticated user's uid
+  const userVault = userWorkspaces.get(uid);
+  return res.json({
+    success: true,
+    files: userVault ? userVault.files : null,
+    updatedAt: userVault ? userVault.updatedAt : null
+  });
 });
 
 // --- Connect Existing Account to Google: POST /api/auth/account/merge ---

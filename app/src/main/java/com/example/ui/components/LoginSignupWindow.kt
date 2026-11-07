@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
@@ -90,7 +91,40 @@ fun LoginSignupWindow(
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
     var usernameInput by remember { mutableStateOf("") }
+    var dobInput by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+
+    // Legal modal state
+    var legalDialogTab by remember { mutableStateOf<String?>(null) }
+
+    // Forgot password dialog states
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmailInput by remember { mutableStateOf("") }
+    var resetMessage by remember { mutableStateOf<String?>(null) }
+    var isResetSuccess by remember { mutableStateOf(false) }
+    var isResetting by remember { mutableStateOf(false) }
+
+    // Real-time password strength calculation
+    val passwordStrength = remember(passwordInput) {
+        if (passwordInput.isEmpty()) {
+            Triple(0f, "", Color.Transparent)
+        } else {
+            var score = 0
+            if (passwordInput.length >= 8) score++
+            if (passwordInput.length >= 12) score++
+            if (passwordInput.any { it.isUpperCase() } && passwordInput.any { it.isLowerCase() }) score++
+            if (passwordInput.any { it.isDigit() }) score++
+            if (passwordInput.any { !it.isLetterOrDigit() }) score++
+
+            if (passwordInput.length < 6 || score <= 2) {
+                Triple(0.33f, "Weak password", Color(0xFFEF4444))
+            } else if (score in 3..4) {
+                Triple(0.66f, "Fair security", Color(0xFFF59E0B))
+            } else {
+                Triple(1.0f, "Strong password", Color(0xFF10B981))
+            }
+        }
+    }
 
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -135,9 +169,40 @@ fun LoginSignupWindow(
             return
         }
 
-        if (authMode == GoogleAuthMode.SIGNUP && cleanUsername.isEmpty()) {
-            errorMessage = "Please set a username for your profile."
-            return
+        if (authMode == GoogleAuthMode.SIGNUP) {
+            val cleanDob = dobInput.trim()
+            if (cleanDob.isEmpty()) {
+                errorMessage = "Please enter your Date of Birth (YYYY-MM-DD)."
+                return
+            }
+            val parts = cleanDob.split("-")
+            if (parts.size != 3) {
+                errorMessage = "Please enter Date of Birth in YYYY-MM-DD format."
+                return
+            }
+            try {
+                val y = parts[0].toInt()
+                val m = parts[1].toInt()
+                val d = parts[2].toInt()
+                val cal = java.util.Calendar.getInstance()
+                val cy = cal.get(java.util.Calendar.YEAR)
+                val cm = cal.get(java.util.Calendar.MONTH) + 1
+                val cd = cal.get(java.util.Calendar.DAY_OF_MONTH)
+                var age = cy - y
+                if (cm < m || (cm == m && cd < d)) age--
+                if (age < 13) {
+                    errorMessage = "You must be at least 13 years old to create an account."
+                    return
+                }
+            } catch (e: Exception) {
+                errorMessage = "Invalid Date of Birth format. Use YYYY-MM-DD."
+                return
+            }
+
+            if (cleanUsername.isEmpty()) {
+                errorMessage = "Please set a username for your profile."
+                return
+            }
         }
 
         isSubmitting = true
@@ -478,6 +543,27 @@ fun LoginSignupWindow(
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.fillMaxWidth().testTag("input_google_username")
                             )
+
+                            OutlinedTextField(
+                                value = dobInput,
+                                onValueChange = { dobInput = it; errorMessage = null },
+                                label = { Text("Date of Birth (YYYY-MM-DD)", fontSize = 12.5.sp) },
+                                placeholder = { Text("e.g. 2002-05-15 (Must be 13+)", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.DateRange, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(20.dp))
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = theme.primaryColor,
+                                    unfocusedBorderColor = theme.borderColor,
+                                    focusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f),
+                                    unfocusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f)
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("input_google_dob")
+                            )
                         }
 
                         // Google Email Field
@@ -537,6 +623,65 @@ fun LoginSignupWindow(
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().testTag("input_google_password")
                         )
+
+                        // Real-Time Password Strength Meter
+                        if (passwordInput.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                LinearProgressIndicator(
+                                    progress = { passwordStrength.first },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = passwordStrength.third,
+                                    trackColor = theme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = passwordStrength.second,
+                                        color = passwordStrength.third,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = if (passwordStrength.first < 0.6f) "Use 8+ chars, numbers & symbols" else "Secure password",
+                                        color = theme.lineNumberColor,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        // Forgot Password Link (Login mode)
+                        if (authMode == GoogleAuthMode.LOGIN) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Text(
+                                    text = "Forgot Password?",
+                                    color = theme.primaryColor,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable {
+                                            resetEmailInput = emailInput.trim()
+                                            resetMessage = null
+                                            showForgotPasswordDialog = true
+                                        }
+                                        .padding(vertical = 2.dp)
+                                        .testTag("btn_forgot_password")
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(18.dp))
@@ -616,7 +761,43 @@ fun LoginSignupWindow(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    // Legal Policy Links: Privacy Policy & Terms of Service
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Privacy Policy",
+                            color = theme.primaryColor,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { legalDialogTab = "privacy" }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .testTag("link_login_privacy")
+                        )
+                        Text(
+                            text = "•",
+                            color = theme.lineNumberColor,
+                            fontSize = 11.5.sp,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                        Text(
+                            text = "Terms of Service",
+                            color = theme.primaryColor,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.5.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable { legalDialogTab = "terms" }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .testTag("link_login_terms")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = "Real Google account authentication for Linq Studio. Your credentials are used directly to sync your workspace.",
@@ -629,5 +810,141 @@ fun LoginSignupWindow(
                 }
             }
         }
+    }
+
+    // Clean Modal Overlay for Forgot Password Flow
+    if (showForgotPasswordDialog) {
+        Dialog(
+            onDismissRequest = { showForgotPasswordDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = theme.surfaceColor,
+                border = BorderStroke(1.dp, theme.borderColor),
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Reset Password",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = theme.onSurfaceColor
+                        )
+                        IconButton(
+                            onClick = { showForgotPasswordDialog = false },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = theme.lineNumberColor, modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    Text(
+                        text = "Enter your Google email address. We'll send a password reset link to your inbox.",
+                        fontSize = 12.5.sp,
+                        color = theme.lineNumberColor,
+                        lineHeight = 16.sp
+                    )
+
+                    if (resetMessage != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isResetSuccess) Color(0xFF064E3B) else Color(0xFF450A0A),
+                            border = BorderStroke(1.dp, if (isResetSuccess) Color(0xFF10B981) else Color(0xFFDC2626)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = resetMessage ?: "",
+                                color = if (isResetSuccess) Color(0xFF6EE7B7) else Color(0xFFFCA5A5),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = resetEmailInput,
+                        onValueChange = { resetEmailInput = it; resetMessage = null },
+                        label = { Text("Google Email", fontSize = 12.5.sp) },
+                        placeholder = { Text("username@gmail.com", fontSize = 12.sp) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Email, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(18.dp))
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = theme.primaryColor,
+                            unfocusedBorderColor = theme.borderColor,
+                            focusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f),
+                            unfocusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("input_reset_email")
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(
+                            onClick = { showForgotPasswordDialog = false }
+                        ) {
+                            Text("Cancel", color = theme.lineNumberColor, fontSize = 13.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                val clean = resetEmailInput.trim().lowercase()
+                                if (!clean.contains("@") || !clean.contains(".")) {
+                                    isResetSuccess = false
+                                    resetMessage = "Please enter a valid Google email address."
+                                    return@Button
+                                }
+                                isResetting = true
+                                val res = InAppAuthService.sendPasswordReset(context, clean)
+                                isResetting = false
+                                if (res.success) {
+                                    isResetSuccess = true
+                                    resetMessage = "✓ Password reset link sent to $clean."
+                                    scope.launch {
+                                        delay(1800)
+                                        showForgotPasswordDialog = false
+                                    }
+                                } else {
+                                    isResetSuccess = false
+                                    resetMessage = res.errorMessage ?: "Failed to send reset link."
+                                }
+                            },
+                            enabled = !isResetting,
+                            colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("btn_submit_reset_password")
+                        ) {
+                            Text("Send Link", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (legalDialogTab != null) {
+        LegalNoticeDialog(
+            theme = theme,
+            initialTab = legalDialogTab ?: "privacy",
+            onDismiss = { legalDialogTab = null }
+        )
     }
 }

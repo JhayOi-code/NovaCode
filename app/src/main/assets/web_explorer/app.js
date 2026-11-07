@@ -586,6 +586,7 @@ greet("Ljhay")
       updatePrismHighlighting();
       triggerAutoSaveDebounced();
       checkSuggestionsTrigger();
+      runCodeLinterDebounced();
     });
 
     codeEditorArea.addEventListener('scroll', () => {
@@ -881,6 +882,7 @@ greet("Ljhay")
 
     renderSidebar();
     updatePrismHighlighting();
+    runCodeLinter();
   }
 
   // --- Unified Create Modal Implementation (File + Folder as ONE) ---
@@ -1812,6 +1814,11 @@ greet("Ljhay")
   // --- Google-Only Auth Handlers (Login & Sign Up with Password) ---
   let webAuthMode = 'login'; // 'login' | 'signup'
   const boxWebSignupUsername = document.getElementById('boxWebSignupUsername');
+  const boxWebSignupDOB = document.getElementById('boxWebSignupDOB');
+  const inputCustomGoogleDOB = document.getElementById('inputCustomGoogleDOB');
+  const boxWebSignupLegal = document.getElementById('boxWebSignupLegal');
+  const linkWebModalPrivacy = document.getElementById('linkWebModalPrivacy');
+  const linkWebModalTerms = document.getElementById('linkWebModalTerms');
   const inputCustomGoogleName = document.getElementById('inputCustomGoogleName');
   const inputCustomGoogleEmail = document.getElementById('inputCustomGoogleEmail');
   const inputCustomGooglePassword = document.getElementById('inputCustomGooglePassword');
@@ -1821,17 +1828,189 @@ greet("Ljhay")
   const btnToggleWebAuthMode = document.getElementById('btnToggleWebAuthMode');
   const webAuthSubtitle = document.getElementById('webAuthSubtitle');
 
+  if (linkWebModalPrivacy) {
+    linkWebModalPrivacy.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLegalModal('privacy');
+    });
+  }
+  if (linkWebModalTerms) {
+    linkWebModalTerms.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLegalModal('terms');
+    });
+  }
+
+  // Password visibility toggle
+  const btnToggleCustomGooglePass = document.getElementById('btnToggleCustomGooglePass');
+  const iconEyeShow = document.getElementById('iconEyeShow');
+  const iconEyeHide = document.getElementById('iconEyeHide');
+  let isCustomPassVisible = false;
+
+  if (btnToggleCustomGooglePass && inputCustomGooglePassword) {
+    btnToggleCustomGooglePass.addEventListener('click', (e) => {
+      e.preventDefault();
+      isCustomPassVisible = !isCustomPassVisible;
+      inputCustomGooglePassword.type = isCustomPassVisible ? 'text' : 'password';
+      if (iconEyeShow) iconEyeShow.style.display = isCustomPassVisible ? 'none' : 'block';
+      if (iconEyeHide) iconEyeHide.style.display = isCustomPassVisible ? 'block' : 'none';
+      btnToggleCustomGooglePass.setAttribute('aria-label', isCustomPassVisible ? 'Hide password' : 'Show password');
+    });
+  }
+
+  // Real-time Password Strength Indicator (CSS color states)
+  const passwordStrengthContainer = document.getElementById('passwordStrengthContainer');
+  const strengthMeterFill = document.getElementById('strengthMeterFill');
+  const strengthTextLabel = document.getElementById('strengthTextLabel');
+  const strengthFeedbackHint = document.getElementById('strengthFeedbackHint');
+
+  function updatePasswordStrength(val) {
+    if (!passwordStrengthContainer || !strengthMeterFill) return;
+    if (!val || val.length === 0) {
+      passwordStrengthContainer.style.display = 'none';
+      passwordStrengthContainer.className = 'password-strength-container';
+      return;
+    }
+    passwordStrengthContainer.style.display = 'block';
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (val.length >= 12) score++;
+    if (/[a-z]/.test(val) && /[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    passwordStrengthContainer.classList.remove('strength-state-weak', 'strength-state-fair', 'strength-state-strong');
+
+    if (val.length < 6 || score <= 2) {
+      passwordStrengthContainer.classList.add('strength-state-weak');
+      if (strengthTextLabel) strengthTextLabel.textContent = 'Weak password';
+      if (strengthFeedbackHint) strengthFeedbackHint.textContent = 'Use 8+ chars, numbers & symbols';
+    } else if (score === 3 || score === 4) {
+      passwordStrengthContainer.classList.add('strength-state-fair');
+      if (strengthTextLabel) strengthTextLabel.textContent = 'Fair security';
+      if (strengthFeedbackHint) strengthFeedbackHint.textContent = 'Add symbols to strengthen';
+    } else {
+      passwordStrengthContainer.classList.add('strength-state-strong');
+      if (strengthTextLabel) strengthTextLabel.textContent = 'Strong password';
+      if (strengthFeedbackHint) strengthFeedbackHint.textContent = 'Great! Your password is secure';
+    }
+  }
+
+  if (inputCustomGooglePassword) {
+    inputCustomGooglePassword.addEventListener('input', (e) => {
+      updatePasswordStrength(e.target.value);
+    });
+  }
+
+  // Subtle Focus-Ring & Error Shake Effects Helper
+  function triggerInputShake(el) {
+    if (!el) return;
+    el.classList.remove('input-error-shake');
+    void el.offsetWidth; // Force CSS reflow to re-trigger keyframe animation
+    el.classList.add('input-error-shake');
+    try { el.focus(); } catch (_) {}
+    setTimeout(() => {
+      el.classList.remove('input-error-shake');
+    }, 450);
+  }
+
+  // Forgot Password Modal Flow via Firebase Auth
+  const btnForgotPasswordLink = document.getElementById('btnForgotPasswordLink');
+  const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+  const btnCloseForgotPassModal = document.getElementById('btnCloseForgotPassModal');
+  const btnCancelForgotPass = document.getElementById('btnCancelForgotPass');
+  const btnSendPasswordReset = document.getElementById('btnSendPasswordReset');
+  const inputResetEmail = document.getElementById('inputResetEmail');
+  const forgotPassAlertBox = document.getElementById('forgotPassAlertBox');
+
+  function openForgotPasswordModal() {
+    if (forgotPasswordModal) forgotPasswordModal.style.display = 'flex';
+    if (forgotPassAlertBox) forgotPassAlertBox.style.display = 'none';
+    if (inputResetEmail) {
+      inputResetEmail.value = (inputCustomGoogleEmail?.value || '').trim();
+      inputResetEmail.focus();
+    }
+  }
+
+  function closeForgotPasswordModal() {
+    if (forgotPasswordModal) forgotPasswordModal.style.display = 'none';
+    if (forgotPassAlertBox) forgotPassAlertBox.style.display = 'none';
+  }
+
+  function showResetAlert(message, isSuccess = false) {
+    if (!forgotPassAlertBox) return;
+    forgotPassAlertBox.style.display = 'block';
+    forgotPassAlertBox.style.background = isSuccess ? 'rgba(16, 185, 129, 0.15)' : '#450A0A';
+    forgotPassAlertBox.style.border = isSuccess ? '1.5px solid #10B981' : '1.5px solid #DC2626';
+    forgotPassAlertBox.style.color = isSuccess ? '#34D399' : '#FFFFFF';
+    forgotPassAlertBox.textContent = message;
+  }
+
+  if (btnForgotPasswordLink) {
+    btnForgotPasswordLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openForgotPasswordModal();
+    });
+  }
+
+  if (btnCloseForgotPassModal) {
+    btnCloseForgotPassModal.addEventListener('click', closeForgotPasswordModal);
+  }
+
+  if (btnCancelForgotPass) {
+    btnCancelForgotPass.addEventListener('click', closeForgotPasswordModal);
+  }
+
+  if (btnSendPasswordReset) {
+    btnSendPasswordReset.addEventListener('click', async () => {
+      const email = (inputResetEmail?.value || '').trim().toLowerCase();
+      if (!email || !email.includes('@') || !email.includes('.')) {
+        triggerInputShake(inputResetEmail);
+        showResetAlert('Please enter a valid Google email address.', false);
+        return;
+      }
+
+      try {
+        btnSendPasswordReset.disabled = true;
+        btnSendPasswordReset.style.opacity = '0.7';
+        btnSendPasswordReset.textContent = 'Sending...';
+
+        if (fbAuth && typeof fbAuth.sendPasswordResetEmail === 'function') {
+          await fbAuth.sendPasswordResetEmail(email);
+        }
+
+        showResetAlert(`✓ Password reset email sent to ${email}. Please check your inbox.`, true);
+        setTimeout(() => {
+          closeForgotPasswordModal();
+          showToast(`✓ Password reset link sent to ${email}`);
+        }, 2000);
+      } catch (err) {
+        triggerInputShake(inputResetEmail);
+        showResetAlert(`Failed to send password reset: ${err.message || 'Please check email address and try again.'}`, false);
+      } finally {
+        btnSendPasswordReset.disabled = false;
+        btnSendPasswordReset.style.opacity = '1';
+        btnSendPasswordReset.textContent = 'Send Reset Link';
+      }
+    });
+  }
+
   function setWebAuthMode(mode) {
     webAuthMode = mode;
     clearAuthErrors();
     if (mode === 'signup') {
       if (boxWebSignupUsername) boxWebSignupUsername.style.display = 'block';
+      if (boxWebSignupDOB) boxWebSignupDOB.style.display = 'block';
+      if (boxWebSignupLegal) boxWebSignupLegal.style.display = 'block';
       if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Sign up';
       if (txtWebAuthPrompt) txtWebAuthPrompt.textContent = 'Already have an account?';
       if (btnToggleWebAuthMode) btnToggleWebAuthMode.textContent = 'Log in';
       if (webAuthSubtitle) webAuthSubtitle.textContent = 'Create your Google account profile to save your workspace';
     } else {
       if (boxWebSignupUsername) boxWebSignupUsername.style.display = 'none';
+      if (boxWebSignupDOB) boxWebSignupDOB.style.display = 'none';
+      if (boxWebSignupLegal) boxWebSignupLegal.style.display = 'none';
       if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Login';
       if (txtWebAuthPrompt) txtWebAuthPrompt.textContent = 'new to the app?';
       if (btnToggleWebAuthMode) btnToggleWebAuthMode.textContent = 'Sign up';
@@ -1845,17 +2024,28 @@ greet("Ljhay")
     });
   }
 
-  async function completeGoogleSignIn(displayName, email, isOwnerAccount) {
+  async function completeGoogleSignIn(displayName, email, isOwnerAccount, dob = null) {
     try {
       const userData = {
         name: displayName,
         email: email,
         provider: 'google.com',
         owner: isOwnerAccount,
-        verified: true
+        verified: true,
+        dob: dob
       };
       setStoredUser(userData);
       recordAuthSuccess();
+
+      // Establish secure session cookie on server
+      try {
+        await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, uid: email })
+        });
+      } catch (_) {}
+
       closeAuthModal();
       showToast(`✓ Signed in with Google as ${displayName}`);
       await syncOwnerStatus();
@@ -1870,23 +2060,51 @@ greet("Ljhay")
       const email = (inputCustomGoogleEmail?.value || '').trim().toLowerCase();
       const password = (inputCustomGooglePassword?.value || '').trim();
       const username = (inputCustomGoogleName?.value || '').trim();
+      const dobVal = (inputCustomGoogleDOB?.value || '').trim();
 
       if (!email || !email.includes('@') || !email.includes('.')) {
+        triggerInputShake(inputCustomGoogleEmail);
         showAuthError('Please enter a valid Google email address.');
         return;
       }
       if (!password) {
+        triggerInputShake(inputCustomGooglePassword);
         showAuthError('Please enter your password.');
         return;
       }
-      if (webAuthMode === 'signup' && !username) {
-        showAuthError('Please set a username for your profile.');
-        return;
+      if (webAuthMode === 'signup') {
+        if (!dobVal) {
+          triggerInputShake(inputCustomGoogleDOB);
+          showAuthError('Please enter your Date of Birth.');
+          return;
+        }
+        const birthDate = new Date(dobVal);
+        if (isNaN(birthDate.getTime())) {
+          triggerInputShake(inputCustomGoogleDOB);
+          showAuthError('Please enter a valid Date of Birth.');
+          return;
+        }
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        if (age < 13) {
+          triggerInputShake(inputCustomGoogleDOB);
+          showAuthError('You must be at least 13 years old to create an account.');
+          return;
+        }
+        if (!username) {
+          triggerInputShake(inputCustomGoogleName);
+          showAuthError('Please set a username for your profile.');
+          return;
+        }
       }
 
       const displayName = username || (email.split('@')[0] || 'Developer');
       const isOwner = (email === 'ljhayoi609@gmail.com' || email === 'jacklangsakalam5@gmail.com');
-      completeGoogleSignIn(displayName, email, isOwner);
+      completeGoogleSignIn(displayName, email, isOwner, dobVal || null);
     });
   }
 
@@ -1906,6 +2124,26 @@ greet("Ljhay")
     if (ownerDiagnosticsSection) {
       ownerDiagnosticsSection.style.display = user.owner ? 'block' : 'none';
     }
+
+    const toggleConsent = document.getElementById('toggleAnalyticsConsent');
+    if (toggleConsent) {
+      toggleConsent.checked = (localStorage.getItem('linq_analytics_consent') === 'accepted');
+    }
+  }
+
+  const linkSettingsPrivacy = document.getElementById('linkSettingsPrivacy');
+  const linkSettingsTerms = document.getElementById('linkSettingsTerms');
+  if (linkSettingsPrivacy) {
+    linkSettingsPrivacy.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLegalModal('privacy');
+    });
+  }
+  if (linkSettingsTerms) {
+    linkSettingsTerms.addEventListener('click', (e) => {
+      e.preventDefault();
+      openLegalModal('terms');
+    });
   }
 
   if (toggleAutoSave) {
@@ -2620,6 +2858,11 @@ greet("Ljhay")
   startTelemetryTicker();
 
   async function connectOwnerTelemetryStream() {
+    // Strictly block telemetry and analytics until user taps Accept
+    if (localStorage.getItem('linq_analytics_consent') !== 'accepted') {
+      return;
+    }
+
     if (ownerTelemetryEventSource) {
       ownerTelemetryEventSource.close();
       ownerTelemetryEventSource = null;
@@ -3269,8 +3512,9 @@ greet("Ljhay")
   async function sendAiAssistantMessage(userPrompt) {
     if (!aiChatHistory || !window.LinqAI) return;
 
-    // Render user bubble
+    // Render user bubble and record in history
     appendChatBubble('user', userPrompt);
+    aiChatMessages.push({ role: 'user', text: userPrompt, timestamp: new Date().toISOString() });
 
     const settings = window.LinqAI.getSettings();
     const providerId = settings.activeProvider || 'openai';
@@ -3323,6 +3567,9 @@ greet("Ljhay")
           bubbleContent.innerHTML = formatMarkdownResponse(fullResponse);
         }
         aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+      }
+      if (fullResponse) {
+        aiChatMessages.push({ role: 'assistant', text: fullResponse, timestamp: new Date().toISOString() });
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -3474,25 +3721,679 @@ greet("Ljhay")
     }
   };
 
-  // Hardware & Physical Keyboard Shortcuts (Ctrl+S, Ctrl+Enter, Ctrl+B)
+  // --- AI Chat History Tracking & Export Handlers ---
+  let aiChatMessages = [];
+  window.aiChatMessages = aiChatMessages;
+
+  function exportAiChatAsMarkdown() {
+    if (aiChatMessages.length === 0) {
+      showToast('No AI chat messages to export.');
+      return;
+    }
+    const dateStr = new Date().toLocaleString();
+    let md = `# Linq Studio - AI Assistant Chat History\n\n`;
+    md += `*Exported on: ${dateStr}*\n`;
+    md += `*Total Messages: ${aiChatMessages.length}*\n\n---\n\n`;
+
+    aiChatMessages.forEach(msg => {
+      const sender = msg.role === 'user' ? '👤 **You**' : '🤖 **Linq AI Assistant**';
+      const time = msg.timestamp ? ` *(${new Date(msg.timestamp).toLocaleTimeString()})*` : '';
+      md += `### ${sender}${time}\n\n${msg.text}\n\n---\n\n`;
+    });
+
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `linq-ai-chat-${Date.now()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ AI chat exported as Markdown (.md)');
+  }
+
+  function exportAiChatAsJson() {
+    if (aiChatMessages.length === 0) {
+      showToast('No AI chat messages to export.');
+      return;
+    }
+    const data = {
+      app: 'Linq Studio',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      totalMessages: aiChatMessages.length,
+      messages: aiChatMessages
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `linq-ai-chat-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✓ AI chat exported as JSON (.json)');
+  }
+
+  function copyAiChatToClipboard() {
+    if (aiChatMessages.length === 0) {
+      showToast('No AI chat messages to copy.');
+      return;
+    }
+    let txt = `Linq Studio AI Chat History (${new Date().toLocaleString()}):\n\n`;
+    aiChatMessages.forEach(msg => {
+      txt += `[${msg.role === 'user' ? 'You' : 'Linq AI'}]:\n${msg.text}\n\n`;
+    });
+    navigator.clipboard.writeText(txt).then(() => {
+      showToast('✓ AI chat history copied to clipboard');
+    }).catch(() => {
+      showToast('Failed to copy to clipboard');
+    });
+  }
+
+  function clearAiChatHistory() {
+    aiChatMessages.length = 0;
+    if (aiChatHistory) {
+      aiChatHistory.innerHTML = `
+        <div class="ai-welcome-card" style="padding:16px; text-align:center; color:var(--text-muted); font-size:12px;">
+          <div style="font-size:24px; margin-bottom:6px;">🤖</div>
+          <div style="font-weight:700; color:var(--text-main); margin-bottom:4px;">Linq AI Assistant</div>
+          <div>Chat history cleared. Ask anything about your code, debugging, or optimization!</div>
+        </div>
+      `;
+    }
+    showToast('✓ AI chat history cleared');
+  }
+
+  const btnAiExportChat = document.getElementById('btnAiExportChat');
+  const aiExportMenu = document.getElementById('aiExportMenu');
+  const btnExportAiMd = document.getElementById('btnExportMarkdown') || document.getElementById('btnExportAiMd');
+  const btnExportAiJson = document.getElementById('btnExportJson') || document.getElementById('btnExportAiJson');
+  const btnCopyAiChat = document.getElementById('btnCopyChatClipboard') || document.getElementById('btnCopyAiChat');
+  const btnClearAiChat = document.getElementById('btnClearChatHistory') || document.getElementById('btnClearAiChat');
+
+  if (btnAiExportChat) {
+    btnAiExportChat.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (aiExportMenu) {
+        aiExportMenu.style.display = aiExportMenu.style.display === 'block' ? 'none' : 'block';
+      }
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (aiExportMenu && !aiExportMenu.contains(e.target) && e.target !== btnAiExportChat) {
+      aiExportMenu.style.display = 'none';
+    }
+  });
+
+  if (btnExportAiMd) {
+    btnExportAiMd.addEventListener('click', () => {
+      exportAiChatAsMarkdown();
+      if (aiExportMenu) aiExportMenu.style.display = 'none';
+    });
+  }
+  if (btnExportAiJson) {
+    btnExportAiJson.addEventListener('click', () => {
+      exportAiChatAsJson();
+      if (aiExportMenu) aiExportMenu.style.display = 'none';
+    });
+  }
+  if (btnCopyAiChat) {
+    btnCopyAiChat.addEventListener('click', () => {
+      copyAiChatToClipboard();
+      if (aiExportMenu) aiExportMenu.style.display = 'none';
+    });
+  }
+  if (btnClearAiChat) {
+    btnClearAiChat.addEventListener('click', () => {
+      if (confirm('Clear entire AI chat history?')) {
+        clearAiChatHistory();
+        if (aiExportMenu) aiExportMenu.style.display = 'none';
+      }
+    });
+  }
+
+  // --- Real-Time Lightweight Code Linter Engine & Quick Fixes ---
+  let activeLintFindings = [];
+  let linterDebounceTimer = null;
+
+  function runCodeLinterDebounced() {
+    clearTimeout(linterDebounceTimer);
+    linterDebounceTimer = setTimeout(runCodeLinter, 250);
+  }
+
+  function runCodeLinter() {
+    if (!codeEditorArea) return;
+    const code = codeEditorArea.value;
+    const lang = activeLanguageSelect ? activeLanguageSelect.value : getPrismLanguage(activeFilePath);
+    const findings = [];
+    const lines = code.split('\n');
+
+    if (lang === 'json') {
+      try {
+        JSON.parse(code);
+      } catch (err) {
+        let lineNum = 1;
+        const match = err.message.match(/position (\d+)/i) || err.message.match(/line (\d+)/i);
+        if (match && match[1]) {
+          const pos = parseInt(match[1], 10);
+          if (err.message.includes('position')) {
+            lineNum = (code.substring(0, pos).match(/\n/g) || []).length + 1;
+          } else {
+            lineNum = pos;
+          }
+        }
+        findings.push({
+          line: lineNum,
+          severity: 'error',
+          rule: 'json-syntax',
+          message: err.message,
+          quickFix: {
+            label: 'Fix trailing commas & sanitize JSON',
+            action: () => {
+              const cleaned = code.replace(/,\s*([\]}])/g, '$1');
+              codeEditorArea.value = cleaned;
+              if (projectFiles[activeFilePath]) {
+                projectFiles[activeFilePath].content = cleaned;
+                projectFiles[activeFilePath].isModified = true;
+              }
+              updatePrismHighlighting();
+              runCodeLinter();
+              showToast('✓ Fixed trailing commas in JSON');
+            }
+          }
+        });
+      }
+    } else if (lang === 'javascript') {
+      lines.forEach((lineText, idx) => {
+        const lineNum = idx + 1;
+        const trimmed = lineText.trim();
+        if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) return;
+
+        if (/\bvar\s+[a-zA-Z_$]/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'warning',
+            rule: 'no-var',
+            message: "Use 'let' or 'const' instead of 'var' for modern block scoping.",
+            quickFix: {
+              label: "Convert 'var' to 'let' on line " + lineNum,
+              action: () => {
+                lines[idx] = lineText.replace(/\bvar\b/, 'let');
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Converted 'var' to 'let' on line " + lineNum);
+              }
+            }
+          });
+        }
+
+        if (/[^=!<>]==[^=]/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'warning',
+            rule: 'strict-equality',
+            message: "Use strict equality '===' instead of loose equality '=='.",
+            quickFix: {
+              label: "Replace '==' with '===' on line " + lineNum,
+              action: () => {
+                lines[idx] = lineText.replace(/==(?!=)/g, '===');
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Upgraded to strict equality '==='");
+              }
+            }
+          });
+        }
+
+        if (/\bconsole\.log\(/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'info',
+            rule: 'no-console',
+            message: "Unexpected console.log statement leftover from debugging.",
+            quickFix: {
+              label: "Comment out console.log on line " + lineNum,
+              action: () => {
+                lines[idx] = lineText.replace(/(\s*)(console\.log\([^;]*;?)/, '$1// $2');
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Commented out console.log");
+              }
+            }
+          });
+        }
+
+        if (/\beval\s*\(/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'error',
+            rule: 'no-eval',
+            message: "eval() can be a security hazard and causes performance degradation.",
+          });
+        }
+      });
+
+      let openBraces = (code.match(/{/g) || []).length;
+      let closeBraces = (code.match(/}/g) || []).length;
+      if (openBraces !== closeBraces) {
+        findings.push({
+          line: lines.length,
+          severity: 'error',
+          rule: 'unbalanced-braces',
+          message: `Unbalanced curly braces: ${openBraces} '{' vs ${closeBraces} '}'.`,
+          quickFix: openBraces > closeBraces ? {
+            label: `Add missing ${openBraces - closeBraces} closing brace(s)`,
+            action: () => {
+              codeEditorArea.value += '\n' + '}'.repeat(openBraces - closeBraces);
+              if (projectFiles[activeFilePath]) {
+                projectFiles[activeFilePath].content = codeEditorArea.value;
+                projectFiles[activeFilePath].isModified = true;
+              }
+              updatePrismHighlighting();
+              runCodeLinter();
+              showToast('✓ Added missing closing braces');
+            }
+          } : null
+        });
+      }
+    } else if (lang === 'python') {
+      lines.forEach((lineText, idx) => {
+        const lineNum = idx + 1;
+        const trimmed = lineText.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+
+        if (/^print\s+["'][^"']+["']/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'error',
+            rule: 'python3-print',
+            message: "Python 3 requires print() function syntax.",
+            quickFix: {
+              label: "Convert to print(...) on line " + lineNum,
+              action: () => {
+                lines[idx] = lineText.replace(/^(\s*)print\s+(.+)$/, '$1print($2)');
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Converted to print(...)");
+              }
+            }
+          });
+        }
+
+        if (/^(def|class|if|elif|else|for|while|try|except|finally|with)\b.*[^:]$/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'error',
+            rule: 'missing-colon',
+            message: "Statement must end with a colon ':'.",
+            quickFix: {
+              label: "Add colon ':' at end of line " + lineNum,
+              action: () => {
+                lines[idx] = lineText + ':';
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Added colon ':' to line " + lineNum);
+              }
+            }
+          });
+        }
+      });
+    } else if (lang === 'markup' || lang === 'html') {
+      lines.forEach((lineText, idx) => {
+        const lineNum = idx + 1;
+        const trimmed = lineText.trim();
+        if (/<img\b(?![^>]*\balt=)[^>]*>/.test(trimmed)) {
+          findings.push({
+            line: lineNum,
+            severity: 'warning',
+            rule: 'a11y-img-alt',
+            message: "Images must have an 'alt' attribute for accessibility compliance.",
+            quickFix: {
+              label: "Add alt=\"\" attribute to <img> on line " + lineNum,
+              action: () => {
+                lines[idx] = lineText.replace(/<img\b/, '<img alt=""');
+                const newCode = lines.join('\n');
+                codeEditorArea.value = newCode;
+                if (projectFiles[activeFilePath]) {
+                  projectFiles[activeFilePath].content = newCode;
+                  projectFiles[activeFilePath].isModified = true;
+                }
+                updatePrismHighlighting();
+                runCodeLinter();
+                showToast("✓ Added alt attribute to image");
+              }
+            }
+          });
+        }
+      });
+    }
+
+    activeLintFindings = findings;
+    window.activeLintFindings = findings;
+    updateLinterUI(findings);
+  }
+
+  function updateLinterUI(findings) {
+    const el = document.getElementById('editorLinterStatus');
+    if (!el) return;
+    const errors = findings.filter(f => f.severity === 'error');
+    const warnings = findings.filter(f => f.severity === 'warning');
+
+    el.className = 'editor-linter-status';
+    if (findings.length === 0) {
+      el.classList.add('clean');
+      el.innerHTML = '<span class="linter-icon">✓</span> <span class="linter-count">0 issues</span>';
+      el.title = 'Code is clean. No syntax errors or warnings detected.';
+    } else if (errors.length > 0) {
+      el.classList.add('errors');
+      el.innerHTML = `<span class="linter-icon">⚠️</span> <span class="linter-count">${errors.length} error${errors.length > 1 ? 's' : ''}${warnings.length ? ', ' + warnings.length + ' warn' : ''}</span>`;
+      el.title = `${errors.length} error(s), ${warnings.length} warning(s). Click to view & apply quick fixes.`;
+    } else {
+      el.classList.add('warnings');
+      el.innerHTML = `<span class="linter-icon">⚡</span> <span class="linter-count">${warnings.length} warning${warnings.length > 1 ? 's' : ''}</span>`;
+      el.title = `${warnings.length} warning(s). Click to view & apply quick fixes.`;
+    }
+  }
+
+  function toggleQuickFixPopup() {
+    const popup = document.getElementById('editorQuickFixPopup');
+    if (!popup) return;
+    if (popup.style.display !== 'none') {
+      popup.style.display = 'none';
+      return;
+    }
+    if (!activeLintFindings || activeLintFindings.length === 0) {
+      popup.innerHTML = `
+        <div style="padding:12px; font-size:12px; color:var(--text-muted); text-align:center;">
+          <span style="color:#10B981; font-weight:700;">✓ All clean!</span> No lint issues found in this file.
+        </div>
+      `;
+      popup.style.display = 'block';
+      return;
+    }
+
+    popup.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; border-bottom:1px solid var(--border-light); padding-bottom:6px;">
+        <div style="font-size:12px; font-weight:700; color:var(--text-main);">
+          Code Quality & Quick Fixes (${activeLintFindings.length})
+        </div>
+        <button type="button" class="btn-close-quickfix" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px;">✕</button>
+      </div>
+      <div class="quickfix-list" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;">
+        ${activeLintFindings.map((f, idx) => `
+          <div class="quickfix-item" style="border:1px solid ${f.severity === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}; border-radius:8px; padding:8px 10px; background:rgba(0,0,0,0.2);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:4px;">
+              <span style="font-size:11px; font-weight:700; color:${f.severity === 'error' ? '#EF4444' : '#F59E0B'};">
+                ${f.severity === 'error' ? '● Error' : '▲ Warning'} Line ${f.line} [${escapeHtml(f.rule)}]
+              </span>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-main); margin-bottom:6px; line-height:1.4;">
+              ${escapeHtml(f.message)}
+            </div>
+            ${f.quickFix ? `
+              <button type="button" class="quickfix-btn btn-apply-fix" data-index="${idx}" style="background:var(--accent-blue, #3B82F6); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer;">
+                ⚡ ${escapeHtml(f.quickFix.label)}
+              </button>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    popup.style.display = 'block';
+
+    popup.querySelector('.btn-close-quickfix')?.addEventListener('click', () => {
+      popup.style.display = 'none';
+    });
+
+    popup.querySelectorAll('.btn-apply-fix').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-index'), 10);
+        const finding = activeLintFindings[idx];
+        if (finding && finding.quickFix && finding.quickFix.action) {
+          finding.quickFix.action();
+          popup.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  const editorLinterStatus = document.getElementById('editorLinterStatus');
+  if (editorLinterStatus) {
+    editorLinterStatus.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleQuickFixPopup();
+    });
+  }
+
+  // --- Keyboard Shortcuts Overlay & Navigation Tooltips ---
+  function showShortcutTooltip(title, subtitle = '') {
+    let tip = document.getElementById('ideShortcutTooltip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'ideShortcutTooltip';
+      tip.className = 'ide-shortcut-tooltip';
+      document.body.appendChild(tip);
+    }
+    tip.innerHTML = `
+      <div style="font-weight:700; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+        <span>⌨️</span> <span>${escapeHtml(title)}</span>
+      </div>
+      ${subtitle ? `<div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${escapeHtml(subtitle)}</div>` : ''}
+    `;
+    tip.classList.add('visible');
+    clearTimeout(tip._hideTimer);
+    tip._hideTimer = setTimeout(() => {
+      tip.classList.remove('visible');
+    }, 2400);
+  }
+
+  const btnOpenShortcuts = document.getElementById('btnOpenShortcuts');
+  const btnCloseShortcutsModal = document.getElementById('btnCloseShortcutsModal');
+  const keyboardShortcutsModal = document.getElementById('keyboardShortcutsModal');
+
+  if (btnOpenShortcuts) {
+    btnOpenShortcuts.addEventListener('click', () => {
+      if (keyboardShortcutsModal) keyboardShortcutsModal.style.display = 'flex';
+    });
+  }
+  if (btnCloseShortcutsModal) {
+    btnCloseShortcutsModal.addEventListener('click', () => {
+      if (keyboardShortcutsModal) keyboardShortcutsModal.style.display = 'none';
+    });
+  }
+  if (keyboardShortcutsModal) {
+    keyboardShortcutsModal.addEventListener('click', (e) => {
+      if (e.target === keyboardShortcutsModal) keyboardShortcutsModal.style.display = 'none';
+    });
+  }
+
+  // Hardware & Physical Keyboard Shortcuts
   window.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         if (btnSidebarSaveFile) btnSidebarSaveFile.click();
+        showShortcutTooltip('Ctrl+S: File Saved', 'Tip: Press Ctrl+/ to view all IDE shortcuts');
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (btnRunActive) btnRunActive.click();
+        showShortcutTooltip('Ctrl+Enter: Run Code');
       } else if (e.key === 'b' || e.key === 'B') {
         e.preventDefault();
         if (btnToggleMobileSidebar) btnToggleMobileSidebar.click();
+        showShortcutTooltip('Ctrl+B: Sidebar Toggled');
+      } else if (e.key === '/' || e.key === '?') {
+        e.preventDefault();
+        if (keyboardShortcutsModal) {
+          keyboardShortcutsModal.style.display = keyboardShortcutsModal.style.display === 'flex' ? 'none' : 'flex';
+        }
+      } else if ((e.key === 'l' || e.key === 'L') && e.shiftKey) {
+        e.preventDefault();
+        runCodeLinter();
+        toggleQuickFixPopup();
+      } else if ((e.key === 'e' || e.key === 'E') && e.shiftKey) {
+        e.preventDefault();
+        if (aiExportMenu) {
+          aiExportMenu.style.display = aiExportMenu.style.display === 'none' ? 'block' : 'none';
+        }
+      } else if ((e.key === 'h' || e.key === 'H') && e.shiftKey) {
+        e.preventDefault();
+        if (btnToggleAiAssistant) btnToggleAiAssistant.click();
+      }
+    } else if (e.key === 'Escape') {
+      if (keyboardShortcutsModal && keyboardShortcutsModal.style.display === 'flex') {
+        keyboardShortcutsModal.style.display = 'none';
+      }
+      const legalModal = document.getElementById('legalModal');
+      if (legalModal && legalModal.style.display === 'flex') {
+        legalModal.style.display = 'none';
+      }
+      const quickFix = document.getElementById('editorQuickFixPopup');
+      if (quickFix && quickFix.style.display !== 'none') {
+        quickFix.style.display = 'none';
+      }
+      if (aiExportMenu && aiExportMenu.style.display !== 'none') {
+        aiExportMenu.style.display = 'none';
       }
     }
   });
 
+  // --- Legal Modal & Tabs (Privacy Policy & Terms of Service) ---
+  function openLegalModal(tab = 'privacy') {
+    const modal = document.getElementById('legalModal');
+    const tabPrivacy = document.getElementById('tabLegalPrivacy');
+    const tabTerms = document.getElementById('tabLegalTerms');
+    const panelPrivacy = document.getElementById('panelLegalPrivacy');
+    const panelTerms = document.getElementById('panelLegalTerms');
+
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    if (tab === 'terms') {
+      tabTerms?.classList.add('active');
+      tabPrivacy?.classList.remove('active');
+      if (panelTerms) panelTerms.style.display = 'block';
+      if (panelPrivacy) panelPrivacy.style.display = 'none';
+    } else {
+      tabPrivacy?.classList.add('active');
+      tabTerms?.classList.remove('active');
+      if (panelPrivacy) panelPrivacy.style.display = 'block';
+      if (panelTerms) panelTerms.style.display = 'none';
+    }
+  }
+  window.openLegalModal = openLegalModal;
+
+  function closeLegalModal() {
+    const modal = document.getElementById('legalModal');
+    if (modal) modal.style.display = 'none';
+  }
+  window.closeLegalModal = closeLegalModal;
+
+  const legalModal = document.getElementById('legalModal');
+  const btnCloseLegalModal = document.getElementById('btnCloseLegalModal');
+  const tabLegalPrivacy = document.getElementById('tabLegalPrivacy');
+  const tabLegalTerms = document.getElementById('tabLegalTerms');
+
+  if (btnCloseLegalModal) {
+    btnCloseLegalModal.addEventListener('click', closeLegalModal);
+  }
+  if (legalModal) {
+    legalModal.addEventListener('click', (e) => {
+      if (e.target === legalModal) closeLegalModal();
+    });
+  }
+  if (tabLegalPrivacy) {
+    tabLegalPrivacy.addEventListener('click', () => openLegalModal('privacy'));
+  }
+  if (tabLegalTerms) {
+    tabLegalTerms.addEventListener('click', () => openLegalModal('terms'));
+  }
+
+  // --- Privacy Consent Banner & Analytics Blocker ---
+  function initPrivacyConsent() {
+    const banner = document.getElementById('privacyConsentBanner');
+    const btnAccept = document.getElementById('btnAcceptAnalytics');
+    const btnReject = document.getElementById('btnRejectAnalytics');
+    const toggleConsent = document.getElementById('toggleAnalyticsConsent');
+
+    const consent = localStorage.getItem('linq_analytics_consent');
+
+    if (toggleConsent) {
+      toggleConsent.checked = (consent === 'accepted');
+      toggleConsent.addEventListener('change', () => {
+        const isAccepted = toggleConsent.checked;
+        localStorage.setItem('linq_analytics_consent', isAccepted ? 'accepted' : 'rejected');
+        showToast(isAccepted ? '✓ Analytics consent granted' : '✓ Analytics & telemetry blocked');
+        if (isAccepted && currentUser && currentUser.owner) {
+          connectOwnerTelemetryStream();
+        }
+      });
+    }
+
+    if (consent === null) {
+      if (banner) banner.style.display = 'flex';
+    }
+
+    if (btnAccept) {
+      btnAccept.addEventListener('click', () => {
+        localStorage.setItem('linq_analytics_consent', 'accepted');
+        if (banner) banner.style.display = 'none';
+        if (toggleConsent) toggleConsent.checked = true;
+        showToast('✓ Analytics preferences saved (Accepted)');
+        if (currentUser && currentUser.owner) {
+          connectOwnerTelemetryStream();
+        }
+      });
+    }
+
+    if (btnReject) {
+      btnReject.addEventListener('click', () => {
+        localStorage.setItem('linq_analytics_consent', 'rejected');
+        if (banner) banner.style.display = 'none';
+        if (toggleConsent) toggleConsent.checked = false;
+        showToast('✓ All analytics & tracking blocked (Rejected)');
+      });
+    }
+  }
+
   // Initialization
+  initPrivacyConsent();
   setDrawerState('collapsed');
   renderSidebar();
   switchActiveFile('src/index.html');
+  runCodeLinter();
   setView('result');
 });

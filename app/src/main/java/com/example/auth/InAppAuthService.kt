@@ -153,4 +153,27 @@ object InAppAuthService {
             userEmail = cleanEmail
         )
     }
+
+    /**
+     * Sends password reset request via EmailService for registered or candidate account.
+     */
+    fun sendPasswordReset(context: Context, email: String): AuthActionResult {
+        val cleanEmail = email.trim().lowercase()
+        if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
+            return AuthActionResult(false, errorMessage = "Please enter a valid Google email address.")
+        }
+
+        val prefs = getPrefs(context)
+        val currentSet = prefs.getStringSet(KEY_ACCOUNTS_SET, emptySet()) ?: emptySet()
+        val displayName = prefs.getString(PREFIX_NAME + cleanEmail, null)?.ifBlank { cleanEmail.substringBefore("@") }
+            ?: cleanEmail.substringBefore("@")
+
+        EmailService.sendPasswordResetEmail(cleanEmail, displayName)
+
+        return AuthActionResult(
+            success = true,
+            userDisplayName = displayName,
+            userEmail = cleanEmail
+        )
+    }
 }

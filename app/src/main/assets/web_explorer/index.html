@@ -53,6 +53,10 @@
       </div>
 
       <div class="header-right">
+        <button id="btnOpenShortcuts" class="btn-shortcuts" title="Keyboard Shortcuts (Ctrl+/)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.06); border:1px solid var(--border-light); color:var(--text-main); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; height:34px;">
+          <span>⌨️</span>
+          <span class="btn-label">Shortcuts</span>
+        </button>
         <button id="btnToggleAiAssistant" class="btn-ai-assistant" title="Linq AI Assistant (Explain, Fix, Scaffolding)" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.25)); border:1px solid rgba(168,85,247,0.45); color:#E0E7FF; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; height:34px;">
           <span>✨</span>
           <span class="btn-label">Assistant</span>
@@ -309,7 +313,11 @@
               </select>
             </div>
           </div>
-          <div class="editor-header-right">
+          <div class="editor-header-right" style="display:flex; align-items:center; gap:8px;">
+            <div id="editorLinterStatus" class="editor-linter-status" title="Code Linter Status • Click to view issues or jump to error">
+              <span id="linterStatusIcon">✓</span>
+              <span id="linterStatusText">No errors</span>
+            </div>
             <span class="hint-badge" id="syntaxStatusBadge">Dynamic Prism Active</span>
           </div>
         </div>
@@ -321,6 +329,8 @@
           <textarea id="codeEditorArea" class="code-editor-area" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
           <!-- Contextual Keyword & Snippet Suggestion Overlay -->
           <div id="editorSuggestionOverlay" class="editor-suggestion-overlay" style="display:none;" role="listbox" aria-label="Code suggestions"></div>
+          <!-- Lightweight Linter Quick-Fix Popup -->
+          <div id="editorQuickFixPopup" class="editor-quickfix-popup" style="display:none;" role="dialog" aria-label="Quick Fixes"></div>
         </div>
       </div>
     </div>
@@ -534,19 +544,51 @@
 
           <!-- Google Auth Card Form -->
           <div style="background:rgba(255,255,255,0.03); padding:16px; border-radius:12px; border:1px solid var(--border-color, #333); text-align:left; margin-bottom:14px;">
+            <!-- Date of Birth step at start of Sign Up -->
+            <div id="boxWebSignupDOB" style="display:none; margin-bottom:10px;">
+              <label for="inputCustomGoogleDOB" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Date of Birth <span style="font-size:10px; color:var(--text-dim); font-weight:normal;">(Must be at least 13 years old)</span></label>
+              <input type="date" id="inputCustomGoogleDOB" class="auth-input-field" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+            </div>
+
             <div id="boxWebSignupUsername" style="display:none; margin-bottom:10px;">
               <label for="inputCustomGoogleName" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Set Username</label>
-              <input type="text" id="inputCustomGoogleName" placeholder="e.g. AlexCoder" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+              <input type="text" id="inputCustomGoogleName" placeholder="e.g. AlexCoder" class="auth-input-field" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
             </div>
 
             <div style="margin-bottom:10px;">
               <label for="inputCustomGoogleEmail" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Google Email</label>
-              <input type="email" id="inputCustomGoogleEmail" placeholder="username@gmail.com" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+              <input type="email" id="inputCustomGoogleEmail" placeholder="username@gmail.com" class="auth-input-field" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
             </div>
 
             <div style="margin-bottom:14px;">
-              <label for="inputCustomGooglePassword" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password</label>
-              <input type="password" id="inputCustomGooglePassword" placeholder="Enter your password" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label for="inputCustomGooglePassword" style="font-size:11px; color:var(--text-muted); font-weight:600;">Password</label>
+                <button type="button" id="btnForgotPasswordLink" class="btn-forgot-password-link">Forgot Password?</button>
+              </div>
+              <div class="auth-password-wrapper">
+                <input type="password" id="inputCustomGooglePassword" placeholder="Enter your password" class="auth-input-field" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 38px 10px 12px; font-size:13px;" />
+                <button type="button" id="btnToggleCustomGooglePass" class="auth-password-toggle-btn" title="Toggle password visibility" aria-label="Toggle password visibility">
+                  <svg id="iconEyeShow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg id="iconEyeHide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Real-Time Password Strength Meter (CSS Color States) -->
+              <div id="passwordStrengthContainer" class="password-strength-container" style="display:none; margin-top:6px;">
+                <div class="strength-meter-bar">
+                  <div id="strengthMeterFill" class="strength-meter-fill"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                  <span id="strengthTextLabel" class="strength-label-text" style="font-size:11px; font-weight:600; color:var(--text-muted);">Password strength</span>
+                  <span id="strengthFeedbackHint" style="font-size:10px; color:var(--text-muted);">8+ chars, numbers &amp; symbols</span>
+                </div>
+              </div>
             </div>
 
             <button type="button" id="btnSubmitCustomGoogle" style="width:100%; min-height:46px; background:var(--primary, #3B82F6); color:#FFF; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -558,6 +600,14 @@
               </svg>
               <span id="txtGoogleAuthAction">Login</span>
             </button>
+
+            <!-- Legal Links on Sign Up Form -->
+            <div id="boxWebSignupLegal" style="display:none; margin-top:12px; font-size:11.5px; color:var(--text-muted); line-height:1.45; text-align:center;">
+              By signing up, you agree to our 
+              <button type="button" id="btnOpenTermsFromAuth" class="btn-legal-link" style="background:none; border:none; color:var(--primary, #00E5FF); text-decoration:underline; cursor:pointer; padding:0; font-size:11.5px;">Terms of Service</button>
+              and 
+              <button type="button" id="btnOpenPrivacyFromAuth" class="btn-legal-link" style="background:none; border:none; color:var(--primary, #00E5FF); text-decoration:underline; cursor:pointer; padding:0; font-size:11.5px;">Privacy Policy</button>.
+            </div>
           </div>
 
           <!-- Switcher Link: "new to the app? Sign up" / "Already have an account? Log in" -->
@@ -566,6 +616,43 @@
             <button type="button" id="btnToggleWebAuthMode" style="background:transparent; border:none; color:var(--primary, #3B82F6); font-weight:bold; cursor:pointer; padding:0 4px; font-size:13px;">Sign up</button>
           </div>
 
+        </div>
+      </div>
+    </div>
+
+    <!-- FORGOT PASSWORD MODAL OVERLAY -->
+    <div id="forgotPasswordModal" class="create-modal-overlay" style="display: none;">
+      <div class="create-modal-card" style="max-width: 420px; padding: 22px; border-radius: 18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:32px; height:32px; border-radius:8px; background:rgba(0,229,255,0.12); display:flex; align-items:center; justify-content:center; color:var(--primary, #00E5FF);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h3 style="font-size:17px; margin:0; color:var(--text-main);">Reset Password</h3>
+          </div>
+          <button id="btnCloseForgotPassModal" class="btn-close-modal" aria-label="Close" style="cursor:pointer;">&times;</button>
+        </div>
+
+        <p style="font-size:12.5px; color:var(--text-muted); margin:0 0 14px 0; line-height:1.5;">
+          Enter your registered Google account email. We will send a secure password reset link to your inbox.
+        </p>
+
+        <!-- Reset Alert Box (Success or Error feedback) -->
+        <div id="forgotPassAlertBox" style="display:none; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px; font-weight:600; line-height:1.4;"></div>
+
+        <div style="margin-bottom:16px;">
+          <label for="inputResetEmail" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:5px; font-weight:600;">Google Email Address</label>
+          <input type="email" id="inputResetEmail" placeholder="username@gmail.com" class="auth-input-field" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" id="btnCancelForgotPass" style="background:transparent; border:1px solid var(--border-light, #334155); color:var(--text-muted); border-radius:8px; padding:9px 16px; font-size:13px; cursor:pointer; min-height:42px;">Cancel</button>
+          <button type="button" id="btnSendPasswordReset" style="background:var(--primary, #00E5FF); color:#000; border:none; font-weight:bold; border-radius:8px; padding:9px 18px; font-size:13px; cursor:pointer; min-height:42px; display:flex; align-items:center; gap:6px;">
+            <span>Send Reset Link</span>
+          </button>
         </div>
       </div>
     </div>
@@ -616,6 +703,33 @@
             <div style="font-size:11px; color:#10B981; margin-top:2px;">
               ✓ Direct Auth Engine Active (Zero Verification Dialog)
             </div>
+          </div>
+        </div>
+
+        <!-- Privacy Policy, Terms & Services Data Disclosure Section -->
+        <div style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">
+          <h3 style="font-size:14px; font-weight:700; color:var(--text-main); margin:0 0 10px 0;">Privacy &amp; Legal Terms</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin:0 0 12px 0; line-height:1.5;">
+            Zero-knowledge project isolation. We strictly isolate all workspaces, encrypt session cookies, and only transmit data to authorized services.
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+            <button id="btnOpenPrivacySettings" type="button" class="btn-consent-reject" style="flex:1 1 140px; min-height:40px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              <span>🛡️</span> <span>Privacy Policy</span>
+            </button>
+            <button id="btnOpenTermsSettings" type="button" class="btn-consent-reject" style="flex:1 1 140px; min-height:40px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              <span>📜</span> <span>Terms of Service</span>
+            </button>
+          </div>
+          <!-- Analytics & Telemetry Opt-in Toggle -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:12px; border-radius:10px;">
+            <div>
+              <div style="font-size:13px; font-weight:600; color:var(--text-main);">Anonymous Diagnostics</div>
+              <div style="font-size:11px; color:var(--text-muted);">Blocked by default until accepted. No pixels or session replays.</div>
+            </div>
+            <label class="switch-toggle" title="Toggle anonymous telemetry">
+              <input type="checkbox" id="toggleAnalyticsConsent" />
+              <span class="switch-slider"></span>
+            </label>
           </div>
         </div>
 
@@ -695,10 +809,27 @@
           <span class="ai-title">Linq AI Assistant</span>
           <span id="aiCurrentModelBadge" class="ai-model-badge">gpt-4o-mini</span>
         </div>
-        <div class="ai-header-right">
+        <div class="ai-header-right" style="position:relative;">
+          <button id="btnAiExportChat" class="ai-btn-icon" title="Save & Export Chat History (Markdown or JSON)">📥 Export</button>
           <button id="btnAiQuickSwitchModel" class="ai-btn-icon" title="Change active model">🔄 Model</button>
           <button id="btnAiOpenSettings" class="ai-btn-icon" title="Configure API Keys">⚙️ Settings</button>
           <button id="btnCloseAiDrawer" class="ai-btn-icon close" title="Close Assistant">&times;</button>
+
+          <!-- Dropdown Export Menu -->
+          <div id="aiExportMenu" class="ai-export-menu" style="display:none;">
+            <button type="button" id="btnExportMarkdown" class="ai-export-item">
+              <span>📄</span> <span>Export as Markdown (.md)</span>
+            </button>
+            <button type="button" id="btnExportJson" class="ai-export-item">
+              <span>📦</span> <span>Export as JSON (.json)</span>
+            </button>
+            <button type="button" id="btnCopyChatClipboard" class="ai-export-item">
+              <span>📋</span> <span>Copy Chat to Clipboard</span>
+            </button>
+            <button type="button" id="btnClearChatHistory" class="ai-export-item" style="color:#EF4444;">
+              <span>🗑️</span> <span>Clear Chat History</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -894,7 +1025,161 @@
         <div id="fallbackActionRow" style="display: flex; gap: 10px; justify-content: center;">
           <button id="btnFallbackRetry" style="display: none; background: #3B82F6; color: #FFF; border: none; border-radius: 8px; padding: 10px 18px; font-weight: bold; cursor: pointer; min-height: 48px;">Try Again</button>
           <button id="btnFallbackHome" style="background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 10px 22px; font-weight: bold; cursor: pointer; min-height: 48px;">Go to Home</button>
+    <!-- KEYBOARD SHORTCUTS MODAL OVERLAY -->
+    <div id="keyboardShortcutsModal" class="create-modal-overlay" style="display:none;">
+      <div class="create-modal-card" style="max-width:540px; padding:24px; border-radius:20px; max-height:88dvh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h2 style="font-size:18px; color:var(--text-main); margin:0; display:flex; align-items:center; gap:8px;">
+            <span>⌨️</span> Keyboard Shortcuts
+          </h2>
+          <button id="btnCloseShortcutsModal" class="btn-close-modal" aria-label="Close">&times;</button>
         </div>
+        
+        <p style="font-size:12px; color:var(--text-muted); margin:0 0 14px 0;">
+          Navigate and code faster in Linq Studio using these productivity shortcuts.
+        </p>
+
+        <!-- Categories -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <div style="font-size:11px; font-weight:800; color:var(--primary, #00E5FF); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">File &amp; Save</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Save active file</span>
+              <span class="shortcut-key-badge">Ctrl + S</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">New file or folder</span>
+              <span class="shortcut-key-badge">Ctrl + N</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Toggle File Explorer</span>
+              <span class="shortcut-key-badge">Ctrl + B</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:800; color:var(--primary, #00E5FF); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Editor &amp; Code</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Indent line (2 spaces)</span>
+              <span class="shortcut-key-badge">Tab</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Autocomplete &amp; Snippets</span>
+              <span class="shortcut-key-badge">Ctrl + Space</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Toggle Comment</span>
+              <span class="shortcut-key-badge">Ctrl + /</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Run Linter &amp; Quick Fixes</span>
+              <span class="shortcut-key-badge">Ctrl + Shift + L</span>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px; font-weight:800; color:var(--primary, #00E5FF); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px;">Assistant &amp; Tools</div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Toggle Linq AI Assistant</span>
+              <span class="shortcut-key-badge">Ctrl + Shift + A</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Export AI Chat History</span>
+              <span class="shortcut-key-badge">Ctrl + Shift + E</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Toggle Terminal Drawer</span>
+              <span class="shortcut-key-badge">Ctrl + `</span>
+            </div>
+            <div class="shortcut-row">
+              <span class="shortcut-desc">Open Keyboard Shortcuts</span>
+              <span class="shortcut-key-badge">Ctrl + Shift + H</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px; text-align:right;">
+          <button type="button" id="btnDismissShortcuts" class="btn-consent-accept" style="padding:8px 20px; font-size:12.5px; min-height:40px;">Got It</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEGAL, PRIVACY & TERMS MODAL -->
+    <div id="legalModal" class="create-modal-overlay" style="display:none;">
+      <div class="create-modal-card" style="max-width:620px; padding:24px; border-radius:20px; max-height:90dvh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="display:flex; gap:8px;">
+            <button type="button" id="tabLegalPrivacy" class="type-switch-btn active" style="border-radius:8px; padding:6px 14px; font-size:13px; font-weight:700;">Privacy Policy</button>
+            <button type="button" id="tabLegalTerms" class="type-switch-btn" style="border-radius:8px; padding:6px 14px; font-size:13px; font-weight:700;">Terms of Service</button>
+          </div>
+          <button id="btnCloseLegalModal" class="btn-close-modal" aria-label="Close">&times;</button>
+        </div>
+
+        <!-- Privacy Policy Content -->
+        <div id="viewLegalPrivacy" style="display:block; font-size:12.5px; color:var(--text-muted); line-height:1.6;">
+          <h3 style="color:var(--text-main); font-size:16px; margin:0 0 8px 0;">Linq Studio Privacy Policy</h3>
+          <p style="margin-bottom:12px;"><strong>Effective Date:</strong> November 2026 • LinqStudiosLLC</p>
+          <p style="margin-bottom:12px;">Linq Studio provides a privacy-first, on-device development environment. We strictly isolate user data, enforce zero-knowledge storage principles, and ensure no unauthorized data sharing occurs.</p>
+          
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">1. User Data Isolation &amp; Database Locking</h4>
+          <p style="margin-bottom:10px;">All project files, user workspaces, and session records are cryptographically keyed and locked to your unique account identifier. Cross-tenant or unauthorized reads are prohibited at both the API boundary and Firestore security rules levels. Users only ever see and access their own data.</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">2. Third-Party Services We Transmit Data To</h4>
+          <p style="margin-bottom:8px;">Linq Studio communicates exclusively with the following vetted services:</p>
+          <ul style="padding-left:18px; margin-bottom:12px; display:flex; flex-direction:column; gap:6px;">
+            <li><strong>Google Identity &amp; Firebase Authentication:</strong> Direct login/sign-up, authentication token issuance, and password reset dispatches. (Data sent: email, username, salted credential hash).</li>
+            <li><strong>Google Cloud Firestore:</strong> Encrypted remote persistence for workspace preferences and user account documents. Locked strictly per authenticated user ID.</li>
+            <li><strong>Google Gemini API / Firebase AI Logic:</strong> On-demand code suggestions, error diagnosis, and conversational coding assistance. Prompts are transmitted only when user initiates AI queries.</li>
+            <li><strong>Nodemailer / LinqStudiosLLC SMTP Relay:</strong> Secure delivery of welcome confirmations, login alerts, and password reset links.</li>
+            <li><strong>User BYOK Providers (OpenAI, Anthropic, Groq, Mistral, DeepSeek):</strong> User-configured alternative AI endpoints. Transmitted only if user explicitly inputs an API key. Keys are stored locally on the client.</li>
+            <li><strong>Local On-Device Interpreter / Sandbox:</strong> Executes Python, Java, Kotlin, C/C++, Rust, and JavaScript directly inside your sandboxed container or browser without external transmission.</li>
+          </ul>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">3. Analytics, Cookies &amp; Tracking Policy</h4>
+          <p style="margin-bottom:10px;">We enforce a strict opt-in analytics policy. No tracking pixels, analytics beacons, or session replays are executed unless you explicitly tap "Accept All". If you tap "Reject All", all telemetry remains completely blocked. Session cookies are protected with <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite=Strict</code> flags.</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">4. Age Restrictions &amp; Date of Birth</h4>
+          <p style="margin-bottom:10px;">In compliance with COPPA and global youth privacy frameworks, Linq Studio requires users to be at least 13 years old. Date of birth is validated at sign-up to enforce this protection.</p>
+        </div>
+
+        <!-- Terms of Service Content -->
+        <div id="viewLegalTerms" style="display:none; font-size:12.5px; color:var(--text-muted); line-height:1.6;">
+          <h3 style="color:var(--text-main); font-size:16px; margin:0 0 8px 0;">Linq Studio Terms of Service</h3>
+          <p style="margin-bottom:12px;"><strong>Effective Date:</strong> November 2026 • LinqStudiosLLC</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">1. Acceptance of Terms</h4>
+          <p style="margin-bottom:10px;">By creating an account or using Linq Studio, you agree to these Terms of Service. If you do not agree, do not use the application.</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">2. Account Responsibility &amp; Passwords</h4>
+          <p style="margin-bottom:10px;">You are responsible for safeguarding your login credentials. Linq Studio hashes all passwords using secure salt and cryptographic hashing before storage. Never share your password with third parties.</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">3. Code Ownership &amp; Intellectual Property</h4>
+          <p style="margin-bottom:10px;">You retain 100% intellectual property ownership of all source code, files, prompts, and project assets created or edited within Linq Studio. LinqStudiosLLC claims no copyright or proprietary rights over user-created software.</p>
+
+          <h4 style="color:var(--primary, #00E5FF); font-size:13px; margin:14px 0 6px 0;">4. Acceptable Use Policy</h4>
+          <p style="margin-bottom:10px;">You agree not to use Linq Studio to author, compile, or distribute malicious code, ransomware, automated spam scripts, or unauthorized network intrusion utilities.</p>
+        </div>
+
+        <div style="margin-top:18px; text-align:right;">
+          <button type="button" id="btnDismissLegal" class="btn-consent-accept" style="padding:8px 20px; font-size:12.5px; min-height:40px;">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRIVACY & ANALYTICS CONSENT BANNER -->
+    <div id="privacyConsentBanner" class="privacy-consent-banner" style="display:none;">
+      <div class="consent-content">
+        <div class="consent-header">
+          <span>🛡️</span>
+          <span>Privacy &amp; Analytics Consent</span>
+        </div>
+        <p class="consent-description">
+          We respect your privacy. No tracking pixels, analytics, or session replays will load unless you explicitly consent. You may accept or reject telemetry below with equal ease.
+        </p>
+      </div>
+      <div class="consent-actions">
+        <button type="button" id="btnRejectAnalytics" class="btn-consent-reject">Reject All</button>
+        <button type="button" id="btnAcceptAnalytics" class="btn-consent-accept">Accept All</button>
       </div>
     </div>
   </div>

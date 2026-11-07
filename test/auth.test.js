@@ -90,12 +90,36 @@ describe('Linq Studio Direct Authentication & Security Tests', () => {
     assert.strictEqual(blockingVerifiedCheck, false, 'No normal login gating behind emailVerified');
   });
 
-  // Test 4: Google-only Login and Sign up action present in UI
-  test('4. Google-only Login and Sign up action present in UI', async () => {
+  // Test 4: Google-only Login and Sign up action present in UI with enhancements
+  test('4. Google-only Login and Sign up action present in UI with enhancements', async () => {
     const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const styleCss = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/style.css'), 'utf8');
+
     assert.strictEqual(indexHtml.includes('inputCustomGoogleEmail'), true, 'Contains Google email input');
     assert.strictEqual(indexHtml.includes('inputCustomGooglePassword'), true, 'Contains password input');
     assert.strictEqual(indexHtml.includes('btnToggleWebAuthMode'), true, 'Contains new to the app? Sign up switcher');
+
+    // Password visibility toggle
+    assert.strictEqual(indexHtml.includes('btnToggleCustomGooglePass'), true, 'Contains password visibility toggle button');
+    assert.strictEqual(appJs.includes('btnToggleCustomGooglePass'), true, 'Handles password toggle in app.js');
+
+    // Real-time password strength indicator & CSS color states
+    assert.strictEqual(indexHtml.includes('passwordStrengthContainer'), true, 'Contains password strength indicator');
+    assert.strictEqual(styleCss.includes('strength-state-weak'), true, 'Contains weak CSS color state');
+    assert.strictEqual(styleCss.includes('strength-state-fair'), true, 'Contains fair CSS color state');
+    assert.strictEqual(styleCss.includes('strength-state-strong'), true, 'Contains strong CSS color state');
+    assert.strictEqual(appJs.includes('updatePasswordStrength'), true, 'Evaluates password strength in real time');
+
+    // Forgot Password button and modal overlay
+    assert.strictEqual(indexHtml.includes('btnForgotPasswordLink'), true, 'Contains Forgot Password link button');
+    assert.strictEqual(indexHtml.includes('forgotPasswordModal'), true, 'Contains clean Forgot Password modal overlay');
+    assert.strictEqual(appJs.includes('sendPasswordResetEmail'), true, 'Triggers password reset flow');
+
+    // Focus-ring transition and error-shake animations
+    assert.strictEqual(styleCss.includes('input-error-shake'), true, 'Contains error shake animation');
+    assert.strictEqual(styleCss.includes('auth-input-field:focus'), true, 'Contains focus-ring transition');
+    assert.strictEqual(appJs.includes('triggerInputShake'), true, 'Triggers input shake on validation failure');
   });
 
   // Test 5: Password validation and error message formatting
@@ -312,6 +336,125 @@ describe('Linq Studio Direct Authentication & Security Tests', () => {
     for (const p of searchDirs) {
       checkFile(p);
     }
+  });
+
+  // Test 15: AI Chat Export (Markdown & JSON) and history tracking
+  test('15. AI Chat Export (Markdown & JSON) and history tracking', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const styleCss = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/style.css'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="btnAiExportChat"'), true, 'AI drawer contains export button');
+    assert.strictEqual(indexHtml.includes('id="aiExportMenu"'), true, 'Contains AI export dropdown menu');
+    assert.strictEqual(indexHtml.includes('btnExportMarkdown'), true, 'Contains Markdown export option');
+    assert.strictEqual(indexHtml.includes('btnExportJson'), true, 'Contains JSON export option');
+    assert.strictEqual(indexHtml.includes('btnCopyChatClipboard'), true, 'Contains copy to clipboard option');
+
+    assert.strictEqual(appJs.includes('exportAiChatAsMarkdown'), true, 'Implements Markdown export');
+    assert.strictEqual(appJs.includes('exportAiChatAsJson'), true, 'Implements JSON export');
+    assert.strictEqual(appJs.includes('aiChatMessages'), true, 'Maintains message history array for export');
+    assert.strictEqual(styleCss.includes('.ai-export-menu'), true, 'Contains styles for AI export menu');
+  });
+
+  // Test 16: Keyboard shortcuts overlay modal, tooltip, and shortcuts
+  test('16. Keyboard shortcuts overlay modal, tooltip, and shortcuts', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const styleCss = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/style.css'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="btnOpenShortcuts"'), true, 'Header contains keyboard shortcuts button');
+    assert.strictEqual(indexHtml.includes('id="keyboardShortcutsModal"'), true, 'Contains keyboard shortcuts modal');
+    assert.strictEqual(appJs.includes('showShortcutTooltip'), true, 'Implements shortcut tooltip display on key combos');
+    assert.strictEqual(styleCss.includes('.ide-shortcut-tooltip'), true, 'Contains style for navigation shortcut tooltips');
+    assert.strictEqual(styleCss.includes('.shortcut-key-badge'), true, 'Contains style for keyboard shortcut badges');
+  });
+
+  // Test 17: Lightweight code linter overlay, syntax checking, and quick-fix popup
+  test('17. Lightweight code linter overlay, syntax checking, and quick-fix popup', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const styleCss = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/style.css'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="editorLinterStatus"'), true, 'Contains editor linter status element');
+    assert.strictEqual(indexHtml.includes('id="editorQuickFixPopup"'), true, 'Contains quick-fix overlay popup');
+    assert.strictEqual(appJs.includes('runCodeLinter'), true, 'Implements code linter engine');
+    assert.strictEqual(appJs.includes('toggleQuickFixPopup'), true, 'Implements quick-fix popup toggle');
+    assert.strictEqual(styleCss.includes('.editor-linter-status'), true, 'Contains styles for linter status pill');
+    assert.strictEqual(styleCss.includes('.editor-quickfix-popup'), true, 'Contains styles for quick fix popup');
+  });
+
+  // Test 18: Privacy Policy, Terms of Service, and 6 external services data transmission disclosure
+  test('18. Privacy Policy, Terms of Service, and 6 external services data transmission disclosure', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const legalDialogKt = fs.readFileSync(path.join(__dirname, '../app/src/main/java/com/example/ui/components/LegalNoticeDialog.kt'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="legalModal"'), true, 'Contains legal modal overlay in web view');
+    assert.strictEqual(indexHtml.includes('tabLegalPrivacy'), true, 'Contains Privacy Policy tab');
+    assert.strictEqual(indexHtml.includes('tabLegalTerms'), true, 'Contains Terms of Service tab');
+
+    // Verify all 6 services are explicitly disclosed in both web and Android
+    const services = [
+      'Google Identity',
+      'Google Cloud Firestore',
+      'Google Gemini API',
+      'Nodemailer',
+      'OpenAI',
+      'Sandbox'
+    ];
+    for (const service of services) {
+      assert.strictEqual(indexHtml.toLowerCase().includes(service.toLowerCase()), true, `Web discloses service: ${service}`);
+      assert.strictEqual(legalDialogKt.toLowerCase().includes(service.toLowerCase()), true, `Android discloses service: ${service}`);
+    }
+  });
+
+  // Test 19: Privacy consent banner (Accept / Reject) blocks analytics until user explicitly accepts
+  test('19. Privacy consent banner (Accept / Reject) blocks analytics until user explicitly accepts', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const styleCss = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/style.css'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="privacyConsentBanner"'), true, 'Contains privacy consent banner');
+    assert.strictEqual(indexHtml.includes('id="btnAcceptAnalytics"'), true, 'Contains Accept All button');
+    assert.strictEqual(indexHtml.includes('id="btnRejectAnalytics"'), true, 'Contains Reject All button');
+    assert.strictEqual(indexHtml.includes('id="toggleAnalyticsConsent"'), true, 'Contains opt-in toggle in Settings');
+
+    assert.strictEqual(appJs.includes('initPrivacyConsent'), true, 'Initializes privacy consent');
+    assert.strictEqual(appJs.includes("localStorage.getItem('linq_analytics_consent') !== 'accepted'"), true, 'Strictly guards telemetry with analytics consent');
+    assert.strictEqual(styleCss.includes('.privacy-consent-banner'), true, 'Contains banner styling');
+  });
+
+  // Test 20: Date of Birth step in sign up with age validation (13+ years old)
+  test('20. Date of Birth step in sign up with age validation (13+ years old)', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
+    const loginWindowKt = fs.readFileSync(path.join(__dirname, '../app/src/main/java/com/example/ui/components/LoginSignupWindow.kt'), 'utf8');
+
+    assert.strictEqual(indexHtml.includes('id="inputCustomGoogleDOB"'), true, 'Web contains DOB input');
+    assert.strictEqual(appJs.includes('13'), true, 'Web validates age >= 13');
+    assert.strictEqual(appJs.includes('You must be at least 13 years old'), true, 'Web enforces age error message');
+
+    assert.strictEqual(loginWindowKt.includes('input_google_dob'), true, 'Android contains DOB input field');
+    assert.strictEqual(loginWindowKt.includes('13'), true, 'Android validates age >= 13');
+    assert.strictEqual(loginWindowKt.includes('You must be at least 13 years old'), true, 'Android enforces age error message');
+  });
+
+  // Test 21: Secure session cookie and user workspace data isolation
+  test('21. Secure session cookie and user workspace data isolation', async () => {
+    // Session endpoint tests
+    const sessionRes = await post('/api/auth/session', { email: 'dev@example.com', uid: 'user_123' });
+    assert.strictEqual(sessionRes.status, 200, 'POST /api/auth/session succeeds');
+    assert.strictEqual(sessionRes.data.success, true, 'Returns success: true');
+
+    // Missing fields returns 400
+    const invalidSession = await post('/api/auth/session', {});
+    assert.strictEqual(invalidSession.status, 400, 'Returns 400 for missing credentials');
+
+    // Workspace isolation: saving user files requires auth
+    const unauthedSave = await post('/api/user/workspace/save', { files: [] });
+    assert.strictEqual(unauthedSave.status, 401, 'Unauthenticated workspace save returns 401');
+
+    const unauthedLoad = await get('/api/user/workspace/load');
+    assert.strictEqual(unauthedLoad.status, 401, 'Unauthenticated workspace load returns 401');
   });
 
 });

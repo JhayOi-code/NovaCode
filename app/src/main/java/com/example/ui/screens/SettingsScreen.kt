@@ -77,6 +77,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Security
+import com.example.ui.components.LegalNoticeDialog
 import com.example.R
 import com.example.ai.AiSettings
 import com.example.model.EditorTheme
@@ -131,6 +134,7 @@ fun SettingsScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showLoginSignupSheet by remember { mutableStateOf(false) }
     var showDebugInspector by remember { mutableStateOf(false) }
+    var legalNoticeTab by remember { mutableStateOf<String?>(null) }
     var remoteUrlState by remember(remoteApiUrl) { mutableStateOf(remoteApiUrl) }
     var remoteKeyState by remember(remoteApiKey) { mutableStateOf(remoteApiKey) }
     var timeoutState by remember(executionTimeoutSeconds) { mutableStateOf(executionTimeoutSeconds.toString()) }
@@ -1248,6 +1252,75 @@ fun SettingsScreen(
                 }
             }
         }
+
+        // Legal & Data Protection Card
+        Card(
+            colors = CardDefaults.cardColors(containerColor = currentTheme.surfaceColor),
+            shape = RoundedCornerShape(12.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, currentTheme.borderColor),
+            modifier = Modifier.fillMaxWidth().testTag("card_legal_compliance")
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = currentTheme.primaryColor.copy(alpha = 0.15f),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Security, contentDescription = null, tint = currentTheme.primaryColor, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Legal & Data Protection",
+                            color = currentTheme.onSurfaceColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = "Privacy Policy, Terms of Service & Service Disclosures",
+                            color = currentTheme.lineNumberColor,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Linq Studio strictly adheres to privacy-by-design. All user data is isolated per authenticated account. Zero tracking or telemetry is executed without explicit user consent.",
+                    fontSize = 12.sp,
+                    color = currentTheme.lineNumberColor,
+                    lineHeight = 16.sp
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { legalNoticeTab = "privacy" },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(38.dp).testTag("btn_settings_privacy_policy")
+                    ) {
+                        Text("Privacy Policy", color = currentTheme.primaryColor, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { legalNoticeTab = "terms" },
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f).height(38.dp).testTag("btn_settings_terms_of_service")
+                    ) {
+                        Text("Terms of Service", color = currentTheme.primaryColor, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1281,6 +1354,14 @@ fun SettingsScreen(
             onTriggerGc = { System.gc() },
             onResetWorkspace = onResetWorkspace,
             onDismiss = { showDebugInspector = false }
+        )
+    }
+
+    if (legalNoticeTab != null) {
+        LegalNoticeDialog(
+            theme = currentTheme,
+            initialTab = legalNoticeTab ?: "privacy",
+            onDismiss = { legalNoticeTab = null }
         )
     }
 }

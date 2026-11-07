@@ -14,10 +14,11 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.owner == true;
     }
 
-    // User profile documents:
+    // User profile documents - Strict user data isolation:
+    // Only the user themselves can read, create, update, or delete their profile and workspace
     // Clients can never modify privileged fields (owner, ownerVerifiedAt, isOwnerVerified, role, admin)
     match /users/{userId} {
-      allow read: if isUser(userId) || isOwner();
+      allow read: if isUser(userId);
       allow create: if isUser(userId)
                     && request.resource.data.uid == userId
                     && request.resource.data.email == request.auth.token.email
@@ -25,14 +26,22 @@ service cloud.firestore {
       allow update: if isUser(userId)
                     && request.resource.data.uid == userId
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['owner', 'ownerVerifiedAt', 'isOwnerVerified', 'role', 'admin']);
-      allow delete: if isUser(userId) || isOwner();
+      allow delete: if isUser(userId);
 
-      // User workspace files & private settings
+      // User workspace files, chats & private settings strictly locked to user
       match /settings/{settingId} {
         allow read, write: if isUser(userId);
       }
 
       match /files/{fileId} {
+        allow read, write: if isUser(userId);
+      }
+
+      match /chats/{chatId} {
+        allow read, write: if isUser(userId);
+      }
+
+      match /projects/{projectId} {
         allow read, write: if isUser(userId);
       }
     }
