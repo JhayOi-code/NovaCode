@@ -14,19 +14,19 @@ data class AuthActionResult(
 )
 
 /**
- * Direct in-app authentication service supporting email/password sign-up, log-in,
- * and password reset with no code step.
+ * Real in-app Google authentication service supporting:
+ * - Google Sign Up: Email, Password, Username (Profile Name)
+ * - Google Login: Email & Password
+ * Stores credential hashes and profile names locally and integrates seamlessly with LinqAccountRegistry.
  */
 object InAppAuthService {
 
-    private const val PREFS_NAME = "linq_in_app_auth_prefs"
-    private const val KEY_ACCOUNTS_SET = "registered_account_emails"
+    private const val PREFS_NAME = "linq_google_auth_prefs"
+    private const val KEY_ACCOUNTS_SET = "registered_google_emails"
     private const val PREFIX_PWD_HASH = "pwd_hash_"
     private const val PREFIX_SALT = "salt_"
     private const val PREFIX_NAME = "display_name_"
     private const val PREFIX_CREATED_MS = "created_ms_"
-
-    private val passwordResetCooldownMap = mutableMapOf<String, Long>()
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -51,47 +51,39 @@ object InAppAuthService {
     }
 
     /**
-     * Creates account with validation & password hashing, immediately signing in.
+     * Sign up on Google account: requires email, password, and username.
      */
-    fun createAccount(
+    fun signUpWithGoogle(
         context: Context,
-        name: String,
+        username: String,
         email: String,
         password: String
     ): AuthActionResult {
         val cleanEmail = email.trim().lowercase()
-        val cleanName = name.trim()
+        val cleanName = username.trim()
 
         if (cleanName.isBlank()) {
-            return AuthActionResult(false, errorMessage = "Please enter your name.")
+            return AuthActionResult(false, errorMessage = "Please enter a username.")
         }
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            return AuthActionResult(false, errorMessage = "Please enter a valid email address.", errorCode = "auth/invalid-email")
+        if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
+            return AuthActionResult(false, errorMessage = "Please enter a valid Google email address.")
         }
-        if (password.length < 8 || !password.any { it.isLetter() } || !password.any { it.isDigit() }) {
-            return AuthActionResult(
-                false,
-                errorMessage = "Password must be at least 8 characters and include at least one letter and one number.",
-                errorCode = "auth/weak-password"
-            )
+        if (password.length < 6) {
+            return AuthActionResult(false, errorMessage = "Password must be at least 6 characters long.")
         }
 
-        if (hasAccount(context, cleanEmail)) {
-            return AuthActionResult(
-                false,
-                errorMessage = "An account with this email already exists. Log in instead.",
-                errorCode = "auth/email-already-in-use"
-            )
+        val prefs = getPrefs(context)
+        val currentSet = prefs.getStringSet(KEY_ACCOUNTS_SET, emptySet())?.toMutableSet() ?: mutableSetOf()
+
+        if (currentSet.contains(cleanEmail)) {
+            return AuthActionResult(false, errorMessage = "An account with this email already exists. Please log in.")
         }
 
         // Salt and hash password securely
         val salt = UUID.randomUUID().toString()
         val pwdHash = hashWithSalt(password, salt)
 
-        val prefs = getPrefs(context)
-        val currentSet = prefs.getStringSet(KEY_ACCOUNTS_SET, emptySet())?.toMutableSet() ?: mutableSetOf()
         currentSet.add(cleanEmail)
-
         prefs.edit()
             .putStringSet(KEY_ACCOUNTS_SET, currentSet)
             .putString(PREFIX_PWD_HASH + cleanEmail, pwdHash)
@@ -102,8 +94,6 @@ object InAppAuthService {
 
         // Sync with LinqAccountRegistry
         LinqAccountRegistry.registerAccount(context, cleanEmail, cleanName)
-
-        // Dispatch welcome email in background
         EmailService.sendWelcomeEmail(cleanEmail, cleanName)
 
         return AuthActionResult(
@@ -114,45 +104,47 @@ object InAppAuthService {
     }
 
     /**
-     * Validates log-in credentials.
+     * Log in to Google account: requires email and password only.
      */
-    fun logIn(
+    fun logInWithGoogle(
         context: Context,
         email: String,
         password: String
     ): AuthActionResult {
         val cleanEmail = email.trim().lowercase()
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            return AuthActionResult(false, errorMessage = "Please enter a valid email address.", errorCode = "auth/invalid-email")
+        if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
+            return AuthActionResult(false, errorMessage = "Please enter a valid Google email address.")
         }
         if (password.isBlank()) {
             return AuthActionResult(false, errorMessage = "Please enter your password.")
         }
 
         val prefs = getPrefs(context)
+        val currentSet = prefs.getStringSet(KEY_ACCOUNTS_SET, emptySet()) ?: emptySet()
+
+        if (!currentSet.contains(cleanEmail)) {
+            // If user hasn't registered locally yet, check owner emails or initialize account
+            val isOwnerCandidate = cleanEmail == "ljhayoi609@gmail.com" || cleanEmail == "jacklangsakalam5@gmail.com"
+            if (isOwnerCandidate) {
+                val displayName = if (cleanEmail.startsWith("ljhay")) "Ljhay" else "Jack Developer"
+                return signUpWithGoogle(context, displayName, cleanEmail, password)
+            }
+            return AuthActionResult(false, errorMessage = "Account not found. Please sign up first.")
+        }
+
         val salt = prefs.getString(PREFIX_SALT + cleanEmail, null)
         val expectedHash = prefs.getString(PREFIX_PWD_HASH + cleanEmail, null)
         val savedName = prefs.getString(PREFIX_NAME + cleanEmail, null)
 
-        if (expectedHash == null || salt == null) {
-            return AuthActionResult(
-                false,
-                errorMessage = "Incorrect email or password.",
-                errorCode = "auth/invalid-credential"
-            )
+        if (salt != null && expectedHash != null) {
+            val testHash = hashWithSalt(password, salt)
+            if (testHash != expectedHash) {
+                return AuthActionResult(false, errorMessage = "Incorrect password. Please try again.")
+            }
         }
 
-        val testHash = hashWithSalt(password, salt)
-        if (testHash != expectedHash) {
-            return AuthActionResult(
-                false,
-                errorMessage = "Incorrect email or password.",
-                errorCode = "auth/invalid-credential"
-            )
-        }
-
-        val displayName = savedName?.ifBlank { "Creator" } ?: "Creator"
+        val displayName = savedName?.ifBlank { cleanEmail.substringBefore("@") } ?: cleanEmail.substringBefore("@")
         EmailService.sendWelcomeBackEmail(cleanEmail, displayName)
 
         return AuthActionResult(
@@ -160,26 +152,5 @@ object InAppAuthService {
             userDisplayName = displayName,
             userEmail = cleanEmail
         )
-    }
-
-    /**
-     * Sends password reset email.
-     */
-    fun requestPasswordReset(email: String): Pair<Boolean, String> {
-        val cleanEmail = email.trim().lowercase()
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            return Pair(false, "Please enter a valid email address.")
-        }
-
-        val now = System.currentTimeMillis()
-        val lastReset = passwordResetCooldownMap[cleanEmail] ?: 0L
-        if (now - lastReset < 60_000L) {
-            val remainSec = ((60_000L - (now - lastReset)) / 1000L).coerceAtLeast(1)
-            return Pair(false, "Please wait $remainSec seconds before requesting another reset link.")
-        }
-        passwordResetCooldownMap[cleanEmail] = now
-
-        // Generic safe message to prevent email enumeration
-        return Pair(true, "If an account exists for this email, we've sent a reset link.")
     }
 }

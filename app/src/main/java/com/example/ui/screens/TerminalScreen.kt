@@ -3,18 +3,7 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,20 +15,8 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,21 +29,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.EditorTheme
 
+/**
+ * Terminal Screen that dynamically recolors all surfaces, output lines, prompts,
+ * accessory keys, and inputs to match the active EditorTheme (all 10 themes).
+ */
 @Composable
 fun TerminalScreen(
     theme: EditorTheme,
     terminalLines: List<String>,
-    isFullScreen: Boolean = false,
-    onToggleFullScreen: () -> Unit = {},
     onSendCommand: (String) -> Unit,
-    onClearTerminal: () -> Unit
+    onClearTerminal: () -> Unit,
+    isFullScreen: Boolean = false,
+    onToggleFullScreen: () -> Unit = {}
 ) {
     var commandInput by remember { mutableStateOf("") }
+    val commandHistory = remember { mutableListOf<String>() }
+    var historyIndex by remember { mutableStateOf(0) }
     val listState = rememberLazyListState()
 
-    // Command History for Termux-style Up/Down navigation
-    val commandHistory = remember { mutableStateListOf<String>() }
-    var historyIndex by remember { mutableIntStateOf(-1) }
+    val pal = theme.terminal
 
     LaunchedEffect(terminalLines.size) {
         if (terminalLines.isNotEmpty()) {
@@ -80,7 +61,7 @@ fun TerminalScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF070B14))
+            .background(pal.background)
             .padding(8.dp)
             .testTag("terminal_screen")
     ) {
@@ -103,12 +84,12 @@ fun TerminalScreen(
                 Icon(
                     imageVector = Icons.Default.Terminal,
                     contentDescription = null,
-                    tint = Color(0xFF10B981),
+                    tint = pal.prompt,
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
                     text = "linq@android:~/workspace",
-                    color = Color(0xFF10B981),
+                    color = pal.prompt,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -161,8 +142,8 @@ fun TerminalScreen(
             quickCommands.forEach { cmd ->
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = theme.surfaceColor,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
+                    color = pal.chipBackground,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, pal.chipBorder),
                     modifier = Modifier.clickable {
                         onSendCommand(cmd)
                         commandHistory.add(cmd)
@@ -171,10 +152,10 @@ fun TerminalScreen(
                 ) {
                     Text(
                         text = cmd,
-                        color = theme.primaryColor,
+                        color = pal.chipText,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -188,17 +169,17 @@ fun TerminalScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color(0xFF02040A), RoundedCornerShape(8.dp))
+                .background(pal.outputBackground, RoundedCornerShape(8.dp))
                 .padding(10.dp)
         ) {
             items(terminalLines) { line ->
                 val lineColor = when {
-                    line.startsWith("$") -> Color(0xFF00E5FF)
-                    line.contains("Error") || line.contains("Exception") -> Color(0xFFEF4444)
-                    line.contains("warning") -> Color(0xFFF59E0B)
-                    line.contains("Success") || line.contains("Compiled") -> Color(0xFF10B981)
-                    line.startsWith("total") -> Color(0xFF94A3B8)
-                    else -> Color(0xFFE2E8F0)
+                    line.startsWith("$") -> pal.prompt
+                    line.contains("Error") || line.contains("Exception") || line.contains("Failed") -> pal.error
+                    line.contains("warning") || line.contains("Warn") -> pal.warning
+                    line.contains("Success") || line.contains("Compiled") -> pal.success
+                    line.startsWith("total") -> theme.lineNumberColor
+                    else -> pal.foreground
                 }
                 Text(
                     text = line,
@@ -217,7 +198,7 @@ fun TerminalScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(theme.surfaceColor, RoundedCornerShape(6.dp))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp)
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -274,7 +255,7 @@ fun TerminalScreen(
         ) {
             Text(
                 text = "$ ",
-                color = Color(0xFF00E5FF),
+                color = pal.prompt,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
@@ -284,19 +265,19 @@ fun TerminalScreen(
                 value = commandInput,
                 onValueChange = { commandInput = it },
                 placeholder = { Text("type command (ls, python, java, node, curl)...", color = theme.lineNumberColor, fontSize = 12.sp) },
-                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = Color(0xFF00E5FF)),
+                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = pal.foreground),
                 singleLine = true,
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 44.dp)
                     .testTag("terminal_input_field"),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color(0xFF00E5FF),
-                    unfocusedTextColor = Color(0xFF00E5FF),
-                    focusedBorderColor = theme.primaryColor,
+                    focusedTextColor = pal.foreground,
+                    unfocusedTextColor = pal.foreground,
+                    focusedBorderColor = pal.prompt,
                     unfocusedBorderColor = theme.borderColor,
-                    focusedContainerColor = Color(0xFF0A0F1D),
-                    unfocusedContainerColor = Color(0xFF0A0F1D)
+                    focusedContainerColor = pal.inputBackground,
+                    unfocusedContainerColor = pal.inputBackground
                 ),
                 shape = RoundedCornerShape(8.dp)
             )
@@ -321,7 +302,7 @@ fun TerminalScreen(
                 Icon(
                     imageVector = Icons.Default.Send,
                     contentDescription = "Send",
-                    tint = Color.Black,
+                    tint = if (theme.isLight) Color.White else Color.Black,
                     modifier = Modifier.size(18.dp)
                 )
             }

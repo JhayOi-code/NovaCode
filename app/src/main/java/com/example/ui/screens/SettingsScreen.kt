@@ -162,12 +162,20 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Preferences & Settings",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = currentTheme.onSurfaceColor
-            )
+            Column {
+                Text(
+                    text = "Preferences & Settings",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = currentTheme.onSurfaceColor
+                )
+                Text(
+                    text = "v1.0 • Build 2026-11-06 08:00 UTC",
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = currentTheme.lineNumberColor
+                )
+            }
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
@@ -347,7 +355,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (userAccount.isSignedIn) "Account" else "Log in or sign up",
+                            text = if (userAccount.isSignedIn) "Account" else "Sign in with Google",
                             fontSize = 12.sp,
                             color = currentTheme.onSurfaceColor
                         )

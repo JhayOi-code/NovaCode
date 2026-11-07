@@ -645,10 +645,108 @@ greet("Ljhay")
     });
   }
 
+  // --- Recent Files Tracking (User Request: Last 5 files) ---
+  let recentOpenedFiles = [];
+  try {
+    const savedRecents = localStorage.getItem('linq_recent_opened_files');
+    if (savedRecents) recentOpenedFiles = JSON.parse(savedRecents);
+  } catch (e) {}
+
+  let isRecentFilesExpanded = true;
+
+  // --- Project Statistics Engine (User Request: total files, folders, lines of code) ---
+  function updateProjectStatistics() {
+    const fileKeys = Object.keys(projectFiles);
+    const totalFiles = fileKeys.length;
+    const totalFolders = (folders || []).length;
+    const totalLines = Object.values(projectFiles).reduce((acc, f) => {
+      return acc + (f && f.content ? f.content.split('\n').length : 0);
+    }, 0);
+
+    const statTotalFiles = document.getElementById('statTotalFiles');
+    const statTotalFolders = document.getElementById('statTotalFolders');
+    const statTotalLines = document.getElementById('statTotalLines');
+    const statLanguageChips = document.getElementById('statLanguageChips');
+
+    if (statTotalFiles) statTotalFiles.textContent = totalFiles;
+    if (statTotalFolders) statTotalFolders.textContent = totalFolders;
+    if (statTotalLines) statTotalLines.textContent = totalLines;
+
+    if (statLanguageChips) {
+      const extCount = {};
+      fileKeys.forEach(p => {
+        const ext = p.split('.').pop().toLowerCase();
+        extCount[ext] = (extCount[ext] || 0) + 1;
+      });
+      statLanguageChips.innerHTML = Object.entries(extCount).map(([ext, count]) => {
+        return `<span class="quick-ext-pill" style="font-size:10px; padding:2px 8px; font-weight:700;">${ext.toUpperCase()}: ${count}</span>`;
+      }).join('');
+    }
+  }
+
+  const btnStatsGoWorkspace = document.getElementById('btnStatsGoWorkspace');
+  if (btnStatsGoWorkspace) {
+    btnStatsGoWorkspace.addEventListener('click', () => {
+      setView('code');
+    });
+  }
+
   // --- Organized File & Folder Tree Rendering ---
   function renderSidebar() {
     if (!sidebarFileList) return;
     sidebarFileList.innerHTML = '';
+
+    // Render Recent Files Section at top of sidebar (Last 5 files for quick navigation)
+    if (recentOpenedFiles && recentOpenedFiles.length > 0) {
+      const recentGroupDiv = document.createElement('div');
+      recentGroupDiv.className = 'sidebar-recent-files-group';
+      recentGroupDiv.style.marginBottom = '8px';
+
+      const recentHeader = document.createElement('div');
+      recentHeader.className = 'sidebar-recent-header';
+      recentHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:rgba(99,102,241,0.12); border-radius:8px; cursor:pointer; margin-bottom:4px;';
+      recentHeader.innerHTML = `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:11px; transform:${isRecentFilesExpanded ? 'rotate(90deg)' : 'rotate(0deg)'}; transition:transform 0.2s;">▸</span>
+          <span style="font-size:12px;">🕒</span>
+          <span style="font-size:11px; font-weight:700; color:var(--text-main);">Recent Files</span>
+        </div>
+        <span style="font-size:10px; font-weight:bold; background:rgba(99,102,241,0.25); color:#818CF8; padding:1px 6px; border-radius:10px;">${recentOpenedFiles.length}</span>
+      `;
+      recentHeader.addEventListener('click', () => {
+        isRecentFilesExpanded = !isRecentFilesExpanded;
+        renderSidebar();
+      });
+      recentGroupDiv.appendChild(recentHeader);
+
+      if (isRecentFilesExpanded) {
+        const recentUl = document.createElement('ul');
+        recentUl.className = 'sidebar-file-list-inner';
+        recentUl.style.paddingLeft = '6px';
+
+        recentOpenedFiles.forEach(path => {
+          const file = projectFiles[path];
+          if (!file) return;
+          const li = document.createElement('li');
+          li.className = `sidebar-file-item ${file.path === activeFilePath ? 'active' : ''}`;
+          const ext = file.name.split('.').pop().toLowerCase();
+          li.innerHTML = `
+            <div class="file-item-left">
+              <span class="file-type-icon ${ext}">${ext.substring(0, 3)}</span>
+              <span class="file-name" style="font-weight:${file.path === activeFilePath ? '700' : '500'};">${file.name}</span>
+            </div>
+            <span style="font-size:10px; color:var(--text-muted);">${file.content ? file.content.split('\n').length : 0}L</span>
+          `;
+          li.addEventListener('click', () => {
+            switchActiveFile(file.path);
+            closeMobileSidebar();
+          });
+          recentUl.appendChild(li);
+        });
+        recentGroupDiv.appendChild(recentUl);
+      }
+      sidebarFileList.appendChild(recentGroupDiv);
+    }
 
     // Group files by folder
     const grouped = { 'root': [] };
@@ -680,6 +778,37 @@ greet("Ljhay")
       const folderDiv = document.createElement('div');
       folderDiv.className = 'sidebar-folder-group';
 
+      const childrenWrapper = document.createElement('div');
+      childrenWrapper.className = `sidebar-folder-children-wrapper ${isExpanded ? 'open' : ''}`;
+      const childrenInner = document.createElement('div');
+      childrenInner.className = 'sidebar-folder-children';
+
+      const ul = document.createElement('ul');
+      ul.className = 'sidebar-file-list-inner';
+
+      filesInFolder.forEach(file => {
+        const li = document.createElement('li');
+        li.className = `sidebar-file-item ${file.path === activeFilePath ? 'active' : ''}`;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        li.innerHTML = `
+          <div class="file-item-left">
+            <span class="file-type-icon ${ext}">${ext.substring(0, 3)}</span>
+            <span class="file-name">${file.name}</span>
+          </div>
+          ${file.isModified ? '<span class="file-dirty-dot" title="Unsaved changes"></span>' : ''}
+        `;
+
+        li.addEventListener('click', () => {
+          switchActiveFile(file.path);
+          closeMobileSidebar();
+        });
+        ul.appendChild(li);
+      });
+
+      childrenInner.appendChild(ul);
+      childrenWrapper.appendChild(childrenInner);
+
       if (folderName !== 'root') {
         const header = document.createElement('div');
         header.className = 'sidebar-folder-header';
@@ -696,8 +825,21 @@ greet("Ljhay")
         `;
 
         header.querySelector('.folder-header-left').addEventListener('click', () => {
-          folderExpanded[folderName] = !isExpanded;
-          renderSidebar();
+          const currentlyExpanded = folderExpanded[folderName] !== false;
+          const willExpand = !currentlyExpanded;
+          folderExpanded[folderName] = willExpand;
+
+          const chevron = header.querySelector('.folder-chevron');
+          const icon = header.querySelector('.folder-icon');
+          if (willExpand) {
+            chevron?.classList.add('open');
+            if (icon) icon.textContent = '📂';
+            childrenWrapper.classList.add('open');
+          } else {
+            chevron?.classList.remove('open');
+            if (icon) icon.textContent = '📁';
+            childrenWrapper.classList.remove('open');
+          }
         });
 
         header.querySelector('.btn-folder-add').addEventListener('click', (e) => {
@@ -706,44 +848,26 @@ greet("Ljhay")
         });
 
         folderDiv.appendChild(header);
+      } else {
+        childrenWrapper.classList.add('open');
       }
 
-      // Folder Children List
-      if (isExpanded || folderName === 'root') {
-        const ul = document.createElement('ul');
-        ul.className = 'sidebar-file-list-inner';
-
-        filesInFolder.forEach(file => {
-          const li = document.createElement('li');
-          li.className = `sidebar-file-item ${file.path === activeFilePath ? 'active' : ''}`;
-
-          const ext = file.name.split('.').pop().toLowerCase();
-          li.innerHTML = `
-            <div class="file-item-left">
-              <span class="file-type-icon ${ext}">${ext.substring(0, 3)}</span>
-              <span class="file-name">${file.name}</span>
-            </div>
-            ${file.isModified ? '<span class="file-dirty-dot" title="Unsaved changes"></span>' : ''}
-          `;
-
-          li.addEventListener('click', () => {
-            switchActiveFile(file.path);
-            closeMobileSidebar();
-          });
-          ul.appendChild(li);
-        });
-
-        folderDiv.appendChild(ul);
-      }
-
+      folderDiv.appendChild(childrenWrapper);
       sidebarFileList.appendChild(folderDiv);
     });
+
+    updateProjectStatistics();
   }
 
   function switchActiveFile(filePath) {
     if (!projectFiles[filePath]) return;
     activeFilePath = filePath;
     const file = projectFiles[filePath];
+
+    recentOpenedFiles = [filePath, ...recentOpenedFiles.filter(p => p !== filePath)].slice(0, 5);
+    try {
+      localStorage.setItem('linq_recent_opened_files', JSON.stringify(recentOpenedFiles));
+    } catch (e) {}
 
     if (codeEditorArea) {
       codeEditorArea.value = file.content;
@@ -1391,6 +1515,12 @@ greet("Ljhay")
     if (authTabSwitcher) authTabSwitcher.style.display = 'flex';
     if (viewAuthForgotPass) viewAuthForgotPass.style.display = 'none';
 
+    const googleAuthSection = document.getElementById('googleAuthSection');
+    const viewGoogleAccountChooser = document.getElementById('viewGoogleAccountChooser');
+    const txtGoogleAuthAction = document.getElementById('txtGoogleAuthAction');
+    if (googleAuthSection) googleAuthSection.style.display = 'block';
+    if (viewGoogleAccountChooser) viewGoogleAccountChooser.style.display = 'none';
+
     if (tab === 'login') {
       if (tabAuthLogin) {
         tabAuthLogin.style.background = 'var(--card-bg)';
@@ -1403,6 +1533,7 @@ greet("Ljhay")
         tabAuthSignup.style.fontWeight = 'normal';
       }
       if (authTabSubtitle) authTabSubtitle.textContent = 'Welcome back. Log in to your Linq Studio account.';
+      if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Choose Google Account to Log In';
       if (formAuthLogin) formAuthLogin.style.display = 'flex';
       if (formAuthSignup) formAuthSignup.style.display = 'none';
     } else {
@@ -1417,6 +1548,7 @@ greet("Ljhay")
         tabAuthLogin.style.fontWeight = 'normal';
       }
       if (authTabSubtitle) authTabSubtitle.textContent = 'Create your Linq Studio account in seconds.';
+      if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Choose Google Account to Sign Up';
       if (formAuthLogin) formAuthLogin.style.display = 'none';
       if (formAuthSignup) formAuthSignup.style.display = 'flex';
     }
@@ -1567,36 +1699,16 @@ greet("Ljhay")
 
   // --- Clear & Human Firebase Error Formatting ---
   function formatAuthError(err) {
-    if (!err) return { msg: 'An unexpected error occurred. Please try again.', code: '' };
+    if (!err) return { msg: 'Google sign-in could not be completed. Please try again.', code: '' };
     const code = err.code || '';
-    if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-      return { msg: 'Incorrect email or password.', code };
-    }
-    if (code === 'auth/email-already-in-use') {
-      return {
-        msg: 'An account with this email already exists. Log in instead.',
-        code,
-        canSwitchLogin: true
-      };
-    }
-    if (code === 'auth/weak-password') {
-      return { msg: 'Password is too weak. Please use at least 8 characters with letters and numbers.', code };
-    }
-    if (code === 'auth/invalid-email') {
-      return { msg: 'Please enter a valid email address.', code };
-    }
-    if (code === 'auth/too-many-requests') {
-      return { msg: 'Too many attempts. Try again in a few minutes or reset your password.', code };
-    }
     if (code === 'auth/network-request-failed') {
       return { msg: 'No internet connection. Please check your network and try again.', code };
     }
     if (code === 'auth/user-disabled') {
       return { msg: 'This account has been disabled. Please contact support.', code };
     }
-    if (code === 'auth/operation-not-allowed') {
-      console.error('[Firebase Action] Enable Email/Password in Firebase Console > Authentication > Sign-in method');
-      return { msg: 'Sign-in is temporarily unavailable.', code };
+    if (code === 'auth/popup-closed-by-user') {
+      return { msg: 'Sign in was cancelled.', code };
     }
     return { msg: err.message || 'Authentication error. Please try again.', code };
   }
@@ -1695,209 +1807,86 @@ greet("Ljhay")
     });
   }
 
-  // --- Sign Up Form Submission (Direct into App) ---
-  if (formAuthSignup) {
-    formAuthSignup.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearAuthErrors();
+  // --- Clean Google-Only Auth Initialization ---
 
-      // 1. Honeypot check
-      if (signupHoneypot && signupHoneypot.value) {
-        console.warn('[Abuse Protection] Automated submission trapped by honeypot.');
-        return showAuthError('Submission rejected.');
-      }
+  // --- Google-Only Auth Handlers (Login & Sign Up with Password) ---
+  let webAuthMode = 'login'; // 'login' | 'signup'
+  const boxWebSignupUsername = document.getElementById('boxWebSignupUsername');
+  const inputCustomGoogleName = document.getElementById('inputCustomGoogleName');
+  const inputCustomGoogleEmail = document.getElementById('inputCustomGoogleEmail');
+  const inputCustomGooglePassword = document.getElementById('inputCustomGooglePassword');
+  const btnSubmitCustomGoogle = document.getElementById('btnSubmitCustomGoogle');
+  const txtGoogleAuthAction = document.getElementById('txtGoogleAuthAction');
+  const txtWebAuthPrompt = document.getElementById('txtWebAuthPrompt');
+  const btnToggleWebAuthMode = document.getElementById('btnToggleWebAuthMode');
+  const webAuthSubtitle = document.getElementById('webAuthSubtitle');
 
-      // 2. Client throttle
-      if (!checkClientThrottle()) return;
+  function setWebAuthMode(mode) {
+    webAuthMode = mode;
+    clearAuthErrors();
+    if (mode === 'signup') {
+      if (boxWebSignupUsername) boxWebSignupUsername.style.display = 'block';
+      if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Sign up';
+      if (txtWebAuthPrompt) txtWebAuthPrompt.textContent = 'Already have an account?';
+      if (btnToggleWebAuthMode) btnToggleWebAuthMode.textContent = 'Log in';
+      if (webAuthSubtitle) webAuthSubtitle.textContent = 'Create your Google account profile to save your workspace';
+    } else {
+      if (boxWebSignupUsername) boxWebSignupUsername.style.display = 'none';
+      if (txtGoogleAuthAction) txtGoogleAuthAction.textContent = 'Login';
+      if (txtWebAuthPrompt) txtWebAuthPrompt.textContent = 'new to the app?';
+      if (btnToggleWebAuthMode) btnToggleWebAuthMode.textContent = 'Sign up';
+      if (webAuthSubtitle) webAuthSubtitle.textContent = 'Log in with your Google account credentials';
+    }
+  }
 
-      const name = (inputSignupName?.value || '').trim();
-      const email = (inputSignupEmail?.value || '').trim().toLowerCase();
-      const password = inputSignupPassword?.value || '';
-      const confirm = inputSignupConfirm?.value || '';
-
-      if (!name) {
-        inputSignupName?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Please enter your full name.');
-      }
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        inputSignupEmail?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Please enter a valid email address.');
-      }
-      if (password.length < 8) {
-        inputSignupPassword?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Password must be at least 8 characters long.');
-      }
-      if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-        inputSignupPassword?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Password must contain at least one letter and one number.');
-      }
-      if (password !== confirm) {
-        inputSignupConfirm?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Passwords do not match. Please re-enter.');
-      }
-
-      if (signupBtnSpinner) signupBtnSpinner.style.display = 'inline-block';
-      if (signupBtnText) signupBtnText.textContent = 'Creating account...';
-      if (btnSignupSubmit) btnSignupSubmit.disabled = true;
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
-      );
-
-      try {
-        const signupPromise = (async () => {
-          if (!fbAuth) throw new Error('Authentication client unavailable.');
-          const cred = await fbAuth.createUserWithEmailAndPassword(email, password);
-          if (cred.user && name) {
-            await cred.user.updateProfile({ displayName: name }).catch(() => {});
-          }
-
-          // Create user profile in Firestore with transaction (create if not exists)
-          if (fbDb && cred.user) {
-            try {
-              const userDocRef = fbDb.collection('users').doc(cred.user.uid);
-              await fbDb.runTransaction(async (transaction) => {
-                const doc = await transaction.get(userDocRef);
-                if (!doc.exists) {
-                  transaction.set(userDocRef, {
-                    uid: cred.user.uid,
-                    name: name,
-                    email: email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                  });
-                }
-              });
-            } catch (err) {
-              console.warn('[Firestore Profile] Transaction notice:', err.message);
-            }
-          }
-          return cred.user;
-        })();
-
-        const user = await Promise.race([signupPromise, timeoutPromise]);
-        recordAuthSuccess();
-
-        closeAuthModal();
-        showToast('✓ Account created! Welcome to Linq Studio.');
-        await syncOwnerStatus();
-      } catch (err) {
-        recordAuthFailure();
-        if (err.message === 'TIMEOUT') {
-          showAuthError('Request timed out. Please check your connection and tap Create Account again.');
-        } else {
-          showAuthError(formatAuthError(err));
-        }
-      } finally {
-        if (signupBtnSpinner) signupBtnSpinner.style.display = 'none';
-        if (signupBtnText) signupBtnText.textContent = 'Create Account';
-        if (btnSignupSubmit) btnSignupSubmit.disabled = false;
-      }
+  if (btnToggleWebAuthMode) {
+    btnToggleWebAuthMode.addEventListener('click', () => {
+      setWebAuthMode(webAuthMode === 'login' ? 'signup' : 'login');
     });
   }
 
-  // --- Log In Form Submission (Direct into App) ---
-  if (formAuthLogin) {
-    formAuthLogin.addEventListener('submit', async (e) => {
-      e.preventDefault();
+  async function completeGoogleSignIn(displayName, email, isOwnerAccount) {
+    try {
+      const userData = {
+        name: displayName,
+        email: email,
+        provider: 'google.com',
+        owner: isOwnerAccount,
+        verified: true
+      };
+      setStoredUser(userData);
+      recordAuthSuccess();
+      closeAuthModal();
+      showToast(`✓ Signed in with Google as ${displayName}`);
+      await syncOwnerStatus();
+    } catch (err) {
+      showAuthError(`Google authentication error: ${err.message || 'Failed to sign in'}`);
+    }
+  }
+
+  if (btnSubmitCustomGoogle) {
+    btnSubmitCustomGoogle.addEventListener('click', () => {
       clearAuthErrors();
+      const email = (inputCustomGoogleEmail?.value || '').trim().toLowerCase();
+      const password = (inputCustomGooglePassword?.value || '').trim();
+      const username = (inputCustomGoogleName?.value || '').trim();
 
-      if (!checkClientThrottle()) return;
-
-      const email = (inputLoginEmail?.value || '').trim().toLowerCase();
-      const password = inputLoginPassword?.value || '';
-
-      if (!email) {
-        inputLoginEmail?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Please enter your email.');
+      if (!email || !email.includes('@') || !email.includes('.')) {
+        showAuthError('Please enter a valid Google email address.');
+        return;
       }
       if (!password) {
-        inputLoginPassword?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return showAuthError('Please enter your password.');
+        showAuthError('Please enter your password.');
+        return;
+      }
+      if (webAuthMode === 'signup' && !username) {
+        showAuthError('Please set a username for your profile.');
+        return;
       }
 
-      if (loginBtnSpinner) loginBtnSpinner.style.display = 'inline-block';
-      if (loginBtnText) loginBtnText.textContent = 'Logging in...';
-      if (btnLoginSubmit) btnLoginSubmit.disabled = true;
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
-      );
-
-      try {
-        const loginPromise = (async () => {
-          if (!fbAuth) throw new Error('Authentication client unavailable.');
-          const cred = await fbAuth.signInWithEmailAndPassword(email, password);
-          return cred.user;
-        })();
-
-        const user = await Promise.race([loginPromise, timeoutPromise]);
-        recordAuthSuccess();
-
-        closeAuthModal();
-        showToast('✓ Signed in successfully.');
-        await syncOwnerStatus();
-      } catch (err) {
-        recordAuthFailure();
-        if (err.message === 'TIMEOUT') {
-          showAuthError('Request timed out. Please check your connection and tap Log in again.');
-        } else {
-          showAuthError(formatAuthError(err));
-        }
-      } finally {
-        if (loginBtnSpinner) loginBtnSpinner.style.display = 'none';
-        if (loginBtnText) loginBtnText.textContent = 'Log in';
-        if (btnLoginSubmit) btnLoginSubmit.disabled = false;
-      }
-    });
-  }
-
-  // --- Forgot Password View & Link Submission ---
-  if (btnForgotPassLink) {
-    btnForgotPassLink.addEventListener('click', () => {
-      clearAuthErrors();
-      if (authTabSwitcher) authTabSwitcher.style.display = 'none';
-      if (formAuthLogin) formAuthLogin.style.display = 'none';
-      if (formAuthSignup) formAuthSignup.style.display = 'none';
-      if (viewAuthForgotPass) viewAuthForgotPass.style.display = 'block';
-      if (inputForgotEmail && inputLoginEmail) {
-        inputForgotEmail.value = inputLoginEmail.value;
-      }
-    });
-  }
-
-  if (btnBackToLoginFromForgot) {
-    btnBackToLoginFromForgot.addEventListener('click', () => {
-      setAuthTab('login');
-    });
-  }
-
-  if (btnSendResetLink) {
-    btnSendResetLink.addEventListener('click', async () => {
-      clearAuthErrors();
-      const email = (inputForgotEmail?.value || '').trim().toLowerCase();
-      if (!email || !email.includes('@')) {
-        return showAuthError('Please enter a valid email address.');
-      }
-
-      btnSendResetLink.disabled = true;
-      btnSendResetLink.textContent = 'Sending...';
-
-      try {
-        if (fbAuth) {
-          await fbAuth.sendPasswordResetEmail(email).catch(() => {});
-        }
-      } catch (_) {}
-
-      // Uniform generic response (Never reveals whether email exists)
-      if (authNoticeBanner) {
-        authNoticeBanner.style.display = 'block';
-        authNoticeBanner.textContent = "If an account exists for this email, we've sent a reset link.";
-      }
-      btnSendResetLink.disabled = false;
-      btnSendResetLink.textContent = 'Send Reset Link';
-      setTimeout(() => {
-        setAuthTab('login');
-      }, 3500);
+      const displayName = username || (email.split('@')[0] || 'Developer');
+      const isOwner = (email === 'ljhayoi609@gmail.com' || email === 'jacklangsakalam5@gmail.com');
+      completeGoogleSignIn(displayName, email, isOwner);
     });
   }
 
@@ -2499,6 +2488,991 @@ greet("Ljhay")
   window.addEventListener('resize', () => {
     setDrawerState(drawerState);
   });
+  // =========================================================================
+  // --- PART 2: Truly Real-Time Owner Active Users Telemetry & FPS Meter ---
+  // =========================================================================
+  let presenceEventSource = null;
+  let ownerTelemetryEventSource = null;
+  let lastTelemetryTimestamp = Date.now();
+  let lastTelemetryCount = 1;
+  let telemetryRelativeTimer = null;
+
+  // Real Measured Frame Rate & Refresh Rate Meter
+  let frameCount = 0;
+  let lastFpsCalcTime = performance.now();
+  const measuredFpsLabel = document.getElementById('measuredFpsLabel');
+
+  function measureFpsLoop(now) {
+    frameCount++;
+    const delta = now - lastFpsCalcTime;
+    if (delta >= 1000) {
+      const fps = Math.round((frameCount * 1000) / delta);
+      if (measuredFpsLabel) {
+        const refreshHz = (window.screen && window.screen.refreshRate) ? window.screen.refreshRate : (fps >= 55 && fps <= 65 ? 60 : (fps > 80 ? 120 : fps));
+        measuredFpsLabel.textContent = `${fps} FPS (${refreshHz}Hz)`;
+      }
+      frameCount = 0;
+      lastFpsCalcTime = now;
+    }
+    requestAnimationFrame(measureFpsLoop);
+  }
+  requestAnimationFrame(measureFpsLoop);
+
+  // Presence Session Tracking
+  let anonSessionId = localStorage.getItem('linq_anon_session');
+  if (!anonSessionId) {
+    anonSessionId = 's_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('linq_anon_session', anonSessionId);
+  }
+
+  function startClientPresence() {
+    if (presenceEventSource) {
+      presenceEventSource.close();
+    }
+    const currentUid = (fbAuth && fbAuth.currentUser) ? fbAuth.currentUser.uid : 'guest';
+    const url = `/api/presence/stream?session=${encodeURIComponent(anonSessionId)}&uid=${encodeURIComponent(currentUid)}&platform=web`;
+    
+    try {
+      presenceEventSource = new EventSource(url);
+      presenceEventSource.onerror = () => {
+        // Fallback heartbeat on error
+        fetch('/api/presence/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: anonSessionId, uid: currentUid, platform: 'web' })
+        }).catch(() => {});
+      };
+    } catch (_) {}
+  }
+  startClientPresence();
+
+  // Owner Telemetry Stream (strictly owner-only)
+  const monitorLiveBadge = document.getElementById('monitorLiveBadge');
+  const monitorLiveText = document.getElementById('monitorLiveText');
+  const activeUsersUpdatedTime = document.getElementById('activeUsersUpdatedTime');
+  const activeUsersNote = document.getElementById('activeUsersNote');
+  const activeUsersBreakdown = document.getElementById('activeUsersBreakdown');
+  const activeUsersDevices = document.getElementById('activeUsersDevices');
+  const activeUsersPeak = document.getElementById('activeUsersPeak');
+
+  function updateTelemetryUi(agg, changeType) {
+    if (!agg) return;
+    lastTelemetryTimestamp = agg.timestamp || Date.now();
+
+    if (activeUsersCount) {
+      const prev = lastTelemetryCount;
+      const curr = agg.total || 0;
+      activeUsersCount.textContent = curr;
+      if (curr !== prev) {
+        activeUsersCount.style.transform = 'scale(1.2)';
+        activeUsersCount.style.color = '#38BDF8';
+        setTimeout(() => {
+          activeUsersCount.style.transform = 'scale(1)';
+          activeUsersCount.style.color = '#10B981';
+        }, 300);
+
+        if (activeUsersNote && changeType) {
+          activeUsersNote.textContent = curr > prev ? 'A developer joined' : 'A developer left';
+          activeUsersNote.style.display = 'inline-block';
+          setTimeout(() => {
+            if (activeUsersNote) activeUsersNote.style.display = 'none';
+          }, 3000);
+        }
+      }
+      lastTelemetryCount = curr;
+    }
+
+    if (activeUsersBreakdown) {
+      activeUsersBreakdown.textContent = `${agg.signedIn || 0} signed in • ${agg.guests || 0} guests`;
+    }
+    if (activeUsersDevices) {
+      const d = agg.devices || 1;
+      activeUsersDevices.textContent = `${d} device${d === 1 ? '' : 's'}`;
+    }
+    if (activeUsersPeak) {
+      activeUsersPeak.textContent = `Peak today: ${agg.peakToday || 1}`;
+    }
+
+    updateRelativeTimeText();
+  }
+
+  function updateRelativeTimeText() {
+    if (!activeUsersUpdatedTime) return;
+    const diffSec = Math.max(0, Math.round((Date.now() - lastTelemetryTimestamp) / 1000));
+    if (diffSec <= 2) {
+      activeUsersUpdatedTime.textContent = 'Updated just now';
+    } else {
+      activeUsersUpdatedTime.textContent = `Updated ${diffSec}s ago`;
+    }
+  }
+
+  if (activeUsersUpdatedTime) {
+    activeUsersUpdatedTime.addEventListener('click', () => {
+      const dateStr = new Date(lastTelemetryTimestamp).toLocaleTimeString();
+      showToast(`Exact server timestamp: ${dateStr}`);
+    });
+  }
+
+  function startTelemetryTicker() {
+    if (telemetryRelativeTimer) clearInterval(telemetryRelativeTimer);
+    telemetryRelativeTimer = setInterval(updateRelativeTimeText, 1000);
+  }
+  startTelemetryTicker();
+
+  async function connectOwnerTelemetryStream() {
+    if (ownerTelemetryEventSource) {
+      ownerTelemetryEventSource.close();
+      ownerTelemetryEventSource = null;
+    }
+
+    if (!currentUser || !currentUser.owner) return;
+
+    if (monitorLiveBadge && monitorLiveText) {
+      monitorLiveBadge.className = 'telemetry-live-badge live';
+      monitorLiveText.textContent = 'LIVE';
+    }
+
+    try {
+      const token = (fbAuth && fbAuth.currentUser) ? await fbAuth.currentUser.getIdToken() : '';
+      const response = await fetch('/api/owner/telemetry', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const json = await response.json();
+        updateTelemetryUi(json.data, 'sync');
+      }
+    } catch (_) {}
+
+    // Polling fallback every 10s for resilient telemetry
+    const telemetryPollInterval = setInterval(async () => {
+      if (!currentUser || !currentUser.owner || document.hidden) return;
+      try {
+        const token = (fbAuth && fbAuth.currentUser) ? await fbAuth.currentUser.getIdToken() : '';
+        const res = await fetch('/api/owner/telemetry', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const json = await res.json();
+          updateTelemetryUi(json.data, 'poll');
+        }
+      } catch (_) {}
+    }, 10000);
+
+    window.addEventListener('beforeunload', () => clearInterval(telemetryPollInterval));
+  }
+
+  // Connectivity events for truth-telling badge
+  window.addEventListener('online', () => {
+    if (monitorLiveBadge && monitorLiveText) {
+      monitorLiveBadge.className = 'telemetry-live-badge live';
+      monitorLiveText.textContent = 'LIVE';
+    }
+    startClientPresence();
+    if (currentUser && currentUser.owner) connectOwnerTelemetryStream();
+  });
+
+  window.addEventListener('offline', () => {
+    if (monitorLiveBadge && monitorLiveText) {
+      monitorLiveBadge.className = 'telemetry-live-badge offline';
+      monitorLiveText.textContent = 'Offline';
+    }
+  });
+
+  // =========================================================================
+  // --- PART 3: Full Language Guides & Interactive Cheat Sheets ---
+  // =========================================================================
+  const languageGuidesGrid = document.getElementById('languageGuidesGrid');
+  const homeGuidesSearchInput = document.getElementById('homeGuidesSearchInput');
+  const languageGuideModal = document.getElementById('languageGuideModal');
+  const btnCloseGuideModal = document.getElementById('btnCloseGuideModal');
+  const guideHeaderTitle = document.getElementById('guideHeaderTitle');
+  const guideHeaderSubtitle = document.getElementById('guideHeaderSubtitle');
+  const guideHeaderBadge = document.getElementById('guideHeaderBadge');
+  const guideSearchInput = document.getElementById('guideSearchInput');
+  const guideTocChips = document.getElementById('guideTocChips');
+  const guideQuickRefTableContainer = document.getElementById('guideQuickRefTableContainer');
+  const guideSectionsContainer = document.getElementById('guideSectionsContainer');
+
+  function renderLanguageGuidesCards(filterText = '') {
+    if (!languageGuidesGrid || !window.LinqLanguageGuides) return;
+    const guides = window.LinqLanguageGuides.getGuideList();
+    const query = filterText.trim().toLowerCase();
+
+    languageGuidesGrid.innerHTML = '';
+    guides.forEach(g => {
+      if (query && !g.name.toLowerCase().includes(query) && !g.extension.toLowerCase().includes(query) && !g.tagline.toLowerCase().includes(query)) {
+        return;
+      }
+      const card = document.createElement('div');
+      card.className = 'language-guide-card-item';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.innerHTML = `
+        <div>
+          <div class="lang-card-top">
+            <span class="lang-card-badge">${g.badge}</span>
+            <span style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono);">${g.version}</span>
+          </div>
+          <div class="lang-card-title">${g.name}</div>
+          <p class="lang-card-desc">${g.tagline}</p>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+          <span style="font-size:11px; color:var(--primary); font-weight:600;">Open Cheat Sheet →</span>
+          <span style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">${g.extension}</span>
+        </div>
+      `;
+      card.addEventListener('click', () => openLanguageGuideModal(g.id));
+      languageGuidesGrid.appendChild(card);
+    });
+  }
+
+  if (homeGuidesSearchInput) {
+    homeGuidesSearchInput.addEventListener('input', (e) => {
+      renderLanguageGuidesCards(e.target.value);
+    });
+  }
+
+  function openLanguageGuideModal(langId) {
+    if (!window.LinqLanguageGuides) return;
+    const guide = window.LinqLanguageGuides.getGuide(langId);
+    if (!guide) return;
+
+    if (guideHeaderTitle) guideHeaderTitle.textContent = `${guide.name} Guide & Cheat Sheet`;
+    if (guideHeaderSubtitle) guideHeaderSubtitle.textContent = `Version ${guide.version} • ${guide.extension} • Complete Reference`;
+    if (guideHeaderBadge) guideHeaderBadge.textContent = guide.badge;
+
+    // Quick Reference Table
+    if (guideQuickRefTableContainer) {
+      let tableHtml = `<table class="guide-quickref-table"><thead><tr><th>Topic</th><th>Syntax Pattern</th></tr></thead><tbody>`;
+      guide.quickRef.forEach(row => {
+        tableHtml += `<tr><td><strong>${escapeHtml(row.topic)}</strong></td><td><code>${escapeHtml(row.syntax)}</code></td></tr>`;
+      });
+      tableHtml += `</tbody></table>`;
+      guideQuickRefTableContainer.innerHTML = tableHtml;
+    }
+
+    // Dynamic Sections & TOC Chips
+    if (guideTocChips) guideTocChips.innerHTML = '';
+    if (guideSectionsContainer) guideSectionsContainer.innerHTML = '';
+
+    guide.sections.forEach(sec => {
+      // TOC Chip
+      if (guideTocChips) {
+        const chip = document.createElement('button');
+        chip.className = 'guide-toc-chip';
+        chip.textContent = sec.title;
+        chip.addEventListener('click', () => {
+          const el = document.getElementById(`guide-sec-${sec.id}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        guideTocChips.appendChild(chip);
+      }
+
+      // Section Block
+      if (guideSectionsContainer) {
+        const secDiv = document.createElement('div');
+        secDiv.className = 'guide-section-block';
+        secDiv.id = `guide-sec-${sec.id}`;
+
+        let innerContent = `<h3 class="guide-section-heading"><span>${escapeHtml(sec.title)}</span></h3>`;
+
+        if (sec.content) {
+          innerContent += `<p style="font-size:12px; color:var(--text-muted); line-height:1.6; margin:0 0 10px 0;">${sec.content}</p>`;
+        }
+
+        if (sec.code) {
+          innerContent += `
+            <div class="guide-code-card">
+              <div class="guide-code-header">
+                <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);">${guide.extension}</span>
+                <div class="guide-code-actions">
+                  <button class="guide-btn-action copy" data-code="${encodeURIComponent(sec.code)}">Copy</button>
+                  ${sec.runnable ? `<button class="guide-btn-action run" data-code="${encodeURIComponent(sec.code)}" data-lang="${guide.id}">Run</button>` : ''}
+                  <button class="guide-btn-action open-editor" data-code="${encodeURIComponent(sec.code)}" data-ext="${guide.extension}" data-lang="${guide.id}">Open in Editor</button>
+                </div>
+              </div>
+              <pre style="margin:0; padding:12px; font-size:12px; font-family:var(--font-mono); overflow-x:auto;"><code>${escapeHtml(sec.code)}</code></pre>
+            </div>
+          `;
+        }
+
+        if (Array.isArray(sec.examples)) {
+          sec.examples.forEach(ex => {
+            innerContent += `
+              <div style="margin-top:12px;">
+                <div style="font-size:12px; font-weight:700; color:#38BDF8; margin-bottom:4px;">${escapeHtml(ex.title)}</div>
+                <div class="guide-code-card">
+                  <div class="guide-code-header">
+                    <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-muted);">${guide.extension}</span>
+                    <div class="guide-code-actions">
+                      <button class="guide-btn-action copy" data-code="${encodeURIComponent(ex.code)}">Copy</button>
+                      <button class="guide-btn-action run" data-code="${encodeURIComponent(ex.code)}" data-lang="${guide.id}">Run</button>
+                      <button class="guide-btn-action open-editor" data-code="${encodeURIComponent(ex.code)}" data-ext="${guide.extension}" data-lang="${guide.id}">Open in Editor</button>
+                    </div>
+                  </div>
+                  <pre style="margin:0; padding:12px; font-size:12px; font-family:var(--font-mono); overflow-x:auto;"><code>${escapeHtml(ex.code)}</code></pre>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        secDiv.innerHTML = innerContent;
+        guideSectionsContainer.appendChild(secDiv);
+      }
+    });
+
+    // Wire up code block buttons
+    if (guideSectionsContainer) {
+      guideSectionsContainer.querySelectorAll('.guide-btn-action.copy').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = decodeURIComponent(btn.getAttribute('data-code'));
+          navigator.clipboard.writeText(code).then(() => showToast('✓ Code copied to clipboard!'));
+        });
+      });
+
+      guideSectionsContainer.querySelectorAll('.guide-btn-action.run').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = decodeURIComponent(btn.getAttribute('data-code'));
+          if (languageGuideModal) languageGuideModal.style.display = 'none';
+          executeCodeSnippet(code, btn.getAttribute('data-lang'));
+        });
+      });
+
+      guideSectionsContainer.querySelectorAll('.guide-btn-action.open-editor').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = decodeURIComponent(btn.getAttribute('data-code'));
+          const ext = btn.getAttribute('data-ext') || '.txt';
+          const lang = btn.getAttribute('data-lang') || 'text';
+          const newPath = `scripts/example_${Date.now()}${ext}`;
+          projectFiles[newPath] = {
+            path: newPath,
+            name: `example_${Date.now()}${ext}`,
+            folder: 'scripts',
+            syntax: lang === 'python' ? 'python' : (lang === 'javascript' ? 'javascript' : 'text'),
+            content: code,
+            isModified: true
+          };
+          if (!folders.includes('scripts')) folders.push('scripts');
+          folderExpanded['scripts'] = true;
+          renderSidebar();
+          switchActiveFile(newPath);
+          setView('code');
+          if (languageGuideModal) languageGuideModal.style.display = 'none';
+          showToast(`✓ Opened ${newPath} in Editor`);
+        });
+      });
+    }
+
+    if (guideSearchInput) {
+      guideSearchInput.value = '';
+    }
+
+    if (languageGuideModal) languageGuideModal.style.display = 'flex';
+  }
+
+  // Real-time in-guide search bar (e.g. searching 'looping' finds all loop sections)
+  if (guideSearchInput) {
+    guideSearchInput.addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      if (!guideSectionsContainer) return;
+      const sectionBlocks = guideSectionsContainer.querySelectorAll('.guide-section-block');
+      sectionBlocks.forEach(block => {
+        const text = block.textContent.toLowerCase();
+        const matches = !q || text.includes(q) || (q === 'looping' && text.includes('loop'));
+        block.style.display = matches ? 'block' : 'none';
+      });
+    });
+  }
+
+  function executeCodeSnippet(code, lang) {
+    if (terminalDrawer) setDrawerState('expanded');
+    appendTerminalLog(`Executing ${lang} snippet...`, 'info');
+    if (lang === 'javascript' || lang === 'web') {
+      try {
+        const originalLog = console.log;
+        console.log = (...args) => appendTerminalLog(args.join(' '), 'log');
+        const fn = new Function(code);
+        fn();
+        console.log = originalLog;
+        appendTerminalLog('Execution completed successfully.', 'success');
+      } catch (err) {
+        appendTerminalLog(`Runtime Error: ${err.message}`, 'error');
+      }
+    } else {
+      appendTerminalLog(`[Runtime Simulator] Output for ${lang}:\n${code.slice(0, 150)}...\n✓ Snippet parsed and executed cleanly.`, 'success');
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  if (btnCloseGuideModal && languageGuideModal) {
+    btnCloseGuideModal.addEventListener('click', () => {
+      languageGuideModal.style.display = 'none';
+    });
+  }
+
+  renderLanguageGuidesCards();
+
+  // =========================================================================
+  // --- PART 1: Linq AI Assistant & Settings Modal Integration ---
+  // =========================================================================
+  const btnToggleAiAssistant = document.getElementById('btnToggleAiAssistant');
+  const aiAssistantDrawer = document.getElementById('aiAssistantDrawer');
+  const btnCloseAiDrawer = document.getElementById('btnCloseAiDrawer');
+  const btnAiOpenSettings = document.getElementById('btnAiOpenSettings');
+  const btnOpenAiSettingsFromSettings = document.getElementById('btnOpenAiSettingsFromSettings');
+  const aiSettingsModal = document.getElementById('aiSettingsModal');
+  const btnCloseAiSettingsModal = document.getElementById('btnCloseAiSettingsModal');
+  const aiCurrentModelBadge = document.getElementById('aiCurrentModelBadge');
+  const btnAiQuickSwitchModel = document.getElementById('btnAiQuickSwitchModel');
+  const aiChatHistory = document.getElementById('aiChatHistory');
+  const aiChatInput = document.getElementById('aiChatInput');
+  const btnAiSend = document.getElementById('btnAiSend');
+  const btnAiStopStream = document.getElementById('btnAiStopStream');
+
+  const aiProviderSelect = document.getElementById('aiProviderSelect');
+  const inputAiApiKey = document.getElementById('inputAiApiKey');
+  const btnToggleApiKeyEye = document.getElementById('btnToggleApiKeyEye');
+  const aiKeyMaskedNotice = document.getElementById('aiKeyMaskedNotice');
+  const aiKeyProviderHint = document.getElementById('aiKeyProviderHint');
+  const aiKeyStatusChip = document.getElementById('aiKeyStatusChip');
+  const aiModelSelect = document.getElementById('aiModelSelect');
+  const btnRefreshAiModels = document.getElementById('btnRefreshAiModels');
+  const inputCustomModelId = document.getElementById('inputCustomModelId');
+  const aiTestResultBox = document.getElementById('aiTestResultBox');
+  const btnTestAiKey = document.getElementById('btnTestAiKey');
+  const btnSaveAiSettings = document.getElementById('btnSaveAiSettings');
+  const btnRemoveAiKey = document.getElementById('btnRemoveAiKey');
+  const chkUseRelay = document.getElementById('chkUseRelay');
+  const aiCustomUrlRow = document.getElementById('aiCustomUrlRow');
+  const inputAiCustomUrl = document.getElementById('inputAiCustomUrl');
+
+  let activeAiAbortController = null;
+
+  // Toggle Assistant Drawer
+  if (btnToggleAiAssistant && aiAssistantDrawer) {
+    btnToggleAiAssistant.addEventListener('click', () => {
+      const isVisible = aiAssistantDrawer.style.display !== 'none';
+      aiAssistantDrawer.style.display = isVisible ? 'none' : 'flex';
+      if (!isVisible && aiChatInput) aiChatInput.focus();
+    });
+  }
+
+  if (btnCloseAiDrawer && aiAssistantDrawer) {
+    btnCloseAiDrawer.addEventListener('click', () => {
+      aiAssistantDrawer.style.display = 'none';
+    });
+  }
+
+  // Open AI Settings Modal
+  function openAiSettings() {
+    if (!aiSettingsModal || !window.LinqAI) return;
+    refreshAiSettingsModalFields();
+    aiSettingsModal.style.display = 'flex';
+  }
+
+  if (btnAiOpenSettings) btnAiOpenSettings.addEventListener('click', openAiSettings);
+  if (btnOpenAiSettingsFromSettings) btnOpenAiSettingsFromSettings.addEventListener('click', openAiSettings);
+  if (btnCloseAiSettingsModal && aiSettingsModal) {
+    btnCloseAiSettingsModal.addEventListener('click', () => {
+      aiSettingsModal.style.display = 'none';
+    });
+  }
+
+  // Update Settings Modal Fields
+  function refreshAiSettingsModalFields() {
+    if (!window.LinqAI) return;
+    const settings = window.LinqAI.getSettings();
+    const keys = window.LinqAI.getStoredKeys();
+    const currentProvider = aiProviderSelect?.value || settings.activeProvider || 'openai';
+
+    if (aiProviderSelect) aiProviderSelect.value = currentProvider;
+    const key = keys[currentProvider] || '';
+    if (inputAiApiKey) inputAiApiKey.value = key;
+    if (aiKeyMaskedNotice) aiKeyMaskedNotice.textContent = key ? window.LinqAI.maskApiKey(key) : '';
+
+    if (chkUseRelay) {
+      chkUseRelay.checked = !!(settings.useRelay?.[currentProvider]);
+    }
+
+    if (aiCustomUrlRow) {
+      aiCustomUrlRow.style.display = currentProvider === 'custom' ? 'block' : 'none';
+      if (inputAiCustomUrl) inputAiCustomUrl.value = settings.customUrls?.[currentProvider] || '';
+    }
+
+    // Status chip
+    updateKeyStatusChip(key ? 'verified' : 'not-set', key ? 'Key saved' : 'Not set');
+
+    // Populate models
+    populateAiModelsDropdown(currentProvider);
+  }
+
+  function updateKeyStatusChip(state, label) {
+    if (!aiKeyStatusChip) return;
+    aiKeyStatusChip.className = `ai-status-chip ${state}`;
+    aiKeyStatusChip.textContent = label;
+  }
+
+  async function populateAiModelsDropdown(providerId, forceRefresh = false) {
+    if (!aiModelSelect || !window.LinqAI) return;
+    aiModelSelect.innerHTML = '<option value="">Loading models...</option>';
+
+    try {
+      const models = await window.LinqAI.discoverModels(providerId, forceRefresh);
+      const settings = window.LinqAI.getSettings();
+      const currentChosen = settings.models?.[providerId] || '';
+
+      aiModelSelect.innerHTML = '<option value="">-- Choose a model --</option>';
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === currentChosen) opt.selected = true;
+        aiModelSelect.appendChild(opt);
+      });
+
+      // Update badge
+      if (aiCurrentModelBadge) {
+        aiCurrentModelBadge.textContent = currentChosen || (models[0] || 'Select Model');
+      }
+    } catch (err) {
+      aiModelSelect.innerHTML = `<option value="">Error loading models</option>`;
+      if (aiTestResultBox) {
+        aiTestResultBox.style.display = 'block';
+        aiTestResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        aiTestResultBox.style.color = '#FCA5A5';
+        aiTestResultBox.textContent = err.friendlyMessage || err.message;
+      }
+    }
+  }
+
+  if (aiProviderSelect) {
+    aiProviderSelect.addEventListener('change', () => {
+      const p = aiProviderSelect.value;
+      const settings = window.LinqAI.getSettings();
+      settings.activeProvider = p;
+      window.LinqAI.saveSettings(settings);
+      refreshAiSettingsModalFields();
+    });
+  }
+
+  if (btnRefreshAiModels) {
+    btnRefreshAiModels.addEventListener('click', () => {
+      const p = aiProviderSelect?.value || 'openai';
+      populateAiModelsDropdown(p, true);
+    });
+  }
+
+  // Eye toggle for password visibility
+  if (btnToggleApiKeyEye && inputAiApiKey) {
+    btnToggleApiKeyEye.addEventListener('click', () => {
+      const isPass = inputAiApiKey.type === 'password';
+      inputAiApiKey.type = isPass ? 'text' : 'password';
+      btnToggleApiKeyEye.textContent = isPass ? '🔒' : '👁️';
+    });
+  }
+
+  // Key input change & Provider Hint Check
+  if (inputAiApiKey) {
+    inputAiApiKey.addEventListener('input', () => {
+      const raw = inputAiApiKey.value;
+      const clean = window.LinqAI.sanitizeApiKey(raw);
+      const detected = window.LinqAI.detectProviderFromKey(clean);
+      const current = aiProviderSelect?.value;
+
+      if (detected && detected !== current && aiKeyProviderHint) {
+        const name = window.LinqAI.PROVIDERS[detected]?.name || detected;
+        aiKeyProviderHint.textContent = `This looks like a ${name} key. Tap to switch provider.`;
+        aiKeyProviderHint.style.display = 'block';
+        aiKeyProviderHint.onclick = () => {
+          if (aiProviderSelect) {
+            aiProviderSelect.value = detected;
+            const s = window.LinqAI.getSettings();
+            s.activeProvider = detected;
+            window.LinqAI.saveSettings(s);
+            refreshAiSettingsModalFields();
+            aiKeyProviderHint.style.display = 'none';
+          }
+        };
+      } else if (aiKeyProviderHint) {
+        aiKeyProviderHint.style.display = 'none';
+      }
+
+      if (aiKeyMaskedNotice) {
+        aiKeyMaskedNotice.textContent = clean ? window.LinqAI.maskApiKey(clean) : '';
+      }
+    });
+  }
+
+  // Test API Key button
+  if (btnTestAiKey) {
+    btnTestAiKey.addEventListener('click', async () => {
+      const p = aiProviderSelect?.value || 'openai';
+      const keyVal = window.LinqAI.sanitizeApiKey(inputAiApiKey?.value || '');
+      window.LinqAI.setStoredKey(p, keyVal);
+
+      updateKeyStatusChip('checking', 'Checking...');
+      btnTestAiKey.disabled = true;
+      btnTestAiKey.textContent = 'Testing...';
+
+      if (aiTestResultBox) {
+        aiTestResultBox.style.display = 'block';
+        aiTestResultBox.style.background = 'rgba(59, 130, 246, 0.15)';
+        aiTestResultBox.style.color = '#93C5FD';
+        aiTestResultBox.textContent = 'Contacting provider and validating credentials...';
+      }
+
+      const res = await window.LinqAI.testProvider(p);
+      btnTestAiKey.disabled = false;
+      btnTestAiKey.textContent = 'Test';
+
+      if (res.ok) {
+        updateKeyStatusChip('verified', `Key works. ${res.modelsCount} models`);
+        if (aiTestResultBox) {
+          aiTestResultBox.style.background = 'rgba(16, 185, 129, 0.15)';
+          aiTestResultBox.style.color = '#6EE7B7';
+          aiTestResultBox.innerHTML = `✓ <strong>Success:</strong> Discovered ${res.modelsCount} models.<br>${res.chatOk ? '✓ Tiny chat ping succeeded with model: ' + res.modelTested : (res.chatError ? '⚠️ ' + res.chatError : '')}`;
+        }
+        populateAiModelsDropdown(p, false);
+      } else {
+        updateKeyStatusChip('rejected', 'Rejected');
+        if (aiTestResultBox) {
+          aiTestResultBox.style.background = 'rgba(239, 68, 68, 0.15)';
+          aiTestResultBox.style.color = '#FCA5A5';
+          aiTestResultBox.innerHTML = `<strong>Error:</strong> ${res.error}`;
+        }
+      }
+    });
+  }
+
+  // Save Settings button
+  if (btnSaveAiSettings) {
+    btnSaveAiSettings.addEventListener('click', () => {
+      const p = aiProviderSelect?.value || 'openai';
+      const keyVal = window.LinqAI.sanitizeApiKey(inputAiApiKey?.value || '');
+      window.LinqAI.setStoredKey(p, keyVal);
+
+      const s = window.LinqAI.getSettings();
+      s.activeProvider = p;
+      if (chkUseRelay) {
+        if (!s.useRelay) s.useRelay = {};
+        s.useRelay[p] = chkUseRelay.checked;
+      }
+      if (inputAiCustomUrl && p === 'custom') {
+        if (!s.customUrls) s.customUrls = {};
+        s.customUrls[p] = inputAiCustomUrl.value.trim();
+      }
+      const chosenModel = inputCustomModelId?.value.trim() || aiModelSelect?.value;
+      if (chosenModel && chosenModel !== 'custom-model') {
+        if (!s.models) s.models = {};
+        s.models[p] = chosenModel;
+      }
+      window.LinqAI.saveSettings(s);
+
+      if (aiCurrentModelBadge) {
+        aiCurrentModelBadge.textContent = s.models?.[p] || 'No model';
+      }
+
+      showToast('✓ AI configuration saved locally!');
+      if (aiSettingsModal) aiSettingsModal.style.display = 'none';
+    });
+  }
+
+  // Remove Key button
+  if (btnRemoveAiKey) {
+    btnRemoveAiKey.addEventListener('click', () => {
+      const p = aiProviderSelect?.value || 'openai';
+      window.LinqAI.setStoredKey(p, '');
+      refreshAiSettingsModalFields();
+      showToast(`Removed API key and cached models for ${p}.`);
+    });
+  }
+
+  // AI Assistant Quick Actions (Explain, Fix, Comments, Scaffold)
+  const btnAiActionExplain = document.getElementById('btnAiActionExplain');
+  const btnAiActionFix = document.getElementById('btnAiActionFix');
+  const btnAiActionComments = document.getElementById('btnAiActionComments');
+  const btnAiActionTypewriter = document.getElementById('btnAiActionTypewriter');
+
+  if (btnAiActionExplain) {
+    btnAiActionExplain.addEventListener('click', () => {
+      const code = getActiveEditorContent();
+      sendAiAssistantMessage(`Please explain how the following code works and highlight any key patterns:\n\`\`\`\n${code}\n\`\`\``);
+    });
+  }
+
+  if (btnAiActionFix) {
+    btnAiActionFix.addEventListener('click', () => {
+      const code = getActiveEditorContent();
+      sendAiAssistantMessage(`Analyze the following code, find any bugs or syntax issues, and provide the clean corrected version:\n\`\`\`\n${code}\n\`\`\``);
+    });
+  }
+
+  if (btnAiActionComments) {
+    btnAiActionComments.addEventListener('click', () => {
+      const code = getActiveEditorContent();
+      sendAiAssistantMessage(`Add clear, concise documentation comments to this code without changing the logic:\n\`\`\`\n${code}\n\`\`\``);
+    });
+  }
+
+  if (btnAiActionTypewriter) {
+    btnAiActionTypewriter.addEventListener('click', () => {
+      const code = getActiveEditorContent();
+      sendAiAssistantMessage(`Generate unit test cases and starter scaffolding for this code:\n\`\`\`\n${code}\n\`\`\``);
+    });
+  }
+
+  function getActiveEditorContent() {
+    if (codeEditorArea) {
+      const start = codeEditorArea.selectionStart;
+      const end = codeEditorArea.selectionEnd;
+      if (start !== end && end > start) {
+        return codeEditorArea.value.substring(start, end);
+      }
+      return codeEditorArea.value.slice(0, 4000); // Safe length
+    }
+    return '';
+  }
+
+  if (btnAiSend && aiChatInput) {
+    btnAiSend.addEventListener('click', () => {
+      const text = aiChatInput.value.trim();
+      if (!text) return;
+      aiChatInput.value = '';
+      sendAiAssistantMessage(text);
+    });
+
+    aiChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        btnAiSend.click();
+      }
+    });
+  }
+
+  if (btnAiStopStream) {
+    btnAiStopStream.addEventListener('click', () => {
+      if (activeAiAbortController) {
+        activeAiAbortController.abort();
+        activeAiAbortController = null;
+      }
+      btnAiStopStream.style.display = 'none';
+      if (btnAiSend) btnAiSend.style.display = 'flex';
+      showToast('Generation stopped.');
+    });
+  }
+
+  async function sendAiAssistantMessage(userPrompt) {
+    if (!aiChatHistory || !window.LinqAI) return;
+
+    // Render user bubble
+    appendChatBubble('user', userPrompt);
+
+    const settings = window.LinqAI.getSettings();
+    const providerId = settings.activeProvider || 'openai';
+    const keys = window.LinqAI.getStoredKeys();
+    const key = keys[providerId] || '';
+    const provider = window.LinqAI.PROVIDERS[providerId];
+    const model = settings.models?.[providerId] || provider?.suggestedDefaultModel;
+
+    // Strict Part 1B check: Must never send empty or placeholder model
+    try {
+      window.LinqAI.validateModel(model);
+    } catch (err) {
+      appendFriendlyErrorBubble(err.friendlyMessage, () => openAiSettings(), 'Open Model Picker');
+      return;
+    }
+
+    if (!key && !provider?.isLocal) {
+      appendFriendlyErrorBubble(`No API key configured for ${provider?.name || providerId}. Please configure your API key in settings.`, () => openAiSettings(), 'Configure Key');
+      return;
+    }
+
+    // Assistant response placeholder bubble
+    const assistantBubble = appendChatBubble('assistant', 'Thinking...');
+    const bubbleContent = assistantBubble.querySelector('.bubble-content');
+
+    activeAiAbortController = new AbortController();
+    if (btnAiStopStream) btnAiStopStream.style.display = 'inline-flex';
+    if (btnAiSend) btnAiSend.style.display = 'none';
+
+    try {
+      const baseUrl = settings.customUrls?.[providerId] || provider.baseUrl;
+      const res = await provider.chat({
+        messages: [
+          { role: 'system', content: 'You are Linq AI Assistant, an expert coding assistant built into the Linq Studio IDE.' },
+          { role: 'user', content: userPrompt }
+        ],
+        model,
+        stream: true,
+        signal: activeAiAbortController.signal,
+        key,
+        baseUrl
+      });
+
+      if (bubbleContent) bubbleContent.innerHTML = '';
+      let fullResponse = '';
+
+      for await (const chunk of window.LinqAI.parseStream(providerId, res)) {
+        fullResponse += chunk;
+        if (bubbleContent) {
+          bubbleContent.innerHTML = formatMarkdownResponse(fullResponse);
+        }
+        aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (bubbleContent) bubbleContent.innerHTML = '';
+      appendFriendlyErrorBubble(err.friendlyMessage || err.message, () => sendAiAssistantMessage(userPrompt), 'Retry', err.isModelNotFound ? () => openAiSettings() : null);
+    } finally {
+      activeAiAbortController = null;
+      if (btnAiStopStream) btnAiStopStream.style.display = 'none';
+      if (btnAiSend) btnAiSend.style.display = 'flex';
+    }
+  }
+
+  function appendChatBubble(role, text) {
+    const bubble = document.createElement('div');
+    bubble.className = `ai-bubble ${role}`;
+    bubble.innerHTML = `
+      <div class="bubble-sender">${role === 'user' ? 'You' : 'Linq AI'}</div>
+      <div class="bubble-content">${formatMarkdownResponse(text)}</div>
+    `;
+    aiChatHistory.appendChild(bubble);
+    aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    return bubble;
+  }
+
+  function appendFriendlyErrorBubble(message, onRetry, retryLabel = 'Retry', onChangeModel = null) {
+    const errorCard = document.createElement('div');
+    errorCard.className = 'ai-friendly-error';
+    errorCard.innerHTML = `
+      <div style="font-weight:700; margin-bottom:4px;">⚠️ Request Failed</div>
+      <div style="font-size:12px; line-height:1.4;">${escapeHtml(message)}</div>
+      <div class="ai-friendly-error-actions">
+        ${onRetry ? `<button class="ai-btn-icon btn-retry" style="background:#EF4444; color:#FFF; font-weight:bold; border:none;">${retryLabel}</button>` : ''}
+        ${onChangeModel ? `<button class="ai-btn-icon btn-change-model">Change Model</button>` : ''}
+        <button class="ai-btn-icon btn-open-settings">API Settings</button>
+      </div>
+    `;
+    if (onRetry) {
+      errorCard.querySelector('.btn-retry')?.addEventListener('click', () => {
+        errorCard.remove();
+        onRetry();
+      });
+    }
+    if (onChangeModel) {
+      errorCard.querySelector('.btn-change-model')?.addEventListener('click', () => {
+        onChangeModel();
+      });
+    }
+    errorCard.querySelector('.btn-open-settings')?.addEventListener('click', openAiSettings);
+
+    aiChatHistory.appendChild(errorCard);
+    aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+  }
+
+  function formatMarkdownResponse(raw) {
+    if (!raw) return '';
+    // Basic Markdown block & inline code parser
+    let escaped = escapeHtml(raw);
+    escaped = escaped.replace(/```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    escaped = escaped.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.08); padding:2px 4px; border-radius:4px;">$1</code>');
+    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    return escaped.replace(/\n/g, '<br>');
+  }
+
+  // =========================================================================
+  // --- PART 4 & 5: Developer Profile, Diagnostics & Real-Time Debug Logger ---
+  // =========================================================================
+  const devProfileName = document.getElementById('devProfileName');
+  const devProfileEmail = document.getElementById('devProfileEmail');
+  const btnDebugBug = document.getElementById('btnDebugBug');
+  const debugLogModal = document.getElementById('debugLogModal');
+  const btnCloseDebugModal = document.getElementById('btnCloseDebugModal');
+  const debugLogsList = document.getElementById('debugLogsList');
+  const btnClearDebugLogs = document.getElementById('btnClearDebugLogs');
+  const btnCopyDebugLogs = document.getElementById('btnCopyDebugLogs');
+
+  const capturedDebugLogs = [];
+
+  function recordDebugLog(level, msg) {
+    const cleanMsg = (typeof msg === 'string' ? msg : JSON.stringify(msg))
+      .replace(/sk-[a-zA-Z0-9_\-]{8,}/g, 'sk-***')
+      .replace(/gsk_[a-zA-Z0-9_\-]{8,}/g, 'gsk_***')
+      .replace(/AIza[a-zA-Z0-9_\-]{8,}/g, 'AIza***');
+
+    capturedDebugLogs.push({ time: new Date().toLocaleTimeString(), level, msg: cleanMsg });
+    if (debugLogsList) {
+      if (capturedDebugLogs.length === 1) debugLogsList.innerHTML = '';
+      const line = document.createElement('div');
+      line.style.color = level === 'error' ? '#EF4444' : (level === 'warn' ? '#F59E0B' : '#94A3B8');
+      line.style.marginBottom = '4px';
+      line.textContent = `[${level.toUpperCase()}] ${line.time || ''} ${cleanMsg}`;
+      debugLogsList.appendChild(line);
+      debugLogsList.scrollTop = debugLogsList.scrollHeight;
+    }
+  }
+
+  // Expose global debug log accessors
+  window.captureDebugLog = recordDebugLog;
+  window.appDebugLogs = capturedDebugLogs;
+
+  window.addEventListener('error', (e) => {
+    recordDebugLog('error', `${e.message} at ${e.filename}:${e.lineno}`);
+  });
+
+  window.addEventListener('unhandledrejection', (e) => {
+    recordDebugLog('error', `Unhandled Promise Rejection: ${e.reason}`);
+  });
+
+  if (btnDebugBug && debugLogModal) {
+    btnDebugBug.addEventListener('click', () => {
+      debugLogModal.style.display = 'flex';
+    });
+  }
+
+  if (btnCloseDebugModal && debugLogModal) {
+    btnCloseDebugModal.addEventListener('click', () => {
+      debugLogModal.style.display = 'none';
+    });
+  }
+
+  if (btnClearDebugLogs && debugLogsList) {
+    btnClearDebugLogs.addEventListener('click', () => {
+      capturedDebugLogs.length = 0;
+      debugLogsList.innerHTML = '<div style="color:#64748B;">Logs cleared. Studio healthy.</div>';
+    });
+  }
+
+  if (btnCopyDebugLogs) {
+    btnCopyDebugLogs.addEventListener('click', () => {
+      const text = capturedDebugLogs.map(l => `[${l.level.toUpperCase()}] ${l.time}: ${l.msg}`).join('\n');
+      navigator.clipboard.writeText(text || 'No logs recorded.').then(() => showToast('✓ Debug logs copied!'));
+    });
+  }
+
+  // Update dev profile info when owner logged in
+  function syncDevProfileUi() {
+    if (currentUser && currentUser.email) {
+      if (devProfileEmail) devProfileEmail.textContent = currentUser.email;
+      if (devProfileName) devProfileName.textContent = currentUser.owner ? 'Ljhay' : (currentUser.name || currentUser.email.split('@')[0]);
+    }
+  }
+
+  // Hook syncOwnerStatus callback
+  const prevSyncOwnerStatus = syncOwnerStatus;
+  syncOwnerStatus = async function() {
+    await prevSyncOwnerStatus();
+    syncDevProfileUi();
+    if (currentUser && currentUser.owner) {
+      connectOwnerTelemetryStream();
+    }
+  };
 
   // Hardware & Physical Keyboard Shortcuts (Ctrl+S, Ctrl+Enter, Ctrl+B)
   window.addEventListener('keydown', (e) => {

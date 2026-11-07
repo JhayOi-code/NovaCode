@@ -34,9 +34,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Description
@@ -102,92 +104,20 @@ data class LanguageGuideData(
 )
 
 object LanguageGuides {
-    val guides = listOf(
-        LanguageGuideData(
-            language = "Java",
-            iconVector = Icons.Default.Coffee,
-            description = "Object-oriented, class-based, robust backend and Android language.",
-            badgeColor = Color(0xFFEF4444),
-            fileExtension = ".java",
-            overview = "Java is a popular strongly typed object-oriented language. Linq Studio supports full syntax highlighting, bracket auto-pairing, smart Enter, and starter code templates for Java files.",
-            starterCode = "public class Example {\n    public static void main(String[] args) {\n        System.out.println(\"Hello from Java on Linq Studio!\");\n    }\n}",
-            tips = listOf(
-                "Class name must match the .java file name",
-                "Every statement ends with a semicolon ';'",
-                "Use System.out.println() for stdout printing"
+    val guides: List<LanguageGuideData> by lazy {
+        LanguageGuidesRepository.allGuides.map { g ->
+            LanguageGuideData(
+                language = g.language,
+                iconVector = g.iconVector,
+                description = g.description,
+                badgeColor = g.badgeColor,
+                fileExtension = g.fileExtension,
+                overview = g.overview,
+                starterCode = g.starterCode,
+                tips = g.tips
             )
-        ),
-        LanguageGuideData(
-            language = "Python",
-            iconVector = Icons.Default.Terminal,
-            description = "Clean, expressive scripting, AI logic, and data analysis.",
-            badgeColor = Color(0xFF3B82F6),
-            fileExtension = ".py",
-            overview = "Python is renowned for clear syntax and rapid development. Use the built-in terminal or execution engine to test Python logic instantly.",
-            starterCode = "def greet(name):\n    return f\"Hello, {name}!\"\n\nif __name__ == \"__main__\":\n    print(greet(\"Linq Developer\"))\n",
-            tips = listOf(
-                "Indentation determines code blocks (use 4 spaces)",
-                "Lines do not require semicolons",
-                "Define entry points using __name__ == '__main__'"
-            )
-        ),
-        LanguageGuideData(
-            language = "JavaScript",
-            iconVector = Icons.Default.Bolt,
-            description = "Dynamic web scripting, algorithms, and node applications.",
-            badgeColor = Color(0xFFFBBF24),
-            fileExtension = ".js",
-            overview = "JavaScript powers the modern web. Test DOM logic, write algorithms, and run web preview scripts in Linq Studio.",
-            starterCode = "function calculateFibonacci(n) {\n    if (n <= 1) return n;\n    return calculateFibonacci(n - 1) + calculateFibonacci(n - 2);\n}\n\nconsole.log('Fibonacci(7):', calculateFibonacci(7));\n",
-            tips = listOf(
-                "Use 'const' and 'let' rather than 'var'",
-                "Format code with Prettier in one tap",
-                "Preview HTML/JS directly in the browser preview"
-            )
-        ),
-        LanguageGuideData(
-            language = "Kotlin",
-            iconVector = Icons.Default.DataObject,
-            description = "Concise, modern multiplatform and Android language.",
-            badgeColor = Color(0xFFA78BFA),
-            fileExtension = ".kt",
-            overview = "Kotlin provides concise syntax, null-safety, and seamless Java interop. Ideal for modern software development.",
-            starterCode = "fun main() {\n    val items = listOf(\"Compose\", \"Coroutines\", \"Flow\")\n    items.forEach { println(\"Learning \$it\") }\n}\n",
-            tips = listOf(
-                "Null-safety is enforced at compile time (? vs !!)",
-                "val is read-only, var is mutable",
-                "Top-level functions like fun main() require no enclosing class"
-            )
-        ),
-        LanguageGuideData(
-            language = "Bash",
-            iconVector = Icons.Default.Terminal,
-            description = "Automation scripts, file processing, and command line tools.",
-            badgeColor = Color(0xFF10B981),
-            fileExtension = ".sh",
-            overview = "Write shell scripts to automate build tasks, file transforms, and directory operations in the integrated terminal.",
-            starterCode = "#!/bin/bash\necho \"Starting Linq Studio automation...\"\ndate\nuname -a\necho \"Done!\"\n",
-            tips = listOf(
-                "Always start with #!/bin/bash shebang",
-                "Execute directly using the Terminal tab",
-                "Variables are referenced with $ (e.g. \$VARIABLE)"
-            )
-        ),
-        LanguageGuideData(
-            language = "Web (HTML, CSS, JS)",
-            iconVector = Icons.Default.Language,
-            description = "Front-end interfaces with live local dev server preview.",
-            badgeColor = Color(0xFF00E5FF),
-            fileExtension = ".html",
-            overview = "Build responsive web applications with HTML5, modern CSS, and JavaScript. Linq Studio includes a built-in dev server and web preview inspector.",
-            starterCode = "<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        body { font-family: sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 40px; }\n        h1 { color: #00e5ff; }\n    </style>\n</head>\n<body>\n    <h1>Hello from Linq Studio Web</h1>\n    <p>Live preview active!</p>\n</body>\n</html>\n",
-            tips = listOf(
-                "Tap 'Web Preview' in the editor to inspect live",
-                "Includes local dev server capabilities",
-                "Supports CSS Flexbox and modern JS APIs"
-            )
-        )
-    )
+        }
+    }
 }
 
 @Composable
@@ -449,7 +379,7 @@ fun HomeScreen(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "Tap to log in or sign up",
+                                        text = "Tap to sign in with Google",
                                         color = theme.onSurfaceColor,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
@@ -477,6 +407,16 @@ fun HomeScreen(
                     isOnline = isOnline
                 )
             }
+        }
+
+        // Project Statistics Widget (User Request: displays total files, folders, and lines of code)
+        item {
+            ProjectStatisticsCard(
+                theme = theme,
+                files = if (openFiles.isNotEmpty()) openFiles else recentFiles,
+                folders = availableHostFolders,
+                onOpenWorkspace = onOpenWorkspace
+            )
         }
 
         // Quick Actions Row
@@ -982,5 +922,242 @@ fun HomeScreen(
             },
             onDismiss = { showFolderPickerSheet = false }
         )
+    }
+}
+
+@Composable
+fun ProjectStatisticsCard(
+    theme: EditorTheme,
+    files: List<CodeFile>,
+    folders: List<String>,
+    onOpenWorkspace: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val totalFiles = files.size
+    val discoveredFolders = remember(files, folders) {
+        val fSet = folders.toMutableSet()
+        files.forEach { file ->
+            val clean = file.name.trim().removePrefix("/")
+            if (clean.contains('/')) {
+                fSet.add(clean.substringBeforeLast('/'))
+            }
+        }
+        fSet.toList()
+    }
+    val totalFolders = discoveredFolders.size
+    val totalLines = remember(files) {
+        files.sumOf { it.content.lines().size }
+    }
+
+    // Breakdown by extension
+    val languageBreakdown = remember(files) {
+        val map = mutableMapOf<String, Int>()
+        files.forEach { f ->
+            val ext = f.name.substringAfterLast('.', "").uppercase().ifEmpty { "TXT" }
+            map[ext] = (map[ext] ?: 0) + 1
+        }
+        map.entries.sortedByDescending { it.value }
+    }
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = theme.surfaceColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor.copy(alpha = 0.35f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("project_statistics_card")
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = theme.primaryColor.copy(alpha = 0.15f),
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Analytics,
+                                contentDescription = null,
+                                tint = theme.primaryColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Project Statistics",
+                            color = theme.onSurfaceColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Active Project Overview",
+                            color = theme.lineNumberColor,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = theme.primaryColor.copy(alpha = 0.12f),
+                    modifier = Modifier.clickable { onOpenWorkspace() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Workspace",
+                            color = theme.primaryColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = theme.primaryColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            // 3-Metric Cards Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Total Files
+                StatMetricPill(
+                    icon = Icons.Default.Description,
+                    label = "Total Files",
+                    value = "$totalFiles",
+                    accentColor = Color(0xFF3B82F6),
+                    theme = theme,
+                    modifier = Modifier.weight(1f).testTag("stat_metric_files")
+                )
+
+                // Total Folders
+                StatMetricPill(
+                    icon = Icons.Default.Folder,
+                    label = "Folders",
+                    value = "$totalFolders",
+                    accentColor = Color(0xFFF59E0B),
+                    theme = theme,
+                    modifier = Modifier.weight(1f).testTag("stat_metric_folders")
+                )
+
+                // Total Lines
+                StatMetricPill(
+                    icon = Icons.Default.Code,
+                    label = "Lines of Code",
+                    value = "$totalLines",
+                    accentColor = Color(0xFF10B981),
+                    theme = theme,
+                    modifier = Modifier.weight(1f).testTag("stat_metric_lines")
+                )
+            }
+
+            // Language / File Types Breakdown Chips
+            if (languageBreakdown.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Types:",
+                        color = theme.lineNumberColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    languageBreakdown.forEach { (ext, count) ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = theme.surfaceVariant.copy(alpha = 0.8f),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, theme.borderColor)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = ext,
+                                    color = theme.primaryColor,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                                Text(
+                                    text = "$count",
+                                    color = theme.onSurfaceColor,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatMetricPill(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    accentColor: Color,
+    theme: EditorTheme,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = theme.surfaceVariant.copy(alpha = 0.5f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.3f)),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = label,
+                    fontSize = 10.sp,
+                    color = theme.lineNumberColor,
+                    maxLines = 1
+                )
+            }
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = theme.onSurfaceColor
+            )
+        }
     }
 }

@@ -88,12 +88,27 @@ fun AboutScreen(theme: EditorTheme) {
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "Learn to code, right from your phone • v2.4.0",
+                text = "Learn to code, right from your phone",
                 fontSize = 13.sp,
                 color = theme.lineNumberColor,
                 fontFamily = FontFamily.Monospace,
                 modifier = Modifier.testTag("about_tagline")
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = theme.primaryColor.copy(alpha = 0.15f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.primaryColor.copy(alpha = 0.35f))
+            ) {
+                Text(
+                    text = "v1.0 (Build 2026-11-06 08:00 UTC)",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    color = theme.primaryColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp).testTag("about_build_label")
+                )
+            }
         }
 
         // Distinctive Accent Left Bar Learner Card

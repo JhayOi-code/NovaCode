@@ -294,7 +294,7 @@ class MainActivity : ComponentActivity() {
                                             } else {
                                                 HomeScreen(
                                                     theme = theme,
-                                                    recentFiles = uiState.openFiles,
+                                                    recentFiles = uiState.recentOpenedFiles.ifEmpty { uiState.openFiles },
                                                     serverStatus = uiState.serverStatus,
                                                     userAccount = uiState.userAccount,
                                                     isFullScreen = uiState.isFullScreen,
@@ -417,7 +417,8 @@ class MainActivity : ComponentActivity() {
                                             onMoveFloatingWindow = { id, x, y -> viewModel.moveFloatingWindow(id, x, y) },
                                             onResizeFloatingWindow = { id, w, h -> viewModel.resizeFloatingWindow(id, w, h) },
                                             onFocusFloatingWindow = { viewModel.focusFloatingWindow(it) },
-                                            onClearFloatingWindows = { viewModel.clearFloatingWindows() }
+                                            onClearFloatingWindows = { viewModel.clearFloatingWindows() },
+                                            recentFiles = uiState.recentOpenedFiles.ifEmpty { uiState.openFiles }
                                         )
 
                                         2 -> FilesScreen(

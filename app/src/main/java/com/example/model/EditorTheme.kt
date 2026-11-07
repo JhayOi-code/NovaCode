@@ -2,6 +2,22 @@ package com.example.model
 
 import androidx.compose.ui.graphics.Color
 
+data class TerminalPalette(
+    val background: Color,
+    val outputBackground: Color,
+    val foreground: Color,
+    val prompt: Color,
+    val success: Color,
+    val error: Color,
+    val warning: Color,
+    val info: Color,
+    val cursor: Color,
+    val inputBackground: Color,
+    val chipBackground: Color,
+    val chipBorder: Color,
+    val chipText: Color
+)
+
 data class EditorTheme(
     val id: String,
     val name: String,
@@ -25,7 +41,22 @@ data class EditorTheme(
     val variableColor: Color,
     val errorColor: Color = Color(0xFFEF4444),
     val warningColor: Color = Color(0xFFF59E0B),
-    val infoColor: Color = Color(0xFF3B82F6)
+    val infoColor: Color = Color(0xFF3B82F6),
+    val terminal: TerminalPalette = TerminalPalette(
+        background = Color(0xFF0A0F1D),
+        outputBackground = Color(0xFF030712),
+        foreground = Color(0xFFE2E8F0),
+        prompt = Color(0xFF00E5FF),
+        success = Color(0xFF10B981),
+        error = Color(0xFFEF4444),
+        warning = Color(0xFFF59E0B),
+        info = Color(0xFF38BDF8),
+        cursor = Color(0xFF00E5FF),
+        inputBackground = Color(0xFF0F172A),
+        chipBackground = Color(0xFF1E293B),
+        chipBorder = Color(0xFF334155),
+        chipText = Color(0xFF38BDF8)
+    )
 ) {
     val isDark: Boolean get() = !isLight
 
@@ -53,7 +84,22 @@ data class EditorTheme(
             variableColor = Color(0xFF1E293B),
             errorColor = Color(0xFFDC2626),
             warningColor = Color(0xFFD97706),
-            infoColor = Color(0xFF2563EB)
+            infoColor = Color(0xFF2563EB),
+            terminal = TerminalPalette(
+                background = Color(0xFFF8FAFC),
+                outputBackground = Color(0xFFFFFFFF),
+                foreground = Color(0xFF0F172A),
+                prompt = Color(0xFF1D4ED8),
+                success = Color(0xFF047857),
+                error = Color(0xFFB91C1C),
+                warning = Color(0xFFB45309),
+                info = Color(0xFF1D4ED8),
+                cursor = Color(0xFF1D4ED8),
+                inputBackground = Color(0xFFF1F5F9),
+                chipBackground = Color(0xFFE2E8F0),
+                chipBorder = Color(0xFFCBD5E1),
+                chipText = Color(0xFF1E40AF)
+            )
         )
 
         val LinqDark = EditorTheme(
@@ -76,7 +122,22 @@ data class EditorTheme(
             commentColor = Color(0xFF64748B),
             numberColor = Color(0xFFFBBF24),
             functionColor = Color(0xFF60A5FA),
-            variableColor = Color(0xFFE2E8F0)
+            variableColor = Color(0xFFE2E8F0),
+            terminal = TerminalPalette(
+                background = Color(0xFF070B14),
+                outputBackground = Color(0xFF030712),
+                foreground = Color(0xFFF8FAFC),
+                prompt = Color(0xFF00E5FF),
+                success = Color(0xFF34D399),
+                error = Color(0xFFF87171),
+                warning = Color(0xFFFBBF24),
+                info = Color(0xFF38BDF8),
+                cursor = Color(0xFF00E5FF),
+                inputBackground = Color(0xFF0E1A38),
+                chipBackground = Color(0xFF1C2541),
+                chipBorder = Color(0xFF2E3B5E),
+                chipText = Color(0xFF00E5FF)
+            )
         )
 
         val CyberpunkNeon = EditorTheme(
@@ -98,7 +159,22 @@ data class EditorTheme(
             commentColor = Color(0xFF6B6289),
             numberColor = Color(0xFFFFE600),
             functionColor = Color(0xFF7B2CBF),
-            variableColor = Color(0xFFE0AAFF)
+            variableColor = Color(0xFFE0AAFF),
+            terminal = TerminalPalette(
+                background = Color(0xFF0A071B),
+                outputBackground = Color(0xFF04020D),
+                foreground = Color(0xFFFDF4FF),
+                prompt = Color(0xFFFF007F),
+                success = Color(0xFF00F5D4),
+                error = Color(0xFFFF1744),
+                warning = Color(0xFFFFE600),
+                info = Color(0xFF00F5D4),
+                cursor = Color(0xFFFF007F),
+                inputBackground = Color(0xFF150D33),
+                chipBackground = Color(0xFF201348),
+                chipBorder = Color(0xFF3B2D7D),
+                chipText = Color(0xFF00F5D4)
+            )
         )
 
         val MonokaiPro = EditorTheme(
@@ -120,7 +196,22 @@ data class EditorTheme(
             commentColor = Color(0xFF727072),
             numberColor = Color(0xFFAB9DF2),
             functionColor = Color(0xFF78DCE8),
-            variableColor = Color(0xFFFCFCFA)
+            variableColor = Color(0xFFFCFCFA),
+            terminal = TerminalPalette(
+                background = Color(0xFF1E1E21),
+                outputBackground = Color(0xFF18181A),
+                foreground = Color(0xFFFCFCFA),
+                prompt = Color(0xFFFFD866),
+                success = Color(0xFFA9DC76),
+                error = Color(0xFFFF6188),
+                warning = Color(0xFFFFD866),
+                info = Color(0xFF78DCE8),
+                cursor = Color(0xFFFFD866),
+                inputBackground = Color(0xFF2D2A2E),
+                chipBackground = Color(0xFF363337),
+                chipBorder = Color(0xFF49464E),
+                chipText = Color(0xFFFFD866)
+            )
         )
 
         val NordFrost = EditorTheme(
@@ -142,7 +233,22 @@ data class EditorTheme(
             commentColor = Color(0xFF616E88),
             numberColor = Color(0xFFB48EAD),
             functionColor = Color(0xFF8FBCBB),
-            variableColor = Color(0xFFD8DEE9)
+            variableColor = Color(0xFFD8DEE9),
+            terminal = TerminalPalette(
+                background = Color(0xFF242933),
+                outputBackground = Color(0xFF1E222B),
+                foreground = Color(0xFFECEFF4),
+                prompt = Color(0xFF88C0D0),
+                success = Color(0xFFA3BE8C),
+                error = Color(0xFFBF616A),
+                warning = Color(0xFFEBCB8B),
+                info = Color(0xFF81A1C1),
+                cursor = Color(0xFF88C0D0),
+                inputBackground = Color(0xFF2E3440),
+                chipBackground = Color(0xFF3B4252),
+                chipBorder = Color(0xFF4C566A),
+                chipText = Color(0xFF88C0D0)
+            )
         )
 
         val TokyoNight = EditorTheme(
@@ -164,7 +270,22 @@ data class EditorTheme(
             commentColor = Color(0xFF565F89),
             numberColor = Color(0xFFFF9E64),
             functionColor = Color(0xFF7AA2F7),
-            variableColor = Color(0xFFC0CAF5)
+            variableColor = Color(0xFFC0CAF5),
+            terminal = TerminalPalette(
+                background = Color(0xFF16161E),
+                outputBackground = Color(0xFF121217),
+                foreground = Color(0xFFC0CAF5),
+                prompt = Color(0xFF7AA2F7),
+                success = Color(0xFF9ECE6A),
+                error = Color(0xFFF7768E),
+                warning = Color(0xFFFF9E64),
+                info = Color(0xFF7AA2F7),
+                cursor = Color(0xFF7AA2F7),
+                inputBackground = Color(0xFF1F2335),
+                chipBackground = Color(0xFF24283B),
+                chipBorder = Color(0xFF292E42),
+                chipText = Color(0xFF7AA2F7)
+            )
         )
 
         val GitHubDark = EditorTheme(
@@ -186,7 +307,22 @@ data class EditorTheme(
             commentColor = Color(0xFF8B949E),
             numberColor = Color(0xFF79C0FF),
             functionColor = Color(0xFFD2A8FF),
-            variableColor = Color(0xFFFFA657)
+            variableColor = Color(0xFFFFA657),
+            terminal = TerminalPalette(
+                background = Color(0xFF0D1117),
+                outputBackground = Color(0xFF090D13),
+                foreground = Color(0xFFC9D1D9),
+                prompt = Color(0xFF58A6FF),
+                success = Color(0xFF3FB950),
+                error = Color(0xFFF85149),
+                warning = Color(0xFFD29922),
+                info = Color(0xFF58A6FF),
+                cursor = Color(0xFF58A6FF),
+                inputBackground = Color(0xFF161B22),
+                chipBackground = Color(0xFF21262D),
+                chipBorder = Color(0xFF30363D),
+                chipText = Color(0xFF58A6FF)
+            )
         )
 
         val SolarizedDark = EditorTheme(
@@ -208,7 +344,22 @@ data class EditorTheme(
             commentColor = Color(0xFF586E75),
             numberColor = Color(0xFFD33682),
             functionColor = Color(0xFF268BD2),
-            variableColor = Color(0xFFB58900)
+            variableColor = Color(0xFFB58900),
+            terminal = TerminalPalette(
+                background = Color(0xFF002B36),
+                outputBackground = Color(0xFF00212B),
+                foreground = Color(0xFF93A1A1),
+                prompt = Color(0xFF2AA198),
+                success = Color(0xFF859900),
+                error = Color(0xFFDC322F),
+                warning = Color(0xFFB58900),
+                info = Color(0xFF268BD2),
+                cursor = Color(0xFF2AA198),
+                inputBackground = Color(0xFF073642),
+                chipBackground = Color(0xFF0D4654),
+                chipBorder = Color(0xFF0E5263),
+                chipText = Color(0xFF2AA198)
+            )
         )
 
         val Dracula = EditorTheme(
@@ -230,7 +381,22 @@ data class EditorTheme(
             commentColor = Color(0xFF6272A4),
             numberColor = Color(0xFFBD93F9),
             functionColor = Color(0xFF50FA7B),
-            variableColor = Color(0xFF8BE9FD)
+            variableColor = Color(0xFF8BE9FD),
+            terminal = TerminalPalette(
+                background = Color(0xFF282A36),
+                outputBackground = Color(0xFF1E1F29),
+                foreground = Color(0xFFF8F8F2),
+                prompt = Color(0xFF50FA7B),
+                success = Color(0xFF50FA7B),
+                error = Color(0xFFFF5555),
+                warning = Color(0xFFFFB86C),
+                info = Color(0xFF8BE9FD),
+                cursor = Color(0xFF50FA7B),
+                inputBackground = Color(0xFF21222C),
+                chipBackground = Color(0xFF343746),
+                chipBorder = Color(0xFF44475A),
+                chipText = Color(0xFFBD93F9)
+            )
         )
 
         val OneDark = EditorTheme(
@@ -252,7 +418,22 @@ data class EditorTheme(
             commentColor = Color(0xFF5C6370),
             numberColor = Color(0xFFD19A66),
             functionColor = Color(0xFF61AFEF),
-            variableColor = Color(0xFFE06C75)
+            variableColor = Color(0xFFE06C75),
+            terminal = TerminalPalette(
+                background = Color(0xFF282C34),
+                outputBackground = Color(0xFF21252B),
+                foreground = Color(0xFFABB2BF),
+                prompt = Color(0xFF61AFEF),
+                success = Color(0xFF98C379),
+                error = Color(0xFFE06C75),
+                warning = Color(0xFFE5C07B),
+                info = Color(0xFF61AFEF),
+                cursor = Color(0xFF61AFEF),
+                inputBackground = Color(0xFF2C313C),
+                chipBackground = Color(0xFF3E4451),
+                chipBorder = Color(0xFF4B5363),
+                chipText = Color(0xFF61AFEF)
+            )
         )
 
         val allThemes: List<EditorTheme> = listOf(

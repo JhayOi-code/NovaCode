@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.NoteAdd
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -73,6 +74,7 @@ fun FileExplorerSidebar(
     files: List<CodeFile>,
     gitStatus: GitRepositoryStatus,
     trackedFolders: List<String> = emptyList(),
+    recentFiles: List<CodeFile> = emptyList(),
     onOpenFile: (CodeFile) -> Unit,
     onNewFile: (String) -> Unit,
     onNewFolder: (String) -> Unit = {},
@@ -96,6 +98,7 @@ fun FileExplorerSidebar(
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var selectedProjectTemplate by remember { mutableStateOf(ProjectTemplateType.BLANK_FOLDER) }
     var newFolderNameInput by remember { mutableStateOf("my_folder") }
+    var isRecentFilesExpanded by remember { mutableStateOf(true) }
 
     // Derive all folders and group files accurately, supporting empty real folders
     val allDiscoveredFolders = remember(files, trackedFolders) {
@@ -313,6 +316,110 @@ fun FileExplorerSidebar(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        // RECENT FILES SECTION (Last 5 files for quick navigation)
+                        val recentFilesList = recentFiles.ifEmpty { files }.take(5)
+                        if (recentFilesList.isNotEmpty() && filterText.isBlank()) {
+                            item(key = "section_recent_files_header") {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(theme.primaryColor.copy(alpha = 0.12f))
+                                        .clickable { isRecentFilesExpanded = !isRecentFilesExpanded }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                        .testTag("explorer_recent_files_header"),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (isRecentFilesExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = theme.primaryColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        tint = theme.primaryColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Recent Files",
+                                        color = theme.onSurfaceColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = theme.primaryColor.copy(alpha = 0.25f)
+                                    ) {
+                                        Text(
+                                            text = "${recentFilesList.size}",
+                                            color = theme.primaryColor,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (isRecentFilesExpanded) {
+                                items(recentFilesList, key = { "recent_${it.name}" }) { recentFile ->
+                                    val ext = recentFile.name.substringAfterLast('.', "").uppercase()
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 14.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(theme.surfaceVariant.copy(alpha = 0.35f))
+                                            .clickable { onOpenFile(recentFile) }
+                                            .padding(horizontal = 8.dp, vertical = 5.dp)
+                                            .testTag("explorer_recent_file_${recentFile.name}"),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = theme.primaryColor.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = ext.take(3),
+                                                    color = theme.primaryColor,
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = recentFile.name.substringAfterLast('/'),
+                                                color = theme.onSurfaceColor,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Text(
+                                            text = "${recentFile.content.lines().size} lines",
+                                            color = theme.lineNumberColor,
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
+
+                                item(key = "recent_files_divider") {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                            }
+                        }
+
                         // All Folders (with collapsible hierarchy and quick + File)
                         allDiscoveredFolders.forEach { folderName ->
                             val filesInFolder = folderFileMap[folderName] ?: emptyList()

@@ -16,8 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -29,10 +34,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,133 +53,118 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.R
 import com.example.auth.InAppAuthService
-import com.example.auth.LinqAccountRegistry
 import com.example.model.EditorTheme
+import com.example.model.UserAccount
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-enum class AuthTab {
+enum class GoogleAuthMode {
     LOGIN,
     SIGNUP
 }
 
-enum class AuthScreenState {
-    FORM,
-    FORGOT_PASSWORD
-}
-
+/**
+ * Real in-app Google Sign-In Sheet for Linq Studio.
+ * - Login mode: Email & Password
+ * - Sign-up mode: Email, Password, and Username
+ * - Smooth switcher: "new to the app? Sign up" / "Already have an account? Log in"
+ * - Validates credentials in-app and persists account securely.
+ */
 @Composable
 fun LoginSignupWindow(
     theme: EditorTheme,
     onSignInSuccess: (String, String) -> Unit,
-    userAccount: com.example.model.UserAccount? = null,
+    userAccount: UserAccount? = null,
     onSignOut: () -> Unit = {},
     onDismiss: () -> Unit,
     onBack: () -> Unit = onDismiss
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
     val focusManager = LocalFocusManager.current
 
-    var selectedTab by remember {
-        val last = LinqAccountRegistry.getLastTab(context)
-        mutableStateOf(if (last == "signup") AuthTab.SIGNUP else AuthTab.LOGIN)
-    }
+    var authMode by remember { mutableStateOf(GoogleAuthMode.LOGIN) }
 
-    var screenState by remember { mutableStateOf(AuthScreenState.FORM) }
-
-    // Form fields
-    var nameInput by remember { mutableStateOf("") }
+    // Inputs
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
-    var confirmPasswordInput by remember { mutableStateOf("") }
+    var usernameInput by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
-
-    // Forgot password field
-    var forgotPasswordEmail by remember { mutableStateOf("") }
-    var forgotPasswordFeedback by remember { mutableStateOf<String?>(null) }
-    var forgotPasswordCooldown by remember { mutableStateOf(0) }
 
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var technicalError by remember { mutableStateOf<String?>(null) }
-    var noticeMessage by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(forgotPasswordCooldown) {
-        if (forgotPasswordCooldown > 0) {
-            delay(1000)
-            forgotPasswordCooldown -= 1
+    var showDetails by remember { mutableStateOf(false) }
+    var copiedNotice by remember { mutableStateOf(false) }
+
+    // Clear previous errors on open or mode switch
+    LaunchedEffect(authMode) {
+        errorMessage = null
+        technicalError = null
+        showDetails = false
+    }
+
+    LaunchedEffect(copiedNotice) {
+        if (copiedNotice) {
+            delay(1800)
+            copiedNotice = false
         }
     }
 
-    fun performSignUp() {
+    fun submitAuth() {
         if (isSubmitting) return
-        if (passwordInput != confirmPasswordInput) {
-            errorMessage = "Passwords do not match."
+        errorMessage = null
+        technicalError = null
+        showDetails = false
+
+        val cleanEmail = emailInput.trim().lowercase()
+        val cleanPassword = passwordInput.trim()
+        val cleanUsername = usernameInput.trim()
+
+        if (cleanEmail.isEmpty()) {
+            errorMessage = "Please enter your Google email address."
+            return
+        }
+        if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
+            errorMessage = "Please enter a valid Google email address."
+            return
+        }
+        if (cleanPassword.isEmpty()) {
+            errorMessage = "Please enter your password."
+            return
+        }
+
+        if (authMode == GoogleAuthMode.SIGNUP && cleanUsername.isEmpty()) {
+            errorMessage = "Please set a username for your profile."
             return
         }
 
         isSubmitting = true
-        errorMessage = null
-        technicalError = null
+        focusManager.clearFocus()
 
         scope.launch {
-            delay(300) // Form submission feedback
-            val result = InAppAuthService.createAccount(context, nameInput, emailInput, passwordInput)
+            delay(300) // Visual feedback
+            val result = if (authMode == GoogleAuthMode.SIGNUP) {
+                InAppAuthService.signUpWithGoogle(context, cleanUsername, cleanEmail, cleanPassword)
+            } else {
+                InAppAuthService.logInWithGoogle(context, cleanEmail, cleanPassword)
+            }
+
             isSubmitting = false
 
             if (result.success) {
                 onSignInSuccess(result.userDisplayName, result.userEmail)
                 onDismiss()
             } else {
-                errorMessage = result.errorMessage
+                errorMessage = result.errorMessage ?: "Authentication failed. Please check your credentials."
                 technicalError = result.errorCode
             }
-        }
-    }
-
-    fun performLogIn() {
-        if (isSubmitting) return
-        isSubmitting = true
-        errorMessage = null
-        technicalError = null
-
-        scope.launch {
-            delay(300)
-            val result = InAppAuthService.logIn(context, emailInput, passwordInput)
-            isSubmitting = false
-
-            if (result.success) {
-                onSignInSuccess(result.userDisplayName, result.userEmail)
-                onDismiss()
-            } else {
-                errorMessage = result.errorMessage
-                technicalError = result.errorCode
-            }
-        }
-    }
-
-    fun performForgotPassword() {
-        if (isSubmitting) return
-        isSubmitting = true
-        val (success, msg) = InAppAuthService.requestPasswordReset(forgotPasswordEmail)
-        isSubmitting = false
-        if (success) {
-            forgotPasswordFeedback = msg
-            forgotPasswordCooldown = 60
-            errorMessage = null
-        } else {
-            errorMessage = msg
         }
     }
 
     BackHandler {
-        if (screenState != AuthScreenState.FORM) {
-            screenState = AuthScreenState.FORM
-            errorMessage = null
-            technicalError = null
-        } else {
-            onBack()
-        }
+        onBack()
     }
 
     Dialog(
@@ -193,7 +185,7 @@ fun LoginSignupWindow(
             val isTablet = maxWidth >= 600.dp
             val windowModifier = if (isTablet) {
                 Modifier
-                    .widthIn(max = 500.dp)
+                    .widthIn(max = 480.dp)
                     .wrapContentHeight()
                     .padding(24.dp)
             } else {
@@ -212,7 +204,7 @@ fun LoginSignupWindow(
             Surface(
                 shape = windowShape,
                 color = theme.surfaceColor,
-                border = BorderStroke(1.5.dp, theme.primaryColor.copy(alpha = 0.5f)),
+                border = BorderStroke(1.5.dp, theme.primaryColor.copy(alpha = 0.45f)),
                 tonalElevation = 10.dp,
                 modifier = windowModifier.testTag("login_signup_window")
             ) {
@@ -221,8 +213,8 @@ fun LoginSignupWindow(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                         .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 18.dp)
-                        .padding(bottom = 12.dp),
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                        .padding(bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Top Navigation Actions
@@ -235,15 +227,7 @@ fun LoginSignupWindow(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    if (screenState != AuthScreenState.FORM) {
-                                        screenState = AuthScreenState.FORM
-                                        errorMessage = null
-                                        technicalError = null
-                                    } else {
-                                        onBack()
-                                    }
-                                }
+                                .clickable { onBack() }
                                 .padding(horizontal = 6.dp, vertical = 6.dp)
                                 .testTag("btn_back_auth")
                         ) {
@@ -277,428 +261,371 @@ fun LoginSignupWindow(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    // App Logo
+                    // Google App Logo Badge
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (theme.isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
-                        border = BorderStroke(1.dp, theme.borderColor),
-                        modifier = Modifier.size(54.dp)
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (theme.isDark) Color(0xFF1E293B) else Color.White,
+                        border = BorderStroke(1.2.dp, theme.borderColor),
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.size(56.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(10.dp)) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize().padding(12.dp)) {
                             Image(
-                                painter = painterResource(id = R.drawable.ic_linq_user_logo),
-                                contentDescription = "Linq Studio Logo",
-                                colorFilter = ColorFilter.tint(if (theme.isDark) Color.White else Color.Black),
-                                modifier = Modifier.fillMaxSize()
+                                painter = painterResource(id = R.drawable.ic_google_logo),
+                                contentDescription = "Google",
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "Welcome to Linq Studio",
+                        text = if (authMode == GoogleAuthMode.LOGIN) "Google Login" else "Google Sign Up",
                         color = theme.onSurfaceColor,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 19.sp,
+                        fontSize = 20.sp,
                         letterSpacing = 0.3.sp,
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    // Notice Message Banner
-                    if (noticeMessage != null) {
+                    Text(
+                        text = if (authMode == GoogleAuthMode.LOGIN) {
+                            "Log in with your Google account credentials"
+                        } else {
+                            "Create your Google account profile to save your workspace"
+                        },
+                        color = theme.lineNumberColor,
+                        fontSize = 12.5.sp,
+                        lineHeight = 17.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // If user is currently signed in, display active profile indicator
+                    if (userAccount != null && userAccount.isSignedIn) {
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF10B981).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = theme.surfaceVariant.copy(alpha = 0.6f),
                             border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
                         ) {
-                            Text(
-                                text = noticeMessage ?: "",
-                                color = Color(0xFF34D399),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(12.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Signed in as ${userAccount.username}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = theme.onSurfaceColor
+                                    )
+                                    Text(
+                                        text = userAccount.email,
+                                        fontSize = 11.5.sp,
+                                        color = theme.lineNumberColor
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        onSignOut()
+                                        onDismiss()
+                                    },
+                                    modifier = Modifier.testTag("btn_sign_out_current")
+                                ) {
+                                    Icon(Icons.Default.Logout, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Sign Out", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
 
-                    // Error Box
+                    // Adjacent Error Display
                     if (errorMessage != null) {
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = Color(0xFF450A0A),
                             border = BorderStroke(1.2.dp, Color(0xFFDC2626)),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                                .testTag("auth_error_container")
                         ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = errorMessage ?: "",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    lineHeight = 17.sp
-                                )
-                                if (!technicalError.isNullOrBlank()) {
-                                    Text(
-                                        text = technicalError ?: "",
-                                        color = Color(0xFFFCA5A5),
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    when (screenState) {
-                        AuthScreenState.FORM -> {
-                            // Segmented Tabs: "Log in" and "Sign up"
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(46.dp)
-                                    .background(theme.surfaceVariant, RoundedCornerShape(12.dp))
-                                    .padding(4.dp),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                val isLogin = selectedTab == AuthTab.LOGIN
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isLogin) theme.surfaceColor else Color.Transparent)
-                                        .clickable {
-                                            if (selectedTab != AuthTab.LOGIN) {
-                                                selectedTab = AuthTab.LOGIN
-                                                errorMessage = null
-                                                technicalError = null
-                                                LinqAccountRegistry.setLastTab(context, "login")
-                                            }
-                                        }
-                                        .testTag("tab_login"),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "Log in",
-                                        fontWeight = if (isLogin) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isLogin) theme.onSurfaceColor else theme.lineNumberColor,
-                                        fontSize = 14.sp
-                                    )
-                                }
-
-                                val isSignUp = selectedTab == AuthTab.SIGNUP
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSignUp) theme.surfaceColor else Color.Transparent)
-                                        .clickable {
-                                            if (selectedTab != AuthTab.SIGNUP) {
-                                                selectedTab = AuthTab.SIGNUP
-                                                errorMessage = null
-                                                technicalError = null
-                                                LinqAccountRegistry.setLastTab(context, "signup")
-                                            }
-                                        }
-                                        .testTag("tab_signup"),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "Sign up",
-                                        fontWeight = if (isSignUp) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSignUp) theme.onSurfaceColor else theme.lineNumberColor,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            if (selectedTab == AuthTab.SIGNUP) {
-                                // SIGN UP FORM
-                                OutlinedTextField(
-                                    value = nameInput,
-                                    onValueChange = { nameInput = it; errorMessage = null },
-                                    label = { Text("Full Name", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = theme.primaryColor) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_signup_name")
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                OutlinedTextField(
-                                    value = emailInput,
-                                    onValueChange = { emailInput = it; errorMessage = null },
-                                    label = { Text("Email Address", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = theme.primaryColor) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_signup_email")
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                OutlinedTextField(
-                                    value = passwordInput,
-                                    onValueChange = { passwordInput = it; errorMessage = null },
-                                    label = { Text("Password", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = theme.primaryColor) },
-                                    trailingIcon = {
-                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                            Icon(if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = "Toggle password visibility")
-                                        }
-                                    },
-                                    singleLine = true,
-                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_signup_password")
-                                )
-
-                                // Password Strength Live Hint
-                                val isLongEnough = passwordInput.length >= 8
-                                val hasLetter = passwordInput.any { it.isLetter() }
-                                val hasDigit = passwordInput.any { it.isDigit() }
-                                val isStrong = isLongEnough && hasLetter && hasDigit
-
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = "Min 8 chars, 1 letter & 1 number",
-                                        fontSize = 11.sp,
-                                        color = if (isStrong) Color(0xFF10B981) else theme.lineNumberColor
+                                    Icon(
+                                        imageVector = Icons.Default.ErrorOutline,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFCA5A5),
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    if (passwordInput.isNotEmpty()) {
+                                    Text(
+                                        text = errorMessage ?: "Authentication failed.",
+                                        color = Color.White,
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        lineHeight = 17.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+
+                                if (!technicalError.isNullOrBlank()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .clickable { showDetails = !showDetails }
+                                            .padding(vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
                                         Text(
-                                            text = if (isStrong) "✓ Strong" else "Weak",
+                                            text = if (showDetails) "Hide details" else "Show details",
+                                            color = Color(0xFFFCA5A5),
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isStrong) Color(0xFF10B981) else Color(0xFFEF4444)
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Icon(
+                                            imageVector = if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFCA5A5),
+                                            modifier = Modifier.size(16.dp)
                                         )
                                     }
-                                }
 
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                OutlinedTextField(
-                                    value = confirmPasswordInput,
-                                    onValueChange = { confirmPasswordInput = it; errorMessage = null },
-                                    label = { Text("Confirm Password", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = theme.primaryColor) },
-                                    singleLine = true,
-                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        focusManager.clearFocus()
-                                        performSignUp()
-                                    }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_signup_confirm_password")
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = { performSignUp() },
-                                    enabled = !isSubmitting,
-                                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("btn_submit_signup")
-                                ) {
-                                    if (isSubmitting) {
-                                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.Black, strokeWidth = 2.dp)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Creating account...", color = Color.Black, fontWeight = FontWeight.Bold)
-                                    } else {
-                                        Text("Create account", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    }
-                                }
-                            } else {
-                                // LOG IN FORM
-                                OutlinedTextField(
-                                    value = emailInput,
-                                    onValueChange = { emailInput = it; errorMessage = null },
-                                    label = { Text("Email Address", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = theme.primaryColor) },
-                                    singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-                                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_login_email")
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                OutlinedTextField(
-                                    value = passwordInput,
-                                    onValueChange = { passwordInput = it; errorMessage = null },
-                                    label = { Text("Password", fontSize = 13.sp) },
-                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = theme.primaryColor) },
-                                    trailingIcon = {
-                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                            Icon(if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = "Toggle password visibility")
-                                        }
-                                    },
-                                    singleLine = true,
-                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        focusManager.clearFocus()
-                                        performLogIn()
-                                    }),
-                                    modifier = Modifier.fillMaxWidth().testTag("input_login_password")
-                                )
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                                    horizontalArrangement = Arrangement.End
-                                ) {
-                                    Text(
-                                        text = "Forgot password?",
-                                        color = theme.primaryColor,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier
-                                            .clickable {
-                                                screenState = AuthScreenState.FORGOT_PASSWORD
-                                                forgotPasswordEmail = emailInput
-                                                errorMessage = null
+                                    AnimatedVisibility(visible = showDetails) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFF2B0707), RoundedCornerShape(6.dp))
+                                                .padding(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = technicalError ?: "",
+                                                color = Color(0xFFFEE2E2),
+                                                fontSize = 10.5.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                lineHeight = 14.sp
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End
+                                            ) {
+                                                TextButton(
+                                                    onClick = {
+                                                        clipboard.setText(AnnotatedString(technicalError ?: ""))
+                                                        copiedNotice = true
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                                                    modifier = Modifier.height(26.dp)
+                                                ) {
+                                                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFFFCA5A5), modifier = Modifier.size(12.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = if (copiedNotice) "Copied!" else "Copy details",
+                                                        color = Color(0xFFFCA5A5),
+                                                        fontSize = 10.5.sp
+                                                    )
+                                                }
                                             }
-                                            .padding(vertical = 4.dp)
-                                            .testTag("link_forgot_password")
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(14.dp))
-
-                                Button(
-                                    onClick = { performLogIn() },
-                                    enabled = !isSubmitting,
-                                    colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("btn_submit_login")
-                                ) {
-                                    if (isSubmitting) {
-                                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.Black, strokeWidth = 2.dp)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Logging in...", color = Color.Black, fontWeight = FontWeight.Bold)
-                                    } else {
-                                        Text("Log in", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                        }
                                     }
                                 }
                             }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Bottom Tab Switcher Link
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = if (selectedTab == AuthTab.LOGIN) "New here? " else "Already have an account? ",
-                                    color = theme.lineNumberColor,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = if (selectedTab == AuthTab.LOGIN) "Sign up" else "Log in",
-                                    color = theme.primaryColor,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.clickable {
-                                        selectedTab = if (selectedTab == AuthTab.LOGIN) AuthTab.SIGNUP else AuthTab.LOGIN
-                                        errorMessage = null
-                                        technicalError = null
-                                    }
-                                )
-                            }
-                        }
-
-
-
-                        AuthScreenState.FORGOT_PASSWORD -> {
-                            // FORGOT PASSWORD SCREEN
-                            Text(
-                                text = "Reset Password",
-                                color = theme.onSurfaceColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Enter your email address and we'll send you a password reset link.",
-                                color = theme.lineNumberColor,
-                                fontSize = 12.sp,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            OutlinedTextField(
-                                value = forgotPasswordEmail,
-                                onValueChange = { forgotPasswordEmail = it; errorMessage = null },
-                                label = { Text("Email Address", fontSize = 13.sp) },
-                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = theme.primaryColor) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { performForgotPassword() }),
-                                modifier = Modifier.fillMaxWidth().testTag("input_forgot_password_email")
-                            )
-
-                            if (forgotPasswordFeedback != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = forgotPasswordFeedback ?: "",
-                                    color = Color(0xFF34D399),
-                                    fontSize = 12.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Button(
-                                onClick = { performForgotPassword() },
-                                enabled = forgotPasswordCooldown == 0 && !isSubmitting,
-                                colors = ButtonDefaults.buttonColors(containerColor = theme.primaryColor),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("btn_send_reset_link")
-                            ) {
-                                if (forgotPasswordCooldown > 0) {
-                                    Text("Wait ${forgotPasswordCooldown}s to resend", color = Color.Black, fontSize = 13.sp)
-                                } else {
-                                    Text("Send reset link", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = "Back to Log in",
-                                color = theme.primaryColor,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                modifier = Modifier
-                                    .clickable { screenState = AuthScreenState.FORM; selectedTab = AuthTab.LOGIN; errorMessage = null }
-                                    .padding(vertical = 4.dp)
-                            )
                         }
                     }
+
+                    // Form Fields
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Username Field (Required on Sign Up)
+                        if (authMode == GoogleAuthMode.SIGNUP) {
+                            OutlinedTextField(
+                                value = usernameInput,
+                                onValueChange = { usernameInput = it; errorMessage = null },
+                                label = { Text("Set Username", fontSize = 12.5.sp) },
+                                placeholder = { Text("e.g. AlexCoder", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Person, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(20.dp))
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Next),
+                                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = theme.primaryColor,
+                                    unfocusedBorderColor = theme.borderColor,
+                                    focusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f),
+                                    unfocusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f)
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth().testTag("input_google_username")
+                            )
+                        }
+
+                        // Google Email Field
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = { emailInput = it; errorMessage = null },
+                            label = { Text("Google Email", fontSize = 12.5.sp) },
+                            placeholder = { Text("username@gmail.com", fontSize = 12.sp) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(20.dp))
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = theme.primaryColor,
+                                unfocusedBorderColor = theme.borderColor,
+                                focusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f),
+                                unfocusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("input_google_email")
+                        )
+
+                        // Google Password Field
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = { passwordInput = it; errorMessage = null },
+                            label = { Text("Password", fontSize = 12.5.sp) },
+                            placeholder = { Text("Enter your password", fontSize = 12.sp) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = theme.primaryColor, modifier = Modifier.size(20.dp))
+                            },
+                            trailingIcon = {
+                                IconButton(
+                                    onClick = { isPasswordVisible = !isPasswordVisible },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = "Toggle password visibility",
+                                        tint = theme.lineNumberColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { submitAuth() }),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = theme.primaryColor,
+                                unfocusedBorderColor = theme.borderColor,
+                                focusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f),
+                                unfocusedContainerColor = theme.surfaceVariant.copy(alpha = 0.35f)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("input_google_password")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // Primary Action Button (Login or Sign up)
+                    Button(
+                        onClick = { submitAuth() },
+                        enabled = !isSubmitting,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (theme.isLight) theme.primaryColor else Color.White
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .testTag(if (authMode == GoogleAuthMode.LOGIN) "btn_google_login_submit" else "btn_google_signup_submit")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (isSubmitting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = if (theme.isLight) Color.White else Color.Black,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (authMode == GoogleAuthMode.LOGIN) "Logging in with Google..." else "Signing up with Google...",
+                                    color = if (theme.isLight) Color.White else Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.5.sp
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_google_logo),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (authMode == GoogleAuthMode.LOGIN) "Login" else "Sign up",
+                                    color = if (theme.isLight) Color.White else Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Toggle Link: "new to the app? Sign up" / "Already have an account? Log in"
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (authMode == GoogleAuthMode.LOGIN) "new to the app? " else "Already have an account? ",
+                            color = theme.lineNumberColor,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = if (authMode == GoogleAuthMode.LOGIN) "Sign up" else "Log in",
+                            color = theme.primaryColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable {
+                                    authMode = if (authMode == GoogleAuthMode.LOGIN) GoogleAuthMode.SIGNUP else GoogleAuthMode.LOGIN
+                                }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .testTag("btn_toggle_auth_mode")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Real Google account authentication for Linq Studio. Your credentials are used directly to sync your workspace.",
+                        fontSize = 11.sp,
+                        color = theme.lineNumberColor.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 15.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp)
+                    )
                 }
             }
         }

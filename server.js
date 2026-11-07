@@ -378,6 +378,58 @@ app.post('/api/auth/signout-all', requireAuth, async (req, res) => {
   return res.json({ success: true, message: 'All sessions revoked.' });
 });
 
+// --- Connect Existing Account to Google: POST /api/auth/account/merge ---
+app.post('/api/auth/account/merge', requireAuth, async (req, res) => {
+  const { uid, email } = req.user;
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  if (!cleanEmail) {
+    return res.status(400).json({ error: 'invalid_account', message: 'Valid account email required.' });
+  }
+
+  try {
+    let existingFound = false;
+    if (admin && admin.auth) {
+      try {
+        const userRecord = await admin.auth().getUserByEmail(cleanEmail);
+        if (userRecord && userRecord.uid !== uid) {
+          // Found legacy account created prior to Google-only migration
+          existingFound = true;
+          await admin.auth().revokeRefreshTokens(userRecord.uid).catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    // Ensure Firestore profile has merged Google provider and clean metadata
+    if (db) {
+      try {
+        const profileRef = db.collection('users').doc(uid);
+        await profileRef.set({
+          email: cleanEmail,
+          authProvider: 'google.com',
+          migratedToGoogle: true,
+          updatedAt: admin ? admin.firestore.FieldValue.serverTimestamp() : new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('[Merge] Firestore profile sync notice:', err.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      merged: existingFound,
+      message: existingFound
+        ? 'We found your existing account and connected it to Google.'
+        : 'Google account connected successfully.'
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: 'merge_failed',
+      message: 'Failed to connect existing account.'
+    });
+  }
+});
+
 // --- Owner-Only Real-Time Email Diagnostics (NDJSON Streaming) ---
 app.all('/api/auth/email/diagnostics', requireAuth, async (req, res) => {
   const { email, owner } = req.user;
@@ -524,6 +576,284 @@ app.all('/api/auth/email/diagnostics', requireAuth, async (req, res) => {
   res.end();
 });
 
+// --- AI Relay Engine: POST /api/ai/relay (Part 1E) ---
+const KNOWN_AI_HOSTS = new Set([
+  'api.openai.com',
+  'api.anthropic.com',
+  'generativelanguage.googleapis.com',
+  'api.groq.com',
+  'openrouter.ai',
+  'api.mistral.ai',
+  'api.deepseek.com',
+  'api.x.ai',
+  'api.together.xyz',
+  'api.fireworks.ai',
+  'api.perplexity.ai',
+  'api.cohere.com'
+]);
+
+function isPrivateIp(ip) {
+  if (!ip) return true;
+  if (ip.startsWith('127.')) return true;
+  if (ip.startsWith('10.')) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip)) return true;
+  if (ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('169.254.')) return true;
+  if (ip.startsWith('0.')) return true;
+  if (ip === '::1' || ip.startsWith('fc00:') || ip.startsWith('fd') || ip.startsWith('fe80:')) return true;
+  return false;
+}
+
+async function validateRelayUrl(targetUrl) {
+  let parsed;
+  try {
+    parsed = new URL(targetUrl);
+  } catch (_) {
+    throw new Error('Invalid destination URL.');
+  }
+
+  if (parsed.protocol !== 'https:') {
+    throw new Error('HTTPS scheme is required for secure AI relay.');
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (KNOWN_AI_HOSTS.has(hostname)) {
+    return parsed;
+  }
+
+  // Resolve DNS to verify no private/metadata IP
+  try {
+    const addresses = await dns.resolve(hostname);
+    for (const addr of addresses) {
+      if (isPrivateIp(addr)) {
+        throw new Error('Destination resolves to a restricted private or metadata IP.');
+      }
+    }
+  } catch (err) {
+    if (err.message.includes('restricted')) throw err;
+    throw new Error(`DNS resolution failed for host: ${hostname}`);
+  }
+
+  return parsed;
+}
+
+app.post('/api/ai/relay', requireAuth, express.json({ limit: '1mb' }), async (req, res) => {
+  const { url: targetUrl, method = 'POST', headers = {}, body } = req.body || {};
+
+  if (!targetUrl) {
+    return res.status(400).json({ error: 'invalid_request', message: 'Missing target URL.' });
+  }
+
+  try {
+    await validateRelayUrl(targetUrl);
+  } catch (err) {
+    return res.status(403).json({ error: 'ssrf_blocked', message: err.message });
+  }
+
+  const rateKey = `ai_relay:${req.user.uid || req.ip}`;
+  const check = Storage.checkRateLimit(rateKey, 60, 60 * 1000);
+  if (!check.allowed) {
+    return res.status(429).json({ error: 'rate_limited', message: 'Relay rate limit reached. Please wait.' });
+  }
+
+  const forwardedHeaders = {};
+  const ALLOWED_HEADERS = ['content-type', 'authorization', 'x-api-key', 'anthropic-version', 'anthropic-dangerous-direct-browser-access', 'x-goog-api-key', 'http-referer', 'x-title'];
+  Object.keys(headers).forEach(k => {
+    const lower = k.toLowerCase();
+    if (ALLOWED_HEADERS.includes(lower)) {
+      forwardedHeaders[lower] = headers[k];
+    }
+  });
+
+  const controller = new AbortController();
+  req.on('close', () => controller.abort());
+
+  try {
+    const fetchOptions = {
+      method,
+      headers: forwardedHeaders,
+      signal: controller.signal,
+      redirect: 'error'
+    };
+    if (body && (method === 'POST' || method === 'PUT')) {
+      fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+    }
+
+    const upstreamRes = await fetch(targetUrl, fetchOptions);
+
+    res.status(upstreamRes.status);
+    const contentType = upstreamRes.headers.get('content-type') || 'application/json';
+    res.setHeader('Content-Type', contentType);
+
+    if (contentType.includes('text/event-stream')) {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Connection', 'keep-alive');
+      const reader = upstreamRes.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } else {
+      const data = await upstreamRes.arrayBuffer();
+      res.send(Buffer.from(data));
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    return res.status(502).json({ error: 'relay_upstream_error', message: err.message });
+  }
+});
+
+// --- Active Real-Time Presence Engine (Part 2) ---
+const activeConnections = new Map();
+const activeOwnerStreams = new Map();
+
+let peakToday = 0;
+let peakTodayDate = new Date().toDateString();
+
+function getPresenceAggregate() {
+  const currentDate = new Date().toDateString();
+  if (currentDate !== peakTodayDate) {
+    peakTodayDate = currentDate;
+    peakToday = 0;
+  }
+
+  const distinctUsers = new Set();
+  const distinctGuests = new Set();
+  let totalDevices = 0;
+
+  for (const conn of activeConnections.values()) {
+    totalDevices++;
+    if (conn.uid && conn.uid !== 'guest') {
+      distinctUsers.add(conn.uid);
+    } else {
+      distinctGuests.add(conn.sessionId);
+    }
+  }
+
+  const signedIn = distinctUsers.size;
+  const guests = distinctGuests.size;
+  const total = signedIn + guests;
+
+  if (total > peakToday) {
+    peakToday = total;
+  }
+
+  return {
+    total,
+    signedIn,
+    guests,
+    devices: totalDevices,
+    peakToday,
+    timestamp: Date.now()
+  };
+}
+
+function broadcastPresenceUpdate(changeType) {
+  const aggregate = getPresenceAggregate();
+  const payload = JSON.stringify({
+    type: 'telemetry_update',
+    change: changeType || 'sync',
+    data: aggregate
+  });
+
+  for (const [subId, res] of activeOwnerStreams.entries()) {
+    try {
+      res.write(`data: ${payload}\n\n`);
+    } catch (_) {
+      activeOwnerStreams.delete(subId);
+    }
+  }
+}
+
+// Client presence SSE stream (guest or signed-in)
+app.get('/api/presence/stream', (req, res) => {
+  const sessionId = (req.query.session || 'anon_' + Math.random().toString(36).substring(2, 9)).slice(0, 32);
+  const uid = (req.query.uid || 'guest').slice(0, 64);
+  const platform = (req.query.platform || 'web').slice(0, 20);
+
+  const connId = 'conn_' + Math.random().toString(36).substring(2, 11);
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  activeConnections.set(connId, {
+    uid,
+    sessionId,
+    platform,
+    connectedAt: Date.now()
+  });
+
+  res.write(`data: ${JSON.stringify({ status: 'connected', connId })}\n\n`);
+  broadcastPresenceUpdate('joined');
+
+  const pingInterval = setInterval(() => {
+    try {
+      res.write(': keepalive\n\n');
+    } catch (_) {
+      clearInterval(pingInterval);
+    }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(pingInterval);
+    activeConnections.delete(connId);
+    broadcastPresenceUpdate('left');
+  });
+});
+
+// Presence Heartbeat fallback
+app.post('/api/presence/heartbeat', express.json(), (req, res) => {
+  const { sessionId = 'anon_hb', uid = 'guest', platform = 'web' } = req.body || {};
+  const connId = 'hb_' + (uid !== 'guest' ? uid : sessionId);
+  activeConnections.set(connId, {
+    uid,
+    sessionId,
+    platform,
+    connectedAt: Date.now()
+  });
+  broadcastPresenceUpdate('heartbeat');
+  res.json({ ok: true, aggregate: getPresenceAggregate() });
+});
+
+// Owner Telemetry Stream (strictly owner-only)
+app.get('/api/owner/telemetry/stream', requireAuth, (req, res) => {
+  const { email, owner } = req.user;
+  const isOwner = owner === true || getOwnerEmails().includes((email || '').toLowerCase());
+  if (!isOwner) {
+    return res.status(403).json({ error: 'forbidden', message: 'Owner access required.' });
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const subId = 'owner_sub_' + Math.random().toString(36).substring(2, 9);
+  activeOwnerStreams.set(subId, res);
+
+  const initial = getPresenceAggregate();
+  res.write(`data: ${JSON.stringify({ type: 'telemetry_update', change: 'initial', data: initial })}\n\n`);
+
+  req.on('close', () => {
+    activeOwnerStreams.delete(subId);
+  });
+});
+
+// Owner Telemetry REST snapshot (strictly owner-only)
+app.get('/api/owner/telemetry', requireAuth, (req, res) => {
+  const { email, owner } = req.user;
+  const isOwner = owner === true || getOwnerEmails().includes((email || '').toLowerCase());
+  if (!isOwner) {
+    return res.status(403).json({ error: 'forbidden', message: 'Owner access required.' });
+  }
+  res.json({ ok: true, data: getPresenceAggregate() });
+});
+
 // Explicit 404 for all other API routes (including legacy verification/device routes)
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'not_found', message: 'API route not found' });
@@ -583,4 +913,4 @@ if (require.main === module || process.env.NODE_ENV === 'test') {
   });
 }
 
-module.exports = { app, server, Storage, sendMail, getMailConfig, getOwnerEmails };
+module.exports = { app, server, Storage, sendMail, getMailConfig, getOwnerEmails, getPresenceAggregate, activeConnections, validateRelayUrl, isPrivateIp };

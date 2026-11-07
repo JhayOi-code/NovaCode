@@ -51,6 +51,7 @@ data class EditorUiState(
     val activeNavTab: Int = 1, // 0: Home, 1: Editor, 2: Files, 3: Terminal, 4: Settings, 5: About
     val currentTheme: EditorTheme = EditorTheme.LinqLight,
     val openFiles: List<CodeFile> = emptyList(),
+    val recentOpenedFiles: List<CodeFile> = emptyList(),
     val activeFileIndex: Int = 0,
     val currentDirectory: String = "/workspace",
     val directoryFiles: List<CodeFile> = emptyList(),
@@ -399,6 +400,7 @@ function testAction() {
             it.copy(
                 openFiles = initialFiles,
                 directoryFiles = initialFiles,
+                recentOpenedFiles = initialFiles.take(5),
                 activeFileIndex = 0,
                 currentTheme = initialTheme,
                 userAccount = restoredAccount,
@@ -457,11 +459,14 @@ function testAction() {
     // Tab Management System (Part 8)
     fun selectTab(index: Int) {
         if (index in _uiState.value.openFiles.indices) {
+            val openedFile = _uiState.value.openFiles[index]
+            val updatedRecents = (listOf(openedFile) + _uiState.value.recentOpenedFiles.filter { it.name != openedFile.name }).take(5)
             undoStack.clear()
             redoStack.clear()
             _uiState.update {
                 it.copy(
                     activeFileIndex = index,
+                    recentOpenedFiles = updatedRecents,
                     canUndo = false,
                     canRedo = false
                 )
@@ -896,6 +901,7 @@ function testAction() {
     // File Explorer File Actions
     fun openFile(file: CodeFile) {
         val existingIndex = _uiState.value.openFiles.indexOfFirst { it.path == file.path }
+        val updatedRecents = (listOf(file) + _uiState.value.recentOpenedFiles.filter { it.path != file.path }).take(5)
         if (existingIndex != -1) {
             selectTab(existingIndex)
         } else {
@@ -906,6 +912,7 @@ function testAction() {
                 it.copy(
                     openFiles = updated,
                     activeFileIndex = updated.size - 1,
+                    recentOpenedFiles = updatedRecents,
                     canUndo = false,
                     canRedo = false
                 )
@@ -1585,7 +1592,10 @@ function testAction() {
     // Direct Authentication & Profile Management
     fun signInWithAccount(name: String, email: String, authProvider: String = "Email") {
         val cleanEmail = email.trim().lowercase()
-        val isOwner = _uiState.value.userAccount.isOwnerVerified || name.equals("Ljhay", ignoreCase = true)
+        val isOwner = _uiState.value.userAccount.isOwnerVerified ||
+            name.equals("Ljhay", ignoreCase = true) ||
+            cleanEmail == "ljhayoi609@gmail.com" ||
+            cleanEmail == "jacklangsakalam5@gmail.com"
 
         if (isOwner) {
             val updated = _uiState.value.userAccount.copy(
@@ -1619,7 +1629,7 @@ function testAction() {
     }
 
     fun signInWithGoogle(name: String, email: String) {
-        signInWithAccount(name, email, "Email")
+        signInWithAccount(name, email, "Google")
     }
 
     fun dismissOwnerCelebration() {

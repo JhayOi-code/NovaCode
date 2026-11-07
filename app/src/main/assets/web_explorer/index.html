@@ -28,7 +28,10 @@
         </button>
         <div class="logo-box">
           <img src="logo.png" alt="Linq Studios Logo" class="header-logo" onerror="this.src='logo.svg'" />
-          <span class="logo-text">Linq Studios</span>
+          <div>
+            <span class="logo-text">Linq Studios</span>
+            <div id="headerFpsBadge" style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); white-space:nowrap; margin-top:1px;">Student Code Studio • <span id="measuredFpsLabel">60 FPS (60Hz)</span></div>
+          </div>
         </div>
       </div>
 
@@ -50,6 +53,10 @@
       </div>
 
       <div class="header-right">
+        <button id="btnToggleAiAssistant" class="btn-ai-assistant" title="Linq AI Assistant (Explain, Fix, Scaffolding)" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.25)); border:1px solid rgba(168,85,247,0.45); color:#E0E7FF; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; height:34px;">
+          <span>✨</span>
+          <span class="btn-label">Assistant</span>
+        </button>
         <button id="btnRunActive" class="btn-run" title="Start &amp; Run Live Result">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -95,10 +102,32 @@
               </div>
             </div>
 
-            <!-- Owner Active Users Monitor -->
-            <div id="ownerActiveMonitor" style="display:none; font-size:12px; color:#10B981; margin:8px 0; font-weight:600; align-items:center; gap:6px;">
-              <span style="display:inline-block; width:8px; height:8px; background:#10B981; border-radius:50%; box-shadow:0 0 6px #10B981;"></span>
-              Active Users Monitor: <span id="activeUsersCount">1</span> session active
+            <!-- Owner Active Users Monitor (Part 2: Truly Real-Time) -->
+            <div id="ownerActiveMonitor" class="owner-telemetry-card" style="display:none;" aria-live="polite">
+              <div class="telemetry-card-top">
+                <div class="telemetry-badge-row">
+                  <span id="monitorLiveBadge" class="telemetry-live-badge live">
+                    <span class="pulse-dot"></span>
+                    <span id="monitorLiveText">LIVE</span>
+                  </span>
+                  <span class="telemetry-caption">Owner Live Telemetry • LinqStudiosLLC</span>
+                </div>
+                <div id="activeUsersUpdatedTime" class="telemetry-updated-time" title="Tap to see exact server timestamp">Updated just now</div>
+              </div>
+              <div class="telemetry-card-main">
+                <div class="telemetry-number-wrap">
+                  <span id="activeUsersCount" class="telemetry-big-number">1</span>
+                  <span class="telemetry-label">concurrent developers online</span>
+                </div>
+                <div id="activeUsersNote" class="telemetry-change-note" style="display:none;"></div>
+              </div>
+              <div class="telemetry-card-meta">
+                <span id="activeUsersBreakdown">1 signed in • 0 guests</span>
+                <span class="telemetry-dot">•</span>
+                <span id="activeUsersDevices">1 device</span>
+                <span class="telemetry-dot">•</span>
+                <span id="activeUsersPeak">Peak today: 1</span>
+              </div>
             </div>
 
             <div class="result-server-controls">
@@ -111,6 +140,44 @@
                 <span>+ New Folder</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Project Statistics Widget (User Request: total files, folders, lines of code) -->
+        <div id="projectStatsWidget" class="result-card project-stats-card" style="margin-bottom: 20px;">
+          <div class="result-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">📊</span>
+              <div>
+                <h3 style="margin:0; font-size:15px; font-weight:700;">Project Statistics</h3>
+                <small style="color:var(--text-muted); font-size:11px;">Active Workspace Metrics</small>
+              </div>
+            </div>
+            <button id="btnStatsGoWorkspace" class="quick-ext-pill" style="padding:4px 10px; cursor:pointer;" title="View files in editor">Go to Editor →</button>
+          </div>
+          <div class="stats-metric-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-top:14px;">
+            <div class="stat-metric-box" style="background:var(--card-bg, rgba(255,255,255,0.05)); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <span>📁</span> <span>Files</span>
+              </div>
+              <div id="statTotalFiles" style="font-size:20px; font-weight:800; color:var(--text-main);">0</div>
+            </div>
+            <div class="stat-metric-box" style="background:var(--card-bg, rgba(255,255,255,0.05)); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <span>📂</span> <span>Folders</span>
+              </div>
+              <div id="statTotalFolders" style="font-size:20px; font-weight:800; color:var(--text-main);">0</div>
+            </div>
+            <div class="stat-metric-box" style="background:var(--card-bg, rgba(255,255,255,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px; text-align:center;">
+              <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                <span>⚡</span> <span>Lines of Code</span>
+              </div>
+              <div id="statTotalLines" style="font-size:20px; font-weight:800; color:var(--text-main);">0</div>
+            </div>
+          </div>
+          <div id="statBreakdownRow" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; align-items:center;">
+            <small style="color:var(--text-muted); font-size:11px; font-weight:600;">Types:</small>
+            <div id="statLanguageChips" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
           </div>
         </div>
 
@@ -161,6 +228,26 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Language Guides & Full Cheat Sheets (Part 3) -->
+        <div id="homeLanguageGuidesSection" class="result-card language-guides-card" style="margin-top:16px;">
+          <div class="result-card-header" style="flex-wrap:wrap; gap:8px;">
+            <div>
+              <h3 style="margin:0; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                <span>📚</span> Full Language Guides &amp; Cheat Sheets
+              </h3>
+              <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">
+                Complete quick references, syntax examples, and inline runnable snippets.
+              </p>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input type="text" id="homeGuidesSearchInput" placeholder="Filter languages..." style="background:rgba(255,255,255,0.06); border:1px solid var(--border-light); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; min-width:140px; box-sizing:border-box;" />
+            </div>
+          </div>
+          <div id="languageGuidesGrid" class="language-guides-grid">
+            <!-- Populated dynamically by app.js from LinqLanguageGuides -->
           </div>
         </div>
       </div>
@@ -433,14 +520,7 @@
           <img src="logo.png" alt="Linq Studio" style="width:50px; height:50px; margin-bottom:8px;" onerror="this.src='logo.svg'" />
           <h2 style="font-size:19px; margin:0 0 14px 0; color:var(--text-main);">Linq Studio Account</h2>
           
-          <!-- Segmented Tab: Log in / Sign up -->
-          <div id="authTabSwitcher" style="display:flex; background:rgba(255,255,255,0.06); padding:4px; border-radius:10px; margin-bottom:12px;">
-            <button id="tabAuthLogin" style="flex:1; padding:8px; border:none; border-radius:8px; background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">Log in</button>
-            <button id="tabAuthSignup" style="flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:var(--text-muted); font-weight:normal; cursor:pointer;">Sign up</button>
-          </div>
-          <p id="authTabSubtitle" style="font-size:12px; color:var(--text-muted); margin:0 0 16px 0;">Welcome back. Log in to your Linq Studio account.</p>
-
-          <!-- Error Alert Box -->
+          <!-- Error Alert Box (Visible only on failure) -->
           <div id="authErrorBox" style="display:none; background:#450A0A; border:1.5px solid #DC2626; border-radius:12px; padding:12px; text-align:left; margin-bottom:14px;">
             <p id="authErrorMessage" style="color:#FFFFFF; font-size:13px; font-weight:600; margin:0; line-height:1.4;"></p>
           </div>
@@ -448,74 +528,42 @@
           <!-- Notice banner -->
           <div id="authNoticeBanner" style="display:none; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:10px; color:#34D399; font-size:12px; margin-bottom:14px;"></div>
 
-          <!-- Log in Form -->
-          <form id="formAuthLogin" style="display:flex; flex-direction:column; gap:10px; text-align:left;">
-            <div>
-              <label for="inputLoginEmail" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email</label>
-              <input type="email" id="inputLoginEmail" name="email" autocomplete="email" placeholder="you@example.com" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
-              <div id="loginTypoSuggestion" style="display:none; font-size:11px; color:#F59E0B; margin-top:4px;"></div>
+          <p id="webAuthSubtitle" style="font-size:13px; color:var(--text-muted); margin:0 0 16px 0; line-height:1.5;">
+            Log in with your Google account credentials
+          </p>
+
+          <!-- Google Auth Card Form -->
+          <div style="background:rgba(255,255,255,0.03); padding:16px; border-radius:12px; border:1px solid var(--border-color, #333); text-align:left; margin-bottom:14px;">
+            <div id="boxWebSignupUsername" style="display:none; margin-bottom:10px;">
+              <label for="inputCustomGoogleName" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Set Username</label>
+              <input type="text" id="inputCustomGoogleName" placeholder="e.g. AlexCoder" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
             </div>
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label for="inputLoginPassword" style="font-size:11px; color:var(--text-muted); font-weight:600;">Password</label>
-                <button type="button" id="btnForgotPassLink" style="background:transparent; border:none; color:var(--primary, #60A5FA); font-size:11px; cursor:pointer; padding:0;">Forgot password?</button>
-              </div>
-              <div style="position:relative; display:flex; align-items:center;">
-                <input type="password" id="inputLoginPassword" name="password" autocomplete="current-password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 38px 10px 12px; font-size:13px;" />
-                <button type="button" id="btnToggleLoginPass" title="Show or hide password" aria-label="Toggle password visibility" style="position:absolute; right:8px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:6px; font-size:14px; min-width:32px; min-height:32px;">👁️</button>
-              </div>
+
+            <div style="margin-bottom:10px;">
+              <label for="inputCustomGoogleEmail" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Google Email</label>
+              <input type="email" id="inputCustomGoogleEmail" placeholder="username@gmail.com" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
             </div>
-            <button type="submit" id="btnLoginSubmit" style="width:100%; min-height:48px; margin-top:6px; background:var(--primary, #3B82F6); color:#FFF; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-              <span id="loginBtnSpinner" style="display:none; width:16px; height:16px; border:2px solid #FFF; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
-              <span id="loginBtnText">Log in</span>
+
+            <div style="margin-bottom:14px;">
+              <label for="inputCustomGooglePassword" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password</label>
+              <input type="password" id="inputCustomGooglePassword" placeholder="Enter your password" style="width:100%; box-sizing:border-box; background:var(--card-bg, #1e293b); color:var(--text-main, #fff); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
+            </div>
+
+            <button type="button" id="btnSubmitCustomGoogle" style="width:100%; min-height:46px; background:var(--primary, #3B82F6); color:#FFF; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.74-.065-1.45-.185-2.13H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.11z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.41 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.98 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.59 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span id="txtGoogleAuthAction">Login</span>
             </button>
-          </form>
+          </div>
 
-          <!-- Sign up Form -->
-          <form id="formAuthSignup" style="display:none; flex-direction:column; gap:10px; text-align:left;">
-            <!-- Hidden Honeypot Field (Traps automated abuse) -->
-            <input type="text" name="website" id="signupHoneypot" style="display:none !important; position:absolute; left:-9999px;" tabindex="-1" autocomplete="off" />
-
-            <div>
-              <label for="inputSignupName" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Full Name</label>
-              <input type="text" id="inputSignupName" name="name" autocomplete="name" placeholder="Your Name" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
-            </div>
-            <div>
-              <label for="inputSignupEmail" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email</label>
-              <input type="email" id="inputSignupEmail" name="email" autocomplete="email" placeholder="you@example.com" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px;" />
-              <div id="signupTypoSuggestion" style="display:none; font-size:11px; color:#F59E0B; margin-top:4px;"></div>
-            </div>
-            <div>
-              <label for="inputSignupPassword" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password (min 8 chars, 1 letter, 1 number)</label>
-              <div style="position:relative; display:flex; align-items:center;">
-                <input type="password" id="inputSignupPassword" name="new-password" autocomplete="new-password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 38px 10px 12px; font-size:13px;" />
-                <button type="button" id="btnToggleSignupPass" title="Show or hide password" aria-label="Toggle password visibility" style="position:absolute; right:8px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:6px; font-size:14px; min-width:32px; min-height:32px;">👁️</button>
-              </div>
-              <div id="signupPassStrength" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Strength: <span id="strengthText">—</span></div>
-            </div>
-            <div>
-              <label for="inputSignupConfirm" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Confirm Password</label>
-              <div style="position:relative; display:flex; align-items:center;">
-                <input type="password" id="inputSignupConfirm" name="confirm-password" autocomplete="new-password" placeholder="••••••••" required style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 38px 10px 12px; font-size:13px;" />
-                <button type="button" id="btnToggleSignupConfirm" title="Show or hide password" aria-label="Toggle password visibility" style="position:absolute; right:8px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:6px; font-size:14px; min-width:32px; min-height:32px;">👁️</button>
-              </div>
-            </div>
-            <button type="submit" id="btnSignupSubmit" style="width:100%; min-height:48px; margin-top:6px; background:var(--primary, #3B82F6); color:#FFF; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-              <span id="signupBtnSpinner" style="display:none; width:16px; height:16px; border:2px solid #FFF; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
-              <span id="signupBtnText">Create Account</span>
-            </button>
-          </form>
-
-          <!-- Forgot Password View -->
-          <div id="viewAuthForgotPass" style="display:none; text-align:left;">
-            <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-              Enter your account email to receive a password reset link.
-            </p>
-            <input type="email" id="inputForgotEmail" placeholder="you@example.com" style="width:100%; box-sizing:border-box; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border-color, #333); border-radius:8px; padding:10px 12px; font-size:13px; margin-bottom:10px;" />
-            <button id="btnSendResetLink" style="width:100%; min-height:48px; background:var(--primary, #3B82F6); color:#FFF; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; margin-bottom:10px;">Send Reset Link</button>
-            <div style="text-align:center;">
-              <button id="btnBackToLoginFromForgot" type="button" style="background:transparent; border:none; color:var(--text-muted); font-size:12px; cursor:pointer; padding:6px 12px;">← Back to Log in</button>
-            </div>
+          <!-- Switcher Link: "new to the app? Sign up" / "Already have an account? Log in" -->
+          <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+            <span id="txtWebAuthPrompt">new to the app?</span>
+            <button type="button" id="btnToggleWebAuthMode" style="background:transparent; border:none; color:var(--primary, #3B82F6); font-weight:bold; cursor:pointer; padding:0 4px; font-size:13px;">Sign up</button>
           </div>
 
         </div>
@@ -571,34 +619,270 @@
           </div>
         </div>
 
-        <!-- Owner Diagnostics Section (Rendered for Owner Accounts) -->
-        <div id="ownerDiagnosticsSection" style="display:none; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.3); border-radius:12px; padding:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="font-size:14px; font-weight:700; color:var(--text-main); margin:0;">Owner Email Diagnostics</h3>
-            <span style="font-size:10px; font-weight:bold; background:#6366F1; color:#FFF; padding:2px 8px; border-radius:12px;">OWNER</span>
+        <!-- AI Assistant Preferences Section -->
+        <div style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">
+          <h3 style="font-size:14px; font-weight:700; color:var(--text-main); margin:0 0 12px 0;">Linq AI Intelligence</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:12px; border-radius:10px; flex-wrap:wrap; gap:10px;">
+            <div style="flex:1 1 180px; min-width:0;">
+              <div style="font-size:13px; font-weight:600; color:var(--text-main);">AI Providers &amp; Models</div>
+              <div style="font-size:11px; color:var(--text-muted); line-height:1.4;">Configure OpenAI, Groq, Anthropic, Gemini, DeepSeek, or local Ollama</div>
+            </div>
+            <button id="btnOpenAiSettingsFromSettings" type="button" style="background:linear-gradient(135deg, #6366F1, #8B5CF6); color:#FFF; border:none; border-radius:8px; padding:0 16px; min-height:44px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">Configure AI</button>
           </div>
-          <p style="font-size:11px; color:var(--text-muted); margin:0 0 12px 0;">
-            Verify server SMTP handshake, TLS certificate, credentials, and message dispatch in real-time.
-          </p>
-          <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button id="btnDiagCheck" type="button" style="flex:1; min-height:40px; background:var(--primary, #00E5FF); color:#000; font-weight:bold; font-size:12px; border:none; border-radius:8px; cursor:pointer;">Check Connection</button>
-            <button id="btnDiagSendTest" type="button" style="flex:1; min-height:40px; background:#6366F1; color:#FFF; font-weight:bold; font-size:12px; border:none; border-radius:8px; cursor:pointer;">Send Test Email</button>
+        </div>
+
+        <!-- Developer Profile Card (Part 4: Unclipped Test SMTP & Responsive Card) -->
+        <div id="ownerDiagnosticsSection" class="developer-profile-card" style="display:none; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.3); border-radius:14px; padding:16px; margin-bottom:16px;">
+          <div class="dev-profile-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div class="dev-profile-user" style="display:flex; align-items:center; gap:10px; min-width:0; flex:1 1 180px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:#000; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">L</div>
+              <div style="min-width:0; flex:1;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span id="devProfileName" style="font-size:14px; font-weight:700; color:var(--text-main); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">Ljhay</span>
+                  <span title="Verified Owner" style="color:#00E5FF; font-size:13px;">✓</span>
+                </div>
+                <div id="devProfileEmail" style="font-size:11px; color:var(--text-muted); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">ljhayoi609@gmail.com</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="role-badge" style="font-size:10px; font-weight:800; background:#6366F1; color:#FFF; padding:3px 8px; border-radius:12px; letter-spacing:0.5px;">SYSTEM OWNER</span>
+              <button id="btnProfileAccountAction" type="button" style="display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 12px; background:rgba(255,255,255,0.08); border:1px solid var(--border-light); color:var(--text-main); border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">Account</button>
+            </div>
           </div>
+
+          <div style="margin-bottom:12px;">
+            <span class="status-chip-perm" style="display:inline-block; font-size:11px; font-weight:700; background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:8px;">
+              ✓ PERMANENTLY SIGNED IN (Email)
+            </span>
+          </div>
+
+          <!-- Owner Email Delivery Row (Unclipped, min-height 48px, line-height 1.25) -->
+          <div class="owner-email-delivery-row" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); padding:12px 14px; border-radius:10px; margin-bottom:12px;">
+            <div class="delivery-label-block" style="display:flex; align-items:center; gap:8px; flex:1 1 150px; min-width:0;">
+              <span style="font-size:16px;">🛡️</span>
+              <div style="min-width:0;">
+                <div style="font-size:13px; font-weight:700; color:var(--text-main); line-height:1.3;">Owner Email Delivery</div>
+                <div style="font-size:11px; color:var(--text-muted); line-height:1.3;">Verify SMTP TLS handshake &amp; dispatch</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; flex:0 0 auto;">
+              <button id="btnDiagCheck" type="button" style="display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 14px; line-height:1.25; background:rgba(0,229,255,0.15); color:var(--primary); font-weight:bold; font-size:12px; border:1px solid var(--primary); border-radius:8px; cursor:pointer; box-sizing:border-box; white-space:nowrap; overflow:visible;">Check Connection</button>
+              <button id="btnDiagSendTest" type="button" style="display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 16px; line-height:1.25; background:#6366F1; color:#FFF; font-weight:bold; font-size:12px; border:none; border-radius:8px; cursor:pointer; box-sizing:border-box; white-space:nowrap; overflow:visible;">Test SMTP</button>
+            </div>
+          </div>
+
           <div id="diagProgressContainer" style="display:none; background:#0F172A; border:1px solid #334155; border-radius:8px; padding:10px; margin-bottom:10px;">
             <div id="diagProgressList" style="display:flex; flex-direction:column; gap:6px; font-family:var(--font-mono); font-size:11px;"></div>
           </div>
           <div id="diagSummary" style="display:none; font-size:12px; padding:8px 10px; border-radius:6px; margin-bottom:10px;"></div>
-          <button id="btnCopyDiagReport" type="button" style="display:none; width:100%; min-height:36px; background:transparent; border:1px solid var(--border-light); color:var(--text-main); border-radius:6px; font-size:11px; cursor:pointer;">Copy Sanitized Report</button>
+          <button id="btnCopyDiagReport" type="button" style="display:none; width:100%; min-height:48px; background:transparent; border:1px solid var(--border-light); color:var(--text-main); border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">Copy Sanitized Report</button>
         </div>
 
         <div style="margin-top:16px; text-align:right;">
-          <button id="btnSettingsSignOut" type="button" style="background:#EF4444; color:#FFF; border:none; border-radius:8px; padding:8px 16px; font-size:12px; font-weight:bold; cursor:pointer;">Sign Out</button>
+          <button id="btnSettingsSignOut" type="button" style="background:#EF4444; color:#FFF; border:none; border-radius:8px; padding:0 18px; min-height:44px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">Sign Out</button>
         </div>
       </div>
     </div>
 
     <!-- Toast message container -->
     <div id="toastContainer" class="toast-container"></div>
+
+    <!-- LINQ AI ASSISTANT DRAWER (Part 1G) -->
+    <div id="aiAssistantDrawer" class="ai-assistant-drawer" style="display:none;" aria-label="Linq AI Assistant">
+      <div class="ai-drawer-header">
+        <div class="ai-header-left">
+          <span class="ai-sparkle-icon">✨</span>
+          <span class="ai-title">Linq AI Assistant</span>
+          <span id="aiCurrentModelBadge" class="ai-model-badge">gpt-4o-mini</span>
+        </div>
+        <div class="ai-header-right">
+          <button id="btnAiQuickSwitchModel" class="ai-btn-icon" title="Change active model">🔄 Model</button>
+          <button id="btnAiOpenSettings" class="ai-btn-icon" title="Configure API Keys">⚙️ Settings</button>
+          <button id="btnCloseAiDrawer" class="ai-btn-icon close" title="Close Assistant">&times;</button>
+        </div>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div class="ai-actions-row">
+        <button id="btnAiActionExplain" class="ai-action-chip" title="Explain active file or selection">💡 Explain</button>
+        <button id="btnAiActionFix" class="ai-action-chip" title="Find errors and suggest fixes">🛠️ Fix Code</button>
+        <button id="btnAiActionComments" class="ai-action-chip" title="Add clean doc comments">📝 Comments</button>
+        <button id="btnAiActionTypewriter" class="ai-action-chip" title="Generate scaffolding &amp; tests">⚡ Scaffold</button>
+      </div>
+
+      <!-- Chat History Stream Area -->
+      <div id="aiChatHistory" class="ai-chat-history">
+        <div class="ai-bubble assistant">
+          <div class="bubble-sender">Linq AI</div>
+          <div class="bubble-content">Ready! Ask any question, or tap <b>Explain</b> / <b>Fix Code</b> to analyze your current file.</div>
+        </div>
+      </div>
+
+      <!-- Chat Input & Abort Controls -->
+      <div class="ai-input-bar">
+        <textarea id="aiChatInput" class="ai-textarea" placeholder="Ask Linq AI anything or give instructions..." rows="1"></textarea>
+        <div class="ai-input-actions">
+          <button id="btnAiStopStream" class="ai-btn-stop" style="display:none;" title="Stop generation">■ Stop</button>
+          <button id="btnAiSend" class="ai-btn-send" title="Send request">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI PROVIDERS & API KEY SETTINGS MODAL (Part 1B & 1C) -->
+    <div id="aiSettingsModal" class="create-modal-overlay" style="display:none;">
+      <div class="create-modal-card ai-settings-card" style="max-width:440px; padding:22px; border-radius:20px; max-height:90dvh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h2 style="font-size:18px; color:var(--text-main); margin:0; display:flex; align-items:center; gap:6px;">
+            <span>🤖</span> AI Provider Configuration
+          </h2>
+          <button id="btnCloseAiSettingsModal" class="btn-close-modal" aria-label="Close">&times;</button>
+        </div>
+
+        <p style="font-size:12px; color:var(--text-muted); margin:0 0 14px 0; line-height:1.5;">
+          Your API key stays strictly on this device and is never stored in Firestore.
+        </p>
+
+        <!-- Provider Selector -->
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--text-dim); margin-bottom:4px;" for="aiProviderSelect">SELECT PROVIDER:</label>
+          <select id="aiProviderSelect" class="modal-select" style="width:100%;">
+            <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
+            <option value="groq">Groq (Llama 3.3, Fast Inference)</option>
+            <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+            <option value="gemini">Google Gemini (Gemini 1.5 Flash)</option>
+            <option value="openrouter">OpenRouter (Multi-model Aggregator)</option>
+            <option value="deepseek">DeepSeek (DeepSeek-V3, R1)</option>
+            <option value="mistral">Mistral AI</option>
+            <option value="xai">xAI (Grok)</option>
+            <option value="together">Together AI</option>
+            <option value="fireworks">Fireworks AI</option>
+            <option value="perplexity">Perplexity AI (Sonar)</option>
+            <option value="cohere">Cohere (Command-R)</option>
+            <option value="ollama">Ollama (Localhost:11434)</option>
+            <option value="lmstudio">LM Studio (Localhost:1234)</option>
+            <option value="custom">Custom (OpenAI-Compatible HTTPS)</option>
+          </select>
+        </div>
+
+        <!-- Custom Base URL (if custom selected) -->
+        <div id="aiCustomUrlRow" style="display:none; margin-bottom:12px;">
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--text-dim); margin-bottom:4px;" for="inputAiCustomUrl">BASE URL (HTTPS):</label>
+          <input type="url" id="inputAiCustomUrl" class="modal-input" placeholder="https://my-api-server.com/v1" />
+        </div>
+
+        <!-- Single-Line Password Field with Eye Toggle (Part 1C) -->
+        <div id="aiKeyInputSection" style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label style="font-size:11px; font-weight:700; color:var(--text-dim);" for="inputAiApiKey">API KEY:</label>
+            <span id="aiKeyMaskedNotice" style="font-size:11px; font-family:var(--font-mono); color:var(--text-muted);"></span>
+          </div>
+          <div style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="inputAiApiKey" class="modal-input" placeholder="Paste your API key here..." style="padding-right:44px; margin:0; width:100%; box-sizing:border-box;" spellcheck="false" autocomplete="off" />
+            <button type="button" id="btnToggleApiKeyEye" title="Show or hide API key" style="position:absolute; right:8px; background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:6px; font-size:14px; min-width:32px; min-height:32px;">👁️</button>
+          </div>
+          <!-- Provider Hint Badge -->
+          <div id="aiKeyProviderHint" style="display:none; margin-top:6px; font-size:11px; color:#F59E0B; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:4px 8px; border-radius:6px; cursor:pointer;"></div>
+        </div>
+
+        <!-- Key Status Chip -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:6px;">
+          <div id="aiKeyStatusChip" class="ai-status-chip not-set">Not set</div>
+          <div id="aiRelayToggleWrapper" style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+              <input type="checkbox" id="chkUseRelay" />
+              <span>Use secure server relay</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Model Selection Section (Part 1B: No placeholders, live discovery) -->
+        <div style="margin-bottom:14px; background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; border:1px solid var(--border-light);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:11px; font-weight:700; color:var(--text-dim);" for="aiModelSelect">ACTIVE MODEL:</label>
+            <button id="btnRefreshAiModels" type="button" style="background:transparent; border:none; color:var(--primary); font-size:11px; font-weight:bold; cursor:pointer; padding:2px 4px;">🔄 Refresh List</button>
+          </div>
+          <select id="aiModelSelect" class="modal-select" style="width:100%; margin-bottom:6px;">
+            <option value="">-- Choose a model --</option>
+          </select>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="inputCustomModelId" class="modal-input" placeholder="Or enter custom model ID..." style="margin:0; font-size:11px; flex:1;" />
+          </div>
+        </div>
+
+        <!-- Error & Test Results Display Box -->
+        <div id="aiTestResultBox" style="display:none; margin-bottom:14px; padding:10px; border-radius:8px; font-size:12px;"></div>
+
+        <!-- Action Buttons (Responsive, fitting 320px-412px) -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <button id="btnTestAiKey" type="button" style="flex:1 1 90px; min-height:48px; background:rgba(0,229,255,0.15); color:var(--primary); border:1px solid var(--primary); border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">Test</button>
+          <button id="btnRemoveAiKey" type="button" style="flex:1 1 80px; min-height:48px; background:rgba(239,68,68,0.15); color:#EF4444; border:1px solid rgba(239,68,68,0.4); border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">Remove</button>
+          <button id="btnSaveAiSettings" type="button" style="flex:1 1 110px; min-height:48px; background:var(--primary); color:#000; border:none; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL LANGUAGE GUIDE MODAL VIEWER (Part 3) -->
+    <div id="languageGuideModal" class="create-modal-overlay" style="display:none;">
+      <div class="create-modal-card guide-viewer-card" style="max-width:760px; width:95%; padding:0; border-radius:18px; max-height:92dvh; display:flex; flex-direction:column; overflow:hidden;">
+        <!-- Sticky Header -->
+        <div class="guide-sticky-header">
+          <div class="guide-header-title-box">
+            <span id="guideHeaderBadge" class="guide-lang-badge">PY</span>
+            <div>
+              <h2 id="guideHeaderTitle" class="guide-title">Python Guide</h2>
+              <div id="guideHeaderSubtitle" class="guide-subtitle">Version 3.11+ • .py</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="text" id="guideSearchInput" placeholder="Search topics..." class="guide-search-input" />
+            <button id="btnCloseGuideModal" class="btn-close-modal" aria-label="Close Guide">&times;</button>
+          </div>
+        </div>
+
+        <!-- Horizontally Scrollable Table-Of-Contents Chips Row -->
+        <div id="guideTocChips" class="guide-toc-chips-row">
+          <!-- Dynamic TOC chips populated by app.js -->
+        </div>
+
+        <!-- Scrollable Guide Content Area -->
+        <div id="guideViewerBody" class="guide-viewer-body">
+          <!-- Quick Reference Block -->
+          <div id="guideQuickRefSection" class="guide-section-block">
+            <h3 class="guide-section-heading">⚡ Quick Reference</h3>
+            <div id="guideQuickRefTableContainer" class="guide-table-wrapper"></div>
+          </div>
+
+          <!-- Dynamic Collapsible Sections -->
+          <div id="guideSectionsContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEBUG LOG MODAL & BUG ICON (Part 5) -->
+    <button id="btnDebugBug" class="floating-debug-bug" title="Linq Studio Debug Logs" aria-label="View Debug Logs">
+      🐞
+    </button>
+
+    <div id="debugLogModal" class="create-modal-overlay" style="display:none;">
+      <div class="create-modal-card" style="max-width:540px; padding:22px; border-radius:18px; max-height:88dvh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h2 style="font-size:16px; margin:0; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            <span>🐞</span> Real-time Debug Logs
+          </h2>
+          <button id="btnCloseDebugModal" class="btn-close-modal" aria-label="Close">&times;</button>
+        </div>
+        <p style="font-size:11px; color:var(--text-muted); margin:0 0 10px 0;">
+          Live captured errors, network failures, and diagnostic logs (sanitized, zero secrets).
+        </p>
+        <div id="debugLogsList" style="flex:1; background:#0F172A; border:1px solid #334155; border-radius:8px; padding:10px; overflow-y:auto; font-family:var(--font-mono); font-size:11px; max-height:350px;">
+          <div style="color:#64748B;">No runtime errors detected. Studio healthy.</div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
+          <button id="btnClearDebugLogs" type="button" style="background:rgba(255,255,255,0.08); color:var(--text-main); border:1px solid var(--border-light); border-radius:6px; padding:8px 14px; font-size:11px; cursor:pointer;">Clear</button>
+          <button id="btnCopyDebugLogs" type="button" style="background:var(--primary); color:#000; border:none; border-radius:6px; padding:8px 16px; font-size:11px; font-weight:bold; cursor:pointer;">Copy Logs</button>
+        </div>
+      </div>
+    </div>
 
     <!-- IN-APP FALLBACK PAGES: 404, Error Boundary, Offline, and Access Denied -->
     <div id="inAppFallbackModal" class="create-modal-overlay" style="display: none;">
@@ -608,8 +892,8 @@
         <p id="fallbackMessage" style="color: var(--text-muted); font-size: 13px; line-height: 1.6; margin: 0 0 20px 0;">The requested destination could not be found.</p>
         
         <div id="fallbackActionRow" style="display: flex; gap: 10px; justify-content: center;">
-          <button id="btnFallbackRetry" style="display: none; background: #3B82F6; color: #FFF; border: none; border-radius: 8px; padding: 10px 18px; font-weight: bold; cursor: pointer; min-height: 44px;">Try Again</button>
-          <button id="btnFallbackHome" style="background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 10px 22px; font-weight: bold; cursor: pointer; min-height: 44px;">Go to Home</button>
+          <button id="btnFallbackRetry" style="display: none; background: #3B82F6; color: #FFF; border: none; border-radius: 8px; padding: 10px 18px; font-weight: bold; cursor: pointer; min-height: 48px;">Try Again</button>
+          <button id="btnFallbackHome" style="background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 10px 22px; font-weight: bold; cursor: pointer; min-height: 48px;">Go to Home</button>
         </div>
       </div>
     </div>
@@ -618,7 +902,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="prism.js?v=20261102-0330"></script>
-  <script src="app.js?v=20261102-0330"></script>
+  <script src="prism.js?v=20261102-0400"></script>
+  <script src="language_guides_data.js?v=20261102-0400"></script>
+  <script src="ai_providers.js?v=20261102-0400"></script>
+  <script src="app.js?v=20261102-0400"></script>
 </body>
 </html>

@@ -201,7 +201,8 @@ fun EditorScreen(
     onMoveFloatingWindow: (String, Float, Float) -> Unit = { _, _, _ -> },
     onResizeFloatingWindow: (String, Float, Float) -> Unit = { _, _, _ -> },
     onFocusFloatingWindow: (String) -> Unit = {},
-    onClearFloatingWindows: () -> Unit = {}
+    onClearFloatingWindows: () -> Unit = {},
+    recentFiles: List<CodeFile> = emptyList()
 ) {
     val activeFile = openFiles.getOrNull(activeFileIndex)
 
@@ -768,6 +769,7 @@ fun EditorScreen(
                         files = openFiles,
                         gitStatus = gitStatus,
                         trackedFolders = trackedFolders,
+                        recentFiles = recentFiles,
                         onOpenFile = onOpenFileFromSidebar,
                         onNewFile = onNewFileInSidebar,
                         onNewFolder = onNewFolderInSidebar,

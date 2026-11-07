@@ -59,9 +59,9 @@ async function get(route, headers = {}) {
 
 describe('Linq Studio Direct Authentication & Security Tests', () => {
 
-  // Test 1: Normal sign up with email and password -> direct app entry, profile in Firestore, no verification dialog
-  test('1. Normal sign up with email and password -> direct app entry, profile in Firestore, no verification dialog', async () => {
-    // Read client app.js and index.html to verify sign-up creates user, sets profile, and avoids code dialog
+  // Test 1: Google sign in -> direct app entry, no verification dialog
+  test('1. Google sign in -> direct app entry, no verification dialog', async () => {
+    // Read client app.js and index.html to verify Google sign in enters app and avoids code dialog
     const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
     const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
 
@@ -69,18 +69,16 @@ describe('Linq Studio Direct Authentication & Security Tests', () => {
     assert.strictEqual(indexHtml.includes('id="viewAuthVerification"'), false, 'viewAuthVerification dialog must not exist in index.html');
     assert.strictEqual(indexHtml.includes('class="otp-digit"'), false, 'otp-digit inputs must not exist');
 
-    // App.js signs up with createUserWithEmailAndPassword and directly enters app
-    assert.strictEqual(appJs.includes('createUserWithEmailAndPassword'), true, 'Uses createUserWithEmailAndPassword');
-    assert.strictEqual(appJs.includes('fbDb.runTransaction'), true, 'Creates profile in Firestore transaction (create if not exists)');
+    // App.js implements direct Google sign-in and closes auth modal immediately
+    assert.strictEqual(appJs.includes('completeGoogleSignIn'), true, 'Uses completeGoogleSignIn');
     assert.strictEqual(appJs.includes('closeAuthModal()'), true, 'Closes auth modal immediately upon completion');
   });
 
-  // Test 2: Normal log in with email and password -> direct app entry
-  test('2. Normal log in with email and password -> direct app entry', async () => {
+  // Test 2: Normal Google log in -> direct app entry
+  test('2. Normal Google log in -> direct app entry', async () => {
     const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
-    assert.strictEqual(appJs.includes('signInWithEmailAndPassword'), true, 'Uses signInWithEmailAndPassword');
-    // Checks that upon login success, closeAuthModal is invoked and no verification step is requested
-    assert.strictEqual(appJs.includes('closeAuthModal();\n        showToast(\'✓ Signed in successfully.\');'), true);
+    assert.strictEqual(appJs.includes('closeAuthModal();'), true, 'Closes auth modal immediately');
+    assert.strictEqual(appJs.includes('recordAuthSuccess();'), true, 'Records auth success');
   });
 
   // Test 3: Existing account created earlier with an unverified email logs in immediately
@@ -92,15 +90,12 @@ describe('Linq Studio Direct Authentication & Security Tests', () => {
     assert.strictEqual(blockingVerifiedCheck, false, 'No normal login gating behind emailVerified');
   });
 
-  // Test 4: Forgot password sends reset link and displays the generic success message
-  test('4. "Forgot password?" sends reset link and displays generic success message', async () => {
-    const appJs = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/app.js'), 'utf8');
-    assert.strictEqual(appJs.includes('sendPasswordResetEmail'), true, 'Calls sendPasswordResetEmail');
-    assert.strictEqual(
-      appJs.includes("If an account exists for this email, we've sent a reset link."),
-      true,
-      'Shows uniform enumeration-safe reset confirmation'
-    );
+  // Test 4: Google-only Login and Sign up action present in UI
+  test('4. Google-only Login and Sign up action present in UI', async () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../app/src/main/assets/web_explorer/index.html'), 'utf8');
+    assert.strictEqual(indexHtml.includes('inputCustomGoogleEmail'), true, 'Contains Google email input');
+    assert.strictEqual(indexHtml.includes('inputCustomGooglePassword'), true, 'Contains password input');
+    assert.strictEqual(indexHtml.includes('btnToggleWebAuthMode'), true, 'Contains new to the app? Sign up switcher');
   });
 
   // Test 5: Password validation and error message formatting

@@ -64,10 +64,12 @@ fun ExpandableTerminalDrawer(
     val errorCount = remember(logs) { logs.count { it.isError } }
     val warnCount = remember(logs) { logs.count { it.isWarning } }
 
+    val pal = theme.terminal
+
     Card(
         shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF090D14)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1E293B)),
+        colors = CardDefaults.cardColors(containerColor = pal.background),
+        border = androidx.compose.foundation.BorderStroke(1.dp, theme.borderColor),
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(200))
@@ -79,7 +81,7 @@ fun ExpandableTerminalDrawer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(38.dp)
-                    .background(Color(0xFF111827))
+                    .background(theme.surfaceColor)
                     .clickable { onToggleExpand() }
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -93,14 +95,14 @@ fun ExpandableTerminalDrawer(
                     Icon(
                         Icons.Default.Terminal,
                         contentDescription = "Console",
-                        tint = if (errorCount > 0) Color(0xFFEF4444) else Color(0xFF10B981),
+                        tint = if (errorCount > 0) pal.error else pal.prompt,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "Sandbox Console",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFF8FAFC)
+                        color = theme.onSurfaceColor
                     )
 
                     // Logs and Errors count badge
@@ -270,20 +272,20 @@ fun ExpandableTerminalDrawer(
                         }
                     }
 
-                    HorizontalDivider(color = Color(0xFF1E293B))
+                    HorizontalDivider(color = theme.borderColor)
 
                     // Quick Command / Eval Input
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF111827))
+                            .background(theme.surfaceColor)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
                             text = ">",
-                            color = Color(0xFF10B981),
+                            color = pal.prompt,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
@@ -292,18 +294,18 @@ fun ExpandableTerminalDrawer(
                         OutlinedTextField(
                             value = commandInput,
                             onValueChange = { commandInput = it },
-                            placeholder = { Text("eval expression or command...", fontSize = 11.sp, color = Color(0xFF64748B)) },
+                            placeholder = { Text("eval expression or command...", fontSize = 11.sp, color = theme.lineNumberColor) },
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
-                                color = Color.White
+                                color = pal.foreground
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
-                                focusedContainerColor = Color(0xFF111827),
-                                unfocusedContainerColor = Color(0xFF111827)
+                                focusedContainerColor = pal.inputBackground,
+                                unfocusedContainerColor = pal.inputBackground
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -321,7 +323,7 @@ fun ExpandableTerminalDrawer(
                             },
                             modifier = Modifier.size(28.dp).testTag("btn_terminal_drawer_send")
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Send", tint = Color(0xFF38BDF8), modifier = Modifier.size(15.dp))
+                            Icon(Icons.Default.Send, contentDescription = "Send", tint = pal.prompt, modifier = Modifier.size(15.dp))
                         }
                     }
                 }
